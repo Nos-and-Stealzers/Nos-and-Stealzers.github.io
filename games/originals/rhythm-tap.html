@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Rhythm Tap</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:10px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(340px,92vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#b06cff;}
+  .wrap{position:relative;width:min(340px,92vw);}
+  canvas{background:#101318;border:1px solid #2a2c33;border-radius:6px;display:block;width:100%;touch-action:none;}
+  .msg{min-height:16px;font-weight:700;}
+  .msg.lose{color:#ff5c66;}
+  .keys{font-size:12px;color:#8a8f99;text-align:center;max-width:340px;}
+  .over{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    gap:10px;background:rgba(12,13,16,.82);border-radius:6px;}
+  .over button{background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px 22px;font:inherit;cursor:pointer;border-radius:4px;}
+  .over button:hover{border-color:#b06cff;color:#b06cff;}
+  .over.hidden{display:none;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Rhythm Tap</h1><div class="sc">score <b id="score">0</b> &middot; best <b id="best">0</b></div></div>
+  <div class="wrap">
+    <canvas id="c" width="340" height="500"></canvas>
+    <div class="over hidden" id="over"><div id="otext"></div><button id="start">Start</button></div>
+  </div>
+  <div class="keys">Tap the column when a tile reaches the bottom line. Keyboard: D F J K for the four lanes. Miss one and it's over.</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d"),W=cv.width,H=cv.height;
+  var msg=document.getElementById("over"),otext=document.getElementById("otext");
+  var LANES=4,LW=W/LANES,TH=110,HITY=H-70,HITZONE=64;
+  var COLS=["#ff5c66","#f2b705","#3fb950","#b06cff"];
+  var KEYS={KeyD:0,KeyF:1,KeyJ:2,KeyK:3};
+  var best=+(localStorage.getItem("orhythm.best")||0);
+  document.getElementById("best").textContent=best;
+  var tiles,score,speed,over,raf,spawnT,flash;
+
+  function reset(){
+    tiles=[];score=0;speed=2.6;over=false;spawnT=0;flash=[0,0,0,0];
+    document.getElementById("score").textContent=0;
+    msg.classList.add("hidden");
+    addTile();
+    cancelAnimationFrame(raf);loop();
+  }
+  function addTile(){
+    var lane=(Math.random()*LANES)|0;
+    tiles.push({lane:lane,y:-TH,hit:false});
+  }
+  function loop(){
+    if(over)return;
+    spawnT++;
+    var gap=Math.max(34,80-score*0.7); // tiles come faster as you score
+    if(spawnT>=gap){spawnT=0;addTile();}
+    for(var i=0;i<tiles.length;i++){
+      var t=tiles[i];t.y+=speed;
+      if(!t.hit&&t.y>HITY+HITZONE){return end("Missed a tile!");}
+    }
+    tiles=tiles.filter(function(t){return t.y<H+TH;});
+    speed=Math.min(8,2.6+score*0.05);
+    draw();
+    raf=requestAnimationFrame(loop);
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(var l=1;l<LANES;l++){ctx.strokeStyle="#1c1f27";ctx.beginPath();ctx.moveTo(l*LW,0);ctx.lineTo(l*LW,H);ctx.stroke();}
+    // hit line
+    ctx.strokeStyle="#2a2c33";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,HITY);ctx.lineTo(W,HITY);ctx.stroke();
+    for(var l2=0;l2<LANES;l2++){
+      if(flash[l2]>0){ctx.fillStyle="rgba(255,255,255,"+(flash[l2]/12*0.25)+")";ctx.fillRect(l2*LW,0,LW,H);flash[l2]--;}
+    }
+    tiles.forEach(function(t){
+      if(t.hit)return;
+      ctx.fillStyle=COLS[t.lane];
+      ctx.fillRect(t.lane*LW+4,t.y,LW-8,TH);
+    });
+  }
+  function tap(lane){
+    if(over)return;
+    // find lowest un-hit tile in this lane within the hit zone
+    var target=null;
+    tiles.forEach(function(t){
+      if(t.lane!==lane||t.hit)return;
+      if(t.y+TH>=HITY-HITZONE&&t.y<=HITY+HITZONE){
+        if(!target||t.y>target.y)target=t;
+      }
+    });
+    if(target){
+      target.hit=true;score++;document.getElementById("score").textContent=score;
+      flash[lane]=12;
+    }else{
+      end("Wrong tap!");
+    }
+  }
+  function end(reason){
+    over=true;cancelAnimationFrame(raf);
+    if(score>best){best=score;localStorage.setItem("orhythm.best",best);
+      document.getElementById("best").textContent=best;}
+    otext.innerHTML=reason+"<br>Score "+score;
+    msg.classList.remove("hidden");
+    document.getElementById("start").textContent="Retry";
+  }
+  cv.addEventListener("pointerdown",function(e){
+    e.preventDefault();
+    var rect=cv.getBoundingClientRect();
+    var x=(e.clientX-rect.left)/rect.width*W;
+    tap(Math.min(LANES-1,Math.max(0,(x/LW)|0)));
+  });
+  window.addEventListener("keydown",function(e){if(e.code in KEYS){e.preventDefault();tap(KEYS[e.code]);}});
+  document.getElementById("start").addEventListener("click",reset);
+  reset();
+})();
+</script>
+</body>
+</html>

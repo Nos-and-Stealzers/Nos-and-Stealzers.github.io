@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Reversi</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(440px,92vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;display:flex;gap:14px;}
+  .sc b{color:#e8eaed;}
+  .board{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;width:min(440px,92vw);aspect-ratio:1;
+    background:#12331f;padding:6px;border-radius:6px;}
+  .cell{background:#1a5c34;border-radius:2px;position:relative;cursor:pointer;}
+  .cell.legal::after{content:"";position:absolute;inset:38%;border-radius:50%;background:rgba(255,255,255,.28);}
+  .disc{position:absolute;inset:12%;border-radius:50%;transition:transform .15s;}
+  .disc.b{background:radial-gradient(circle at 35% 30%,#4a4d55,#0c0d10);}
+  .disc.w{background:radial-gradient(circle at 35% 30%,#ffffff,#c2c6cc);}
+  .msg{min-height:18px;font-weight:700;}
+  .msg.win{color:#3fb950;} .msg.lose{color:#ff5c66;}
+  .row{display:flex;gap:8px;width:min(440px,92vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;border-radius:4px;}
+  button:hover{border-color:#3fb950;color:#3fb950;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:440px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Reversi</h1><div class="sc"><span>you <b id="sb">2</b></span><span>cpu <b id="sw">2</b></span></div></div>
+  <div class="board" id="board"></div>
+  <div class="msg" id="msg">Your move — you are dark.</div>
+  <div class="row"><button id="new">New game</button><button id="diff">CPU: Normal</button></div>
+  <div class="hint">Place a disc so it traps a line of the CPU's discs between yours. Trapped discs flip. Corners are gold — grab them.</div>
+<script>
+(function(){
+  "use strict";
+  var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
+  var B=1,W=2,board,turn,over,hard=false;
+  var DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+  var WEIGHT=[
+    120,-20,20,5,5,20,-20,120, -20,-40,-5,-5,-5,-5,-40,-20,
+    20,-5,15,3,3,15,-5,20, 5,-5,3,3,3,3,-5,5,
+    5,-5,3,3,3,3,-5,5, 20,-5,15,3,3,15,-5,20,
+    -20,-40,-5,-5,-5,-5,-40,-20, 120,-20,20,5,5,20,-20,120];
+
+  function reset(){
+    board=new Array(64).fill(0);
+    board[27]=W;board[28]=B;board[35]=B;board[36]=W;
+    turn=B;over=false;msg.textContent="Your move — you are dark.";msg.className="msg";
+    draw();
+  }
+  function inb(r,c){return r>=0&&c>=0&&r<8&&c<8;}
+  function flips(bd,pos,who){
+    var r=(pos/8)|0,c=pos%8,opp=who===B?W:B,out=[];
+    if(bd[pos])return out;
+    DIRS.forEach(function(d){
+      var line=[],rr=r+d[0],cc=c+d[1];
+      while(inb(rr,cc)&&bd[rr*8+cc]===opp){line.push(rr*8+cc);rr+=d[0];cc+=d[1];}
+      if(line.length&&inb(rr,cc)&&bd[rr*8+cc]===who)out=out.concat(line);
+    });
+    return out;
+  }
+  function legal(bd,who){
+    var m=[];for(var i=0;i<64;i++)if(!bd[i]&&flips(bd,i,who).length)m.push(i);return m;
+  }
+  function apply(bd,pos,who){
+    var f=flips(bd,pos,who);bd[pos]=who;f.forEach(function(p){bd[p]=who;});return f;
+  }
+  function counts(bd){var b=0,w=0;for(var i=0;i<64;i++){if(bd[i]===B)b++;else if(bd[i]===W)w++;}return{b:b,w:w};}
+
+  function draw(){
+    boardEl.innerHTML="";
+    var legalNow=(!over&&turn===B)?legal(board,B):[];
+    for(var i=0;i<64;i++){
+      var d=document.createElement("div");d.className="cell";
+      if(legalNow.indexOf(i)!==-1)d.className+=" legal";
+      if(board[i]){var disc=document.createElement("div");disc.className="disc "+(board[i]===B?"b":"w");d.appendChild(disc);}
+      (function(pos){d.addEventListener("click",function(){human(pos);});})(i);
+      boardEl.appendChild(d);
+    }
+    var c=counts(board);
+    document.getElementById("sb").textContent=c.b;
+    document.getElementById("sw").textContent=c.w;
+  }
+  function human(pos){
+    if(over||turn!==B)return;
+    if(!flips(board,pos,B).length)return;
+    apply(board,pos,B);turn=W;draw();
+    setTimeout(nextW,320);
+  }
+  function nextW(){
+    if(over)return;
+    var moves=legal(board,W);
+    if(!moves.length){
+      if(!legal(board,B).length)return finish();
+      turn=B;msg.textContent="CPU has no move — your turn.";draw();return;
+    }
+    var pick=hard?bestMove(moves):greedy(moves);
+    apply(board,pick,W);turn=B;
+    if(!legal(board,B).length){
+      if(!legal(board,W).length)return finish();
+      msg.textContent="You have no move — CPU plays again.";draw();setTimeout(nextW,420);return;
+    }
+    msg.textContent="Your move.";draw();
+  }
+  function greedy(moves){
+    var best=moves[0],bv=-1e9;
+    moves.forEach(function(m){var v=flips(board,m,W).length+WEIGHT[m]*0.6;if(v>bv){bv=v;best=m;}});
+    return best;
+  }
+  function bestMove(moves){
+    // 1-ply lookahead minimising opponent's best reply, weighted by position
+    var best=moves[0],bv=-1e9;
+    moves.forEach(function(m){
+      var bd=board.slice();apply(bd,m,W);
+      var oppBest=0;legal(bd,B).forEach(function(o){var f=flips(bd,o,B).length+Math.max(0,WEIGHT[o]);if(f>oppBest)oppBest=f;});
+      var v=WEIGHT[m]+flips(board,m,W).length*2-oppBest;
+      if(v>bv){bv=v;best=m;}
+    });
+    return best;
+  }
+  function finish(){
+    over=true;var c=counts(board);
+    if(c.b>c.w){msg.textContent="You win "+c.b+"–"+c.w+"!";msg.className="msg win";}
+    else if(c.w>c.b){msg.textContent="CPU wins "+c.w+"–"+c.b+".";msg.className="msg lose";}
+    else{msg.textContent="Tied "+c.b+"–"+c.w+".";msg.className="msg";}
+    draw();
+  }
+  document.getElementById("new").addEventListener("click",reset);
+  document.getElementById("diff").addEventListener("click",function(){
+    hard=!hard;this.textContent="CPU: "+(hard?"Hard":"Normal");reset();});
+  reset();
+})();
+</script>
+</body>
+</html>

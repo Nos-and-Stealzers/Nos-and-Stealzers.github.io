@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Golf Solitaire</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(500px,94vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#3fb950;}
+  .tableau{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;width:min(500px,94vw);}
+  .col{display:flex;flex-direction:column;align-items:center;min-height:160px;}
+  .card{width:100%;aspect-ratio:5/7;border-radius:6px;background:#f4f6f8;color:#1a1c22;
+    display:flex;align-items:center;justify-content:center;font-size:clamp(14px,4vw,20px);font-weight:700;
+    border:1px solid #c2c6cc;margin-top:-42px;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer;transition:transform .08s;}
+  .card:first-child{margin-top:0;}
+  .card.red{color:#d13a12;}
+  .card.play{cursor:pointer;}
+  .card.play:hover{transform:translateY(-4px);}
+  .card.dead{cursor:default;opacity:.85;}
+  .base{display:flex;gap:16px;align-items:center;width:min(500px,94vw);justify-content:center;margin-top:8px;}
+  .slot{width:66px;aspect-ratio:5/7;border-radius:6px;display:flex;align-items:center;justify-content:center;
+    font-size:20px;font-weight:700;}
+  .stock{background:#1a5c34;color:#e8eaed;border:1px solid #2a7d47;cursor:pointer;}
+  .stock:hover{border-color:#3fb950;}
+  .found{background:#f4f6f8;color:#1a1c22;border:1px solid #c2c6cc;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  .found.red{color:#d13a12;}
+  .info{font-size:13px;color:#8a8f99;text-align:center;}
+  .msg{min-height:18px;font-weight:700;}
+  .msg.win{color:#3fb950;} .msg.lose{color:#ff8a3d;}
+  .row{display:flex;gap:8px;width:min(500px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;border-radius:4px;}
+  button:hover{border-color:#3fb950;color:#3fb950;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:500px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Golf Solitaire</h1><div class="sc">cleared <b id="cleared">0</b> &middot; wins <b id="wins">0</b></div></div>
+  <div class="tableau" id="tableau"></div>
+  <div class="base">
+    <div class="slot found" id="found">—</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div class="slot stock" id="stock">?</div>
+      <div class="info"><span id="stockn">0</span> in stock</div>
+    </div>
+  </div>
+  <div class="msg" id="msg"></div>
+  <div class="row"><button id="new">New deal</button></div>
+  <div class="hint">Play any exposed card that is one rank above or below the foundation card. Aces are low or high. Draw from the stock when stuck. Clear all seven columns to win.</div>
+<script>
+(function(){
+  "use strict";
+  var SUITS=["♠","♥","♦","♣"],RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  var tableau,stock,found,cleared,over;
+  var wins=+(localStorage.getItem("ogolf.wins")||0);
+  document.getElementById("wins").textContent=wins;
+
+  function makeDeck(){
+    var d=[];
+    for(var s=0;s<4;s++)for(var r=0;r<13;r++)d.push({s:s,r:r});
+    for(var i=d.length-1;i>0;i--){var j=(Math.random()*(i+1))|0;var t=d[i];d[i]=d[j];d[j]=t;}
+    return d;
+  }
+  function deal(){
+    var d=makeDeck();
+    tableau=[[],[],[],[],[],[],[]];
+    for(var i=0;i<35;i++)tableau[i%7].push(d.pop());
+    found=d.pop();       // starting foundation card
+    stock=d;             // remaining 16
+    cleared=0;over=false;
+    document.getElementById("cleared").textContent=0;
+    document.getElementById("msg").textContent="";document.getElementById("msg").className="msg";
+    render();
+  }
+  function isRed(c){return c.s===1||c.s===2;}
+  function label(c){return RANKS[c.r]+SUITS[c.s];}
+  function canPlay(c){
+    var diff=Math.abs(c.r-found.r);
+    return diff===1||diff===12; // 12 wraps A<->K
+  }
+  function playCard(col){
+    if(over)return;
+    var pile=tableau[col];
+    if(!pile.length)return;
+    var c=pile[pile.length-1];
+    if(!canPlay(c))return;
+    found=pile.pop();
+    if(!pile.length)cleared++;
+    document.getElementById("cleared").textContent=cleared;
+    render();checkEnd();
+  }
+  function drawStock(){
+    if(over||!stock.length)return;
+    found=stock.pop();
+    render();checkEnd();
+  }
+  function anyMove(){
+    return tableau.some(function(p){return p.length&&canPlay(p[p.length-1]);});
+  }
+  function checkEnd(){
+    var el=document.getElementById("msg");
+    if(cleared===7){
+      over=true;el.textContent="Cleared the board — you win!";el.className="msg win";
+      wins++;localStorage.setItem("ogolf.wins",wins);document.getElementById("wins").textContent=wins;
+      return;
+    }
+    if(!anyMove()&&!stock.length){
+      over=true;el.textContent="No moves left. "+cleared+"/7 columns cleared.";el.className="msg lose";
+    }
+  }
+  function render(){
+    var tb=document.getElementById("tableau");tb.innerHTML="";
+    tableau.forEach(function(pile,col){
+      var colEl=document.createElement("div");colEl.className="col";
+      pile.forEach(function(c,i){
+        var top=i===pile.length-1;
+        var el=document.createElement("div");
+        el.className="card"+(isRed(c)?" red":"")+(top&&canPlay(c)&&!over?" play":" dead");
+        el.textContent=label(c);
+        if(top)el.addEventListener("click",function(){playCard(col);});
+        colEl.appendChild(el);
+      });
+      tb.appendChild(colEl);
+    });
+    var f=document.getElementById("found");
+    f.textContent=label(found);f.className="slot found"+(isRed(found)?" red":"");
+    document.getElementById("stockn").textContent=stock.length;
+    document.getElementById("stock").textContent=stock.length?"?":"—";
+  }
+  document.getElementById("stock").addEventListener("click",drawStock);
+  document.getElementById("new").addEventListener("click",deal);
+  deal();
+})();
+</script>
+</body>
+</html>

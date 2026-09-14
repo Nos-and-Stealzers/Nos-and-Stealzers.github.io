@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>2D Maze</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(440px,92vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:14px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  canvas{background:#15171c;border:1px solid #2a2c33;width:min(440px,92vw);height:auto;touch-action:none;}
+  .row{display:flex;gap:8px;width:min(440px,92vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .win{color:#3fb950;font-weight:700;min-height:16px;text-align:center;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>2D Maze</h1><div class="sc">level <b id="lv">1</b> &middot; best <b id="b">1</b></div></div>
+  <canvas id="c" width="420" height="420"></canvas>
+  <div class="win" id="win"></div>
+  <div class="row"><button id="new">New maze</button></div>
+  <div class="hint">Arrows / WASD / swipe to reach the green exit. Every level adds a bigger maze.</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var W=cv.width;
+  var level=1,best=+(localStorage.getItem("omaze.best")||1);
+  document.getElementById("b").textContent=best;
+  var N,cell,grid,px,py,solved;
+
+  // recursive-backtracker maze; each cell stores wall bits N,E,S,W
+  function gen(){
+    N=7+level; // grid dimension
+    cell=Math.floor(W/N);
+    grid=[];for(var i=0;i<N*N;i++)grid.push({n:1,e:1,s:1,w:1,v:0});
+    var stack=[0];grid[0].v=1;
+    while(stack.length){
+      var cur=stack[stack.length-1],cx=cur%N,cy=(cur/N)|0,nb=[];
+      if(cy>0&&!grid[cur-N].v)nb.push([cur-N,"n","s"]);
+      if(cx<N-1&&!grid[cur+1].v)nb.push([cur+1,"e","w"]);
+      if(cy<N-1&&!grid[cur+N].v)nb.push([cur+N,"s","n"]);
+      if(cx>0&&!grid[cur-1].v)nb.push([cur-1,"w","e"]);
+      if(!nb.length){stack.pop();continue;}
+      var pick=nb[(Math.random()*nb.length)|0];
+      grid[cur][pick[1]]=0;grid[pick[0]][pick[2]]=0;grid[pick[0]].v=1;stack.push(pick[0]);
+    }
+    px=0;py=0;solved=false;document.getElementById("win").textContent="";
+    document.getElementById("lv").textContent=level;draw();
+  }
+  function move(dx,dy){
+    if(solved)return;
+    var c=grid[py*N+px];
+    if(dx===1&&!c.e)px++;else if(dx===-1&&!c.w)px--;
+    else if(dy===1&&!c.s)py++;else if(dy===-1&&!c.n)py--;
+    draw();
+    if(px===N-1&&py===N-1){solved=true;
+      document.getElementById("win").textContent="Escaped! Level "+level+" clear.";
+      if(level>=best){best=level+1;localStorage.setItem("omaze.best",best);document.getElementById("b").textContent=best;}
+      setTimeout(function(){level++;gen();},650);
+    }
+  }
+  function draw(){
+    ctx.fillStyle="#15171c";ctx.fillRect(0,0,W,W);
+    // exit
+    ctx.fillStyle="#123a1e";ctx.fillRect((N-1)*cell+2,(N-1)*cell+2,cell-4,cell-4);
+    ctx.strokeStyle="#3a3d45";ctx.lineWidth=2;ctx.beginPath();
+    for(var i=0;i<N*N;i++){var c=grid[i],x=(i%N)*cell,y=((i/N)|0)*cell;
+      if(c.n){ctx.moveTo(x,y);ctx.lineTo(x+cell,y);}
+      if(c.e){ctx.moveTo(x+cell,y);ctx.lineTo(x+cell,y+cell);}
+      if(c.s){ctx.moveTo(x,y+cell);ctx.lineTo(x+cell,y+cell);}
+      if(c.w){ctx.moveTo(x,y);ctx.lineTo(x,y+cell);}}
+    ctx.stroke();
+    // player
+    ctx.fillStyle="#f2b705";
+    ctx.beginPath();ctx.arc(px*cell+cell/2,py*cell+cell/2,Math.max(3,cell*0.3),0,7);ctx.fill();
+  }
+  document.addEventListener("keydown",function(e){
+    var k=e.key.toLowerCase();
+    if(k==="arrowup"||k==="w"){move(0,-1);e.preventDefault();}
+    else if(k==="arrowdown"||k==="s"){move(0,1);e.preventDefault();}
+    else if(k==="arrowleft"||k==="a"){move(-1,0);e.preventDefault();}
+    else if(k==="arrowright"||k==="d"){move(1,0);e.preventDefault();}
+  });
+  // swipe
+  var sx,sy;
+  cv.addEventListener("touchstart",function(e){sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+  cv.addEventListener("touchend",function(e){
+    var dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)<18&&Math.abs(dy)<18)return;
+    if(Math.abs(dx)>Math.abs(dy))move(dx>0?1:-1,0);else move(0,dy>0?1:-1);
+  },{passive:true});
+  document.getElementById("new").addEventListener("click",function(){gen();});
+  gen();
+})();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
    The site's own pages and assets are cached; game folders never are, so a
    game always fetches its current build. Bump SHELL_VERSION after a deploy. */
 
-var SHELL_VERSION = "ach-shell-v9";
+var SHELL_VERSION = "ach-shell-v10";
 
 var SHELL = [
   "index.html",
@@ -104,6 +104,19 @@ self.addEventListener("fetch", function (event) {
           });
         })
     );
+    return;
+  }
+
+  // Always prefer the active deployment's backend configuration, but keep
+  // the last known config for genuinely offline arcade browsing.
+  if (/\/js\/core\/config\.js$/.test(url.pathname)) {
+    event.respondWith(fetch(request, { cache: "no-store" }).then(function (response) {
+      if (!response || response.status !== 200) throw new Error("Config unavailable");
+      var copy = response.clone();
+      return caches.open(SHELL_VERSION).then(function (cache) {
+        return cache.put(request, copy);
+      }).catch(function () {}).then(function () { return response; });
+    }).catch(function () { return caches.match(request); }));
     return;
   }
 

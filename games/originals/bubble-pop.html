@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Bubble Pop</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(460px,94vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:14px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  canvas{background:#15171c;border:1px solid #2a2c33;width:min(460px,94vw);height:auto;touch-action:none;cursor:crosshair;}
+  .row{display:flex;gap:8px;width:min(460px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Bubble Pop</h1><div class="sc">score <b id="s">0</b> &middot; best <b id="b">0</b> &middot; miss <b id="ms">0</b>/5</div></div>
+  <canvas id="c" width="440" height="520"></canvas>
+  <div class="row"><button id="start">New game</button></div>
+  <div class="hint">Pop the rising bubbles before they escape the top. Gold bubbles are worth triple. Let 5 slip by and it's over.</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var W=cv.width,H=cv.height;
+  var best=+(localStorage.getItem("obubble.best")||0);
+  document.getElementById("b").textContent=best;
+  var bubbles,score,misses,running,timer,tick,spawnRate;
+  var COLORS=["#e5484d","#3fb950","#4f8cff","#b06cff","#4dd9ff"];
+
+  function reset(){
+    bubbles=[];score=0;misses=0;tick=0;spawnRate=42;running=true;
+    document.getElementById("s").textContent=0;document.getElementById("ms").textContent=0;
+    clearInterval(timer);timer=setInterval(step,1000/60);
+  }
+  function spawn(){
+    var gold=Math.random()<0.12;
+    var r=gold?14:18+Math.random()*14;
+    bubbles.push({x:r+Math.random()*(W-2*r),y:H+r,r:r,
+      vy:-(1.4+Math.random()*1.1+score/900),gold:gold,
+      color:gold?"#f2b705":COLORS[(Math.random()*COLORS.length)|0],pop:0});
+  }
+  function step(){
+    tick++;
+    spawnRate=Math.max(16,42-((score/60)|0));
+    if(tick%spawnRate===0)spawn();
+    bubbles.forEach(function(b){if(b.pop)return;b.y+=b.vy;});
+    // escaped past top
+    for(var i=bubbles.length-1;i>=0;i--){var b=bubbles[i];
+      if(!b.pop&&b.y+b.r<0){bubbles.splice(i,1);misses++;
+        document.getElementById("ms").textContent=misses;
+        if(misses>=5){end();return;}}
+      else if(b.pop){b.pop++;if(b.pop>8)bubbles.splice(i,1);}}
+    draw();
+  }
+  function end(){running=false;clearInterval(timer);
+    if(score>best){best=score;localStorage.setItem("obubble.best",best);document.getElementById("b").textContent=best;}
+    ctx.fillStyle="rgba(12,13,16,.72)";ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#c02a3f";ctx.font="700 24px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillText("Game over",W/2,H/2-6);
+    ctx.fillStyle="#8a8f99";ctx.font="13px ui-monospace,monospace";
+    ctx.fillText("press New game",W/2,H/2+18);ctx.textAlign="left";}
+  function draw(){
+    ctx.fillStyle="#15171c";ctx.fillRect(0,0,W,H);
+    bubbles.forEach(function(b){
+      if(b.pop){ctx.strokeStyle=b.color;ctx.lineWidth=2;ctx.globalAlpha=1-b.pop/9;
+        ctx.beginPath();ctx.arc(b.x,b.y,b.r+b.pop*2,0,7);ctx.stroke();ctx.globalAlpha=1;return;}
+      ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,.35)";ctx.beginPath();
+      ctx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.28,0,7);ctx.fill();
+    });
+  }
+  function popAt(cx,cy){
+    if(!running)return;
+    for(var i=0;i<bubbles.length;i++){var b=bubbles[i];
+      if(!b.pop&&(cx-b.x)*(cx-b.x)+(cy-b.y)*(cy-b.y)<=b.r*b.r){
+        b.pop=1;score+=b.gold?3:1;document.getElementById("s").textContent=score;return;}}
+  }
+  function toCanvas(clientX,clientY){var r=cv.getBoundingClientRect();
+    return [(clientX-r.left)*(W/r.width),(clientY-r.top)*(H/r.height)];}
+  cv.addEventListener("mousedown",function(e){var p=toCanvas(e.clientX,e.clientY);popAt(p[0],p[1]);});
+  cv.addEventListener("touchstart",function(e){
+    for(var i=0;i<e.touches.length;i++){var p=toCanvas(e.touches[i].clientX,e.touches[i].clientY);popAt(p[0],p[1]);}
+    e.preventDefault();},{passive:false});
+  document.getElementById("start").addEventListener("click",reset);
+  reset();
+})();
+</script>
+</body>
+</html>

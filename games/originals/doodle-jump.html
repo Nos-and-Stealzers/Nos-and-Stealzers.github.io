@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Doodle Jump</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(360px,90vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:14px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  canvas{background:#15171c;border:1px solid #2a2c33;width:min(360px,90vw);height:auto;touch-action:none;}
+  .row{display:flex;gap:8px;width:min(360px,90vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Doodle Jump</h1><div class="sc">score <b id="s">0</b> &middot; best <b id="b">0</b></div></div>
+  <canvas id="c" width="340" height="500"></canvas>
+  <div class="row"><button id="start">New game</button></div>
+  <div class="hint">Auto-jumps on every platform &middot; Arrows / A D / tilt phone / drag to steer left &amp; right</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var W=cv.width,H=cv.height;
+  var best=+(localStorage.getItem("odoodle.best")||0);
+  document.getElementById("b").textContent=best;
+  var px,py,vx,vy,plats,score,running,dead,timer,camY,keys={};
+
+  function make(){
+    plats=[];
+    for(var i=0;i<9;i++)plats.push({x:Math.random()*(W-60),y:H-i*58-20,w:60,moving:i>4&&Math.random()<0.3,d:1});
+    px=W/2;py=H-80;vx=0;vy=-11;score=0;dead=false;camY=0;
+    document.getElementById("s").textContent=0;
+    running=true;clearInterval(timer);timer=setInterval(step,1000/60);
+  }
+  function step(){
+    if(keys.left)vx-=0.6;if(keys.right)vx+=0.6;
+    vx*=0.92;px+=vx;
+    if(px<-16)px=W;if(px>W)px=-16;
+    vy+=0.42;py+=vy;
+    // moving platforms
+    plats.forEach(function(p){if(p.moving){p.x+=p.d*1.4;if(p.x<0||p.x>W-p.w)p.d*=-1;}});
+    // land on platform while falling
+    if(vy>0){plats.forEach(function(p){
+      if(px+14>p.x&&px-14<p.x+p.w&&py+18>p.y&&py+18<p.y+14){vy=-11.5;}
+    });}
+    // scroll when high
+    if(py<H*0.42){var dy=H*0.42-py;py=H*0.42;camY+=dy;score=Math.max(score,(camY/10)|0);
+      document.getElementById("s").textContent=score;
+      plats.forEach(function(p){p.y+=dy;});
+      plats=plats.filter(function(p){return p.y<H+20;});
+      while(plats.length<9){var top=Math.min.apply(null,plats.map(function(p){return p.y;}));
+        plats.push({x:Math.random()*(W-60),y:top-Math.random()*40-42,w:60,moving:score>200&&Math.random()<0.35,d:1});}
+    }
+    if(py>H+20){end();return;}
+    draw();
+  }
+  function end(){dead=true;running=false;clearInterval(timer);
+    if(score>best){best=score;localStorage.setItem("odoodle.best",best);document.getElementById("b").textContent=best;}
+    ctx.fillStyle="rgba(12,13,16,.72)";ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="#c02a3f";ctx.font="700 24px ui-monospace,monospace";ctx.textAlign="center";
+    ctx.fillText("Game over",W/2,H/2-6);
+    ctx.fillStyle="#8a8f99";ctx.font="13px ui-monospace,monospace";
+    ctx.fillText("press New game",W/2,H/2+18);ctx.textAlign="left";}
+  function draw(){
+    ctx.fillStyle="#15171c";ctx.fillRect(0,0,W,H);
+    plats.forEach(function(p){ctx.fillStyle=p.moving?"#4f8cff":"#3fb950";
+      ctx.fillRect(p.x,p.y,p.w,8);});
+    // player
+    ctx.fillStyle="#f2b705";ctx.fillRect(px-13,py,26,20);
+    ctx.fillStyle="#0c0d10";ctx.fillRect(px+2,py+5,4,4);ctx.fillRect(px-6,py+5,4,4);
+    // legs indicate direction
+    ctx.fillStyle="#f2b705";ctx.fillRect(px+(vx>0?8:-13),py+20,5,6);
+  }
+  document.addEventListener("keydown",function(e){
+    var k=e.key.toLowerCase();
+    if(k==="arrowleft"||k==="a"){keys.left=true;e.preventDefault();}
+    else if(k==="arrowright"||k==="d"){keys.right=true;e.preventDefault();}
+  });
+  document.addEventListener("keyup",function(e){
+    var k=e.key.toLowerCase();
+    if(k==="arrowleft"||k==="a")keys.left=false;
+    else if(k==="arrowright"||k==="d")keys.right=false;
+  });
+  // drag to steer
+  var drag=false;
+  cv.addEventListener("touchstart",function(e){drag=true;steer(e.touches[0]);e.preventDefault();},{passive:false});
+  cv.addEventListener("touchmove",function(e){if(drag)steer(e.touches[0]);e.preventDefault();},{passive:false});
+  cv.addEventListener("touchend",function(){drag=false;keys.left=keys.right=false;});
+  function steer(t){var r=cv.getBoundingClientRect();var x=(t.clientX-r.left)*(W/r.width);
+    keys.left=x<px-6;keys.right=x>px+6;}
+  // device tilt
+  if(window.DeviceOrientationEvent){window.addEventListener("deviceorientation",function(e){
+    if(e.gamma==null)return;keys.left=e.gamma<-4;keys.right=e.gamma>4;});}
+  document.getElementById("start").addEventListener("click",make);
+  make();
+})();
+</script>
+</body>
+</html>

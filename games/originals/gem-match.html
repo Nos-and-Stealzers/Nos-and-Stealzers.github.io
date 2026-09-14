@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Gem Match</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(400px,92vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#4dd9ff;}
+  .board{width:min(400px,92vw);aspect-ratio:1;display:grid;gap:4px;
+    grid-template-columns:repeat(8,1fr);}
+  .gem{border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:min(5.4vw,26px);cursor:pointer;transition:transform .1s,opacity .18s;box-shadow:0 2px 4px rgba(0,0,0,.4);}
+  .gem.sel{transform:scale(.82);box-shadow:0 0 0 3px #fff inset;}
+  .gem.pop{opacity:0;transform:scale(.3);}
+  .bar{width:min(400px,92vw);height:8px;background:#25272e;border-radius:4px;overflow:hidden;}
+  .bar i{display:block;height:100%;background:#4dd9ff;width:100%;transition:width .3s;}
+  .msg{min-height:18px;font-weight:700;text-align:center;}
+  .msg.over{color:#f2b705;}
+  .row{display:flex;gap:8px;width:min(400px,92vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:11px;
+    font:inherit;cursor:pointer;border-radius:6px;}
+  button:hover{border-color:#4dd9ff;color:#4dd9ff;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:400px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Gem Match</h1><div class="sc">score <b id="score">0</b> &middot; best <b id="best">0</b></div></div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="board" id="board"></div>
+  <div class="msg" id="msg">Swap adjacent gems to line up 3 or more.</div>
+  <div class="row"><button id="new">New game</button></div>
+  <div class="hint">Tap a gem then a neighbour to swap. Matches of 3+ clear and score. You have 30 moves.</div>
+<script>
+(function(){
+  "use strict";
+  var N=8,TYPES=["\uD83D\uDD34","\uD83D\uDD35","\uD83D\uDFE1","\uD83D\uDFE2","\uD83D\uDFE3","\uD83D\uDFE0"];
+  var COLORS=["#3a1414","#0e2540","#3a3212","#123a1e","#2a1240","#3a2410"];
+  var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
+  var scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),barEl=document.getElementById("bar");
+  var g,score,moves,sel,busy;
+  var best=parseInt(localStorage.getItem("ogem.best")||"0",10);
+  bestEl.textContent=best;
+  function ri(){return (Math.random()*TYPES.length)|0;}
+  function idx(r,c){return r*N+c;}
+  function noMatchFill(){
+    g=new Array(N*N);
+    for(var r=0;r<N;r++)for(var c=0;c<N;c++){
+      var t;do{t=ri();}while((c>=2&&g[idx(r,c-1)]===t&&g[idx(r,c-2)]===t)||(r>=2&&g[idx(r-1,c)]===t&&g[idx(r-2,c)]===t));
+      g[idx(r,c)]=t;
+    }
+  }
+  function fresh(){score=0;moves=30;sel=null;busy=false;noMatchFill();update();render();
+    msg.textContent="Swap adjacent gems to line up 3 or more.";msg.className="msg";}
+  function update(){scoreEl.textContent=score;barEl.style.width=(moves/30*100)+"%";}
+  function render(){
+    boardEl.innerHTML="";
+    for(var i=0;i<N*N;i++){
+      var d=document.createElement("div");d.className="gem";
+      if(g[i]<0){d.style.background="#16181d";}
+      else{d.textContent=TYPES[g[i]];d.style.background=COLORS[g[i]];}
+      if(sel===i)d.className+=" sel";
+      d.dataset.i=i;d.addEventListener("click",onTap);
+      boardEl.appendChild(d);
+    }
+  }
+  function adjacent(a,b){var ar=(a/N)|0,ac=a%N,br=(b/N)|0,bc=b%N;
+    return Math.abs(ar-br)+Math.abs(ac-bc)===1;}
+  function onTap(){
+    if(busy||moves<=0)return;
+    var i=+this.dataset.i;
+    if(sel===null){sel=i;render();return;}
+    if(sel===i){sel=null;render();return;}
+    if(!adjacent(sel,i)){sel=i;render();return;}
+    var a=sel,b=i;sel=null;
+    swap(a,b);
+    if(findMatches().length===0){swap(a,b);render();return;} // revert
+    moves--;update();render();
+    setTimeout(resolve,180);
+  }
+  function swap(a,b){var t=g[a];g[a]=g[b];g[b]=t;}
+  function findMatches(){
+    var m={};
+    for(var r=0;r<N;r++)for(var c=0;c<N-2;c++){
+      var v=g[idx(r,c)];if(v<0)continue;
+      if(g[idx(r,c+1)]===v&&g[idx(r,c+2)]===v){m[idx(r,c)]=m[idx(r,c+1)]=m[idx(r,c+2)]=1;
+        var k=c+3;while(k<N&&g[idx(r,k)]===v){m[idx(r,k)]=1;k++;}}
+    }
+    for(var c2=0;c2<N;c2++)for(var r2=0;r2<N-2;r2++){
+      var v2=g[idx(r2,c2)];if(v2<0)continue;
+      if(g[idx(r2+1,c2)]===v2&&g[idx(r2+2,c2)]===v2){m[idx(r2,c2)]=m[idx(r2+1,c2)]=m[idx(r2+2,c2)]=1;
+        var k2=r2+3;while(k2<N&&g[idx(k2,c2)]===v2){m[idx(k2,c2)]=1;k2++;}}
+    }
+    return Object.keys(m).map(Number);
+  }
+  function resolve(){
+    var matches=findMatches();
+    if(matches.length===0){busy=false;checkOver();return;}
+    busy=true;
+    score+=matches.length*10;update();
+    // pop animation
+    var cells=boardEl.children;
+    matches.forEach(function(i){if(cells[i])cells[i].className="gem pop";});
+    matches.forEach(function(i){g[i]=-1;});
+    setTimeout(function(){
+      // gravity
+      for(var c=0;c<N;c++){
+        var col=[];
+        for(var r=N-1;r>=0;r--)if(g[idx(r,c)]>=0)col.push(g[idx(r,c)]);
+        for(var r2=N-1,k=0;r2>=0;r2--)g[idx(r2,c)]=k<col.length?col[k++]:ri();
+      }
+      render();setTimeout(resolve,180);
+    },200);
+  }
+  function checkOver(){
+    if(moves<=0){
+      if(score>best){best=score;localStorage.setItem("ogem.best",String(best));bestEl.textContent=best;}
+      msg.textContent="Out of moves \u2014 final score "+score+".";msg.className="msg over";
+    }
+  }
+  document.getElementById("new").addEventListener("click",fresh);
+  fresh();
+})();
+</script>
+</body>
+</html>

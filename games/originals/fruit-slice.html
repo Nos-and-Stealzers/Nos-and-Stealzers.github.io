@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Fruit Slice</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(440px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#4dd9ff;}
+  .lives{color:#ff5c66;letter-spacing:2px;}
+  canvas{width:min(440px,94vw);aspect-ratio:3/4;background:#16181d;border:1px solid #35373f;
+    border-radius:8px;touch-action:none;cursor:crosshair;}
+  .msg{min-height:18px;font-weight:700;text-align:center;}
+  .msg.over{color:#ff5c66;}
+  .row{display:flex;gap:8px;width:min(440px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:11px;
+    font:inherit;cursor:pointer;border-radius:6px;}
+  button:hover{border-color:#4dd9ff;color:#4dd9ff;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:440px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Fruit Slice</h1><div class="sc">score <b id="score">0</b> &middot; <span class="lives" id="lives">\u2665\u2665\u2665</span> &middot; best <b id="best">0</b></div></div>
+  <canvas id="c" width="360" height="480"></canvas>
+  <div class="msg" id="msg">Swipe across fruit to slice. Miss three and it's over.</div>
+  <div class="row"><button id="new">New game</button></div>
+  <div class="hint">Drag the mouse or finger through flying fruit to slice it. Don't hit the bombs \u2014 they cost you a life instantly.</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var W=360,H=480;
+  var msg=document.getElementById("msg"),scoreEl=document.getElementById("score");
+  var livesEl=document.getElementById("lives"),bestEl=document.getElementById("best");
+  var best=parseInt(localStorage.getItem("ofruit.best")||"0",10);bestEl.textContent=best;
+  var FRUIT=[["\uD83C\uDF4E","#ff5c66"],["\uD83C\uDF4A","#ff8a3d"],["\uD83C\uDF49","#3fb950"],
+            ["\uD83C\uDF47","#b06cff"],["\uD83C\uDF4B","#f2b705"],["\uD83C\uDF53","#ff6fae"]];
+  var objs,score,lives,over,raf,spawnT,trail,lastX,lastY,slicing;
+  function reset(){
+    objs=[];score=0;lives=3;over=false;spawnT=0;trail=[];slicing=false;
+    scoreEl.textContent=0;livesEl.textContent="\u2665\u2665\u2665";
+    msg.textContent="Swipe across fruit to slice. Miss three and it's over.";msg.className="msg";
+    if(raf)cancelAnimationFrame(raf);loop();
+  }
+  function spawn(){
+    var bomb=Math.random()<0.16;
+    var f=FRUIT[(Math.random()*FRUIT.length)|0];
+    objs.push({
+      x:40+Math.random()*(W-80),y:H+30,
+      vx:(Math.random()-0.5)*3.2,
+      vy:-(9.5+Math.random()*3.2),
+      r:24,bomb:bomb,emoji:bomb?"\uD83D\uDCA3":f[0],col:bomb?"#666":f[1],
+      sliced:false,rot:Math.random()*6.28,vr:(Math.random()-0.5)*0.2
+    });
+  }
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    spawnT--;
+    if(spawnT<=0){spawn();spawnT=42-Math.min(28,score);if(Math.random()<0.3)spawn();}
+    for(var i=objs.length-1;i>=0;i--){
+      var o=objs[i];
+      o.x+=o.vx;o.y+=o.vy;o.vy+=0.22;o.rot+=o.vr;
+      if(o.y>H+60){
+        if(!o.sliced&&!o.bomb){loseLife();}
+        objs.splice(i,1);continue;
+      }
+      drawObj(o);
+    }
+    // trail
+    ctx.strokeStyle="rgba(77,217,255,.8)";ctx.lineWidth=4;ctx.lineCap="round";
+    for(var t=1;t<trail.length;t++){
+      ctx.globalAlpha=t/trail.length;
+      ctx.beginPath();ctx.moveTo(trail[t-1].x,trail[t-1].y);ctx.lineTo(trail[t].x,trail[t].y);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    if(trail.length)trail.shift();
+    if(!over)raf=requestAnimationFrame(loop);
+  }
+  function drawObj(o){
+    ctx.save();ctx.translate(o.x,o.y);ctx.rotate(o.rot);
+    if(o.sliced){ctx.globalAlpha=0.5;}
+    ctx.font="40px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(o.emoji,0,0);
+    ctx.restore();
+  }
+  function loseLife(){
+    lives--;livesEl.textContent="\u2665".repeat(Math.max(0,lives))||"\u2014";
+    if(lives<=0)gameOver();
+  }
+  function gameOver(){
+    over=true;
+    if(score>best){best=score;localStorage.setItem("ofruit.best",String(best));bestEl.textContent=best;}
+    msg.textContent="Game over \u2014 final score "+score+".";msg.className="msg over";
+  }
+  function sliceAt(x,y){
+    objs.forEach(function(o){
+      if(o.sliced)return;
+      var dx=x-o.x,dy=y-o.y;
+      if(dx*dx+dy*dy<o.r*o.r*1.4){
+        o.sliced=true;
+        if(o.bomb){loseLife();o.emoji="\uD83D\uDCA5";o.vy=-4;}
+        else{score++;scoreEl.textContent=score;o.vy=-2;o.emoji="\u2728";}
+      }
+    });
+  }
+  function pos(e){
+    var r=cv.getBoundingClientRect();
+    var cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    var cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return {x:cx*W/r.width,y:cy*H/r.height};
+  }
+  function down(e){slicing=true;var p=pos(e);trail=[p];e.preventDefault();}
+  function moveH(e){
+    if(over)return;
+    if(!slicing)return;
+    var p=pos(e);trail.push(p);if(trail.length>12)trail.shift();
+    sliceAt(p.x,p.y);e.preventDefault();
+  }
+  function up(){slicing=false;}
+  cv.addEventListener("mousedown",down);cv.addEventListener("mousemove",moveH);
+  addEventListener("mouseup",up);
+  cv.addEventListener("touchstart",down,{passive:false});
+  cv.addEventListener("touchmove",moveH,{passive:false});
+  addEventListener("touchend",up);
+  cv.addEventListener("click",function(){if(over)reset();});
+  document.getElementById("new").addEventListener("click",reset);
+  reset();
+})();
+</script>
+</body>
+</html>

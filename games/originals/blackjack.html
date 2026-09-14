@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Blackjack</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:14px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(460px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#4dd9ff;}
+  .felt{width:min(460px,94vw);display:flex;flex-direction:column;gap:14px;}
+  .hand{display:flex;flex-direction:column;gap:6px;}
+  .hand .who{font-size:12px;color:#8a8f99;letter-spacing:1px;text-transform:uppercase;}
+  .cards{display:flex;gap:8px;flex-wrap:wrap;min-height:88px;}
+  .card{width:58px;height:82px;border-radius:8px;background:#f4f5f7;color:#16181d;
+    display:flex;flex-direction:column;justify-content:space-between;padding:6px 8px;
+    font-weight:700;font-size:18px;box-shadow:0 3px 8px rgba(0,0,0,.45);}
+  .card.red{color:#d62839;} .card .b{align-self:flex-end;transform:rotate(180deg);}
+  .card.back{background:linear-gradient(135deg,#25406b,#0e1c33);color:#4dd9ff;
+    align-items:center;justify-content:center;font-size:26px;}
+  .val{font-size:13px;color:#8a8f99;} .val b{color:#e8eaed;}
+  .msg{min-height:20px;font-weight:700;text-align:center;}
+  .msg.win{color:#3fb950;} .msg.lose{color:#ff5c66;} .msg.push{color:#f2b705;}
+  .row{display:flex;gap:8px;width:min(460px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:12px;
+    font:inherit;cursor:pointer;border-radius:6px;}
+  button:hover:not(:disabled){border-color:#4dd9ff;color:#4dd9ff;}
+  button:disabled{opacity:.4;cursor:default;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:460px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Blackjack</h1><div class="sc">chips <b id="chips">100</b></div></div>
+  <div class="felt">
+    <div class="hand"><div class="who">Dealer <span class="val" id="dval"></span></div><div class="cards" id="dealer"></div></div>
+    <div class="hand"><div class="who">You <span class="val" id="pval"></span></div><div class="cards" id="player"></div></div>
+  </div>
+  <div class="msg" id="msg"></div>
+  <div class="row"><button id="hit">Hit</button><button id="stand">Stand</button><button id="deal">Deal (bet 10)</button></div>
+  <div class="hint">Get closer to 21 than the dealer without going over. Dealer draws to 16 and stands on 17. Blackjack pays 3:2.</div>
+<script>
+(function(){
+  "use strict";
+  var SUITS=["\u2660","\u2665","\u2666","\u2663"],RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  var deck,player,dealer,over,hidden,chips,bet=10;
+  chips=parseInt(localStorage.getItem("oblackjack.chips")||"100",10);
+  if(!(chips>0))chips=100;
+  var elP=document.getElementById("player"),elD=document.getElementById("dealer");
+  var msg=document.getElementById("msg"),chipsEl=document.getElementById("chips");
+  var bHit=document.getElementById("hit"),bStand=document.getElementById("stand"),bDeal=document.getElementById("deal");
+  function newDeck(){deck=[];for(var s=0;s<4;s++)for(var r=0;r<13;r++)deck.push({s:s,r:r});
+    for(var i=deck.length-1;i>0;i--){var j=(Math.random()*(i+1))|0,t=deck[i];deck[i]=deck[j];deck[j]=t;}}
+  function draw(){if(deck.length<8)newDeck();return deck.pop();}
+  function val(hand){var t=0,aces=0;hand.forEach(function(c){var r=c.r;
+    if(r===0){aces++;t+=11;}else if(r>=9)t+=10;else t+=r+1;});
+    while(t>21&&aces){t-=10;aces--;}return t;}
+  function cardEl(c,face){var d=document.createElement("div");
+    if(!face){d.className="card back";d.textContent="\u2666";return d;}
+    d.className="card"+(c.s===1||c.s===2?" red":"");
+    var lbl=RANKS[c.r]+SUITS[c.s];
+    var a=document.createElement("span");a.textContent=lbl;
+    var b=document.createElement("span");b.className="b";b.textContent=lbl;
+    d.appendChild(a);d.appendChild(b);return d;}
+  function render(){
+    elP.innerHTML="";player.forEach(function(c){elP.appendChild(cardEl(c,true));});
+    elD.innerHTML="";dealer.forEach(function(c,i){elD.appendChild(cardEl(c,!(hidden&&i===1)));});
+    document.getElementById("pval").innerHTML="<b>"+val(player)+"</b>";
+    document.getElementById("dval").innerHTML=hidden?"":"<b>"+val(dealer)+"</b>";
+    chipsEl.textContent=chips;
+  }
+  function saveChips(){localStorage.setItem("oblackjack.chips",String(chips));}
+  function endGame(){
+    hidden=false;over=true;bHit.disabled=true;bStand.disabled=true;bDeal.disabled=false;
+    var p=val(player),d=val(dealer),pBJ=(player.length===2&&p===21);
+    var res;
+    if(p>21){res="lose";msg.textContent="Bust \u2014 you lose "+bet+".";}
+    else if(d>21){res="win";msg.textContent="Dealer busts \u2014 you win!";}
+    else if(pBJ&&!(dealer.length===2&&d===21)){res="bj";msg.textContent="Blackjack! Pays 3:2.";}
+    else if(p>d){res="win";msg.textContent="You win!";}
+    else if(p<d){res="lose";msg.textContent="Dealer wins \u2014 you lose "+bet+".";}
+    else{res="push";msg.textContent="Push \u2014 bet returned.";}
+    if(res==="win"){chips+=bet;msg.className="msg win";}
+    else if(res==="bj"){chips+=Math.round(bet*1.5);msg.className="msg win";}
+    else if(res==="lose"){chips-=bet;msg.className="msg lose";}
+    else{msg.className="msg push";}
+    if(chips<0)chips=0;saveChips();render();
+    if(chips<bet){bDeal.textContent="New stack";}
+  }
+  function dealerPlay(){
+    hidden=false;render();
+    var step=function(){
+      if(val(dealer)<17){dealer.push(draw());render();setTimeout(step,420);}
+      else endGame();
+    };
+    setTimeout(step,420);
+  }
+  function deal(){
+    if(chips<bet){chips=100;bDeal.textContent="Deal (bet 10)";saveChips();}
+    newDeck();player=[draw(),draw()];dealer=[draw(),draw()];
+    hidden=true;over=false;msg.textContent="";msg.className="msg";
+    bHit.disabled=false;bStand.disabled=false;bDeal.disabled=true;render();
+    if(val(player)===21)dealerPlay();
+  }
+  bHit.addEventListener("click",function(){if(over)return;player.push(draw());render();
+    if(val(player)>21)endGame();});
+  bStand.addEventListener("click",function(){if(over)return;dealerPlay();});
+  bDeal.addEventListener("click",deal);
+  render();
+})();
+</script>
+</body>
+</html>

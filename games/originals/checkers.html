@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Checkers</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(440px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#4dd9ff;}
+  .board{width:min(440px,94vw);aspect-ratio:1;display:grid;
+    grid-template-columns:repeat(8,1fr);border:2px solid #35373f;border-radius:6px;overflow:hidden;}
+  .sq{position:relative;display:flex;align-items:center;justify-content:center;}
+  .sq.dark{background:#2a2c33;} .sq.light{background:#3a3d46;}
+  .sq.sel{box-shadow:inset 0 0 0 3px #4dd9ff;}
+  .sq.move{cursor:pointer;} .sq.move::after{content:"";width:26%;height:26%;border-radius:50%;background:rgba(77,217,255,.5);}
+  .pc{width:72%;height:72%;border-radius:50%;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.5);
+    display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;}
+  .pc.you{background:radial-gradient(circle at 35% 30%,#7fe0ff,#1f8fbf);color:#04212e;}
+  .pc.cpu{background:radial-gradient(circle at 35% 30%,#ff8a8f,#b62a33);color:#2e0405;}
+  .pc.king::after{content:"\2605";}
+  .msg{min-height:20px;font-weight:700;text-align:center;}
+  .msg.win{color:#3fb950;} .msg.lose{color:#ff5c66;}
+  .row{display:flex;gap:8px;width:min(440px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:11px;
+    font:inherit;cursor:pointer;border-radius:6px;}
+  button:hover{border-color:#4dd9ff;color:#4dd9ff;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:440px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Checkers</h1><div class="sc">wins <b id="wins">0</b></div></div>
+  <div class="board" id="board"></div>
+  <div class="msg" id="msg">Your move. You are blue.</div>
+  <div class="row"><button id="new">New game</button></div>
+  <div class="hint">Captures are mandatory. Reach the far row to crown a king (moves both ways). Take all the red pieces to win.</div>
+<script>
+(function(){
+  "use strict";
+  // board: 8x8, cell = null | {p:1|-1, k:bool}. p=1 you (move up, row decreasing), p=-1 cpu (down)
+  var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
+  var wins=parseInt(localStorage.getItem("ocheckers.wins")||"0",10);
+  document.getElementById("wins").textContent=wins;
+  var B,sel=null,legal=[],turn=1,locked=false;
+  function idx(r,c){return r*8+c;}
+  function inb(r,c){return r>=0&&c>=0&&r<8&&c<8;}
+  function fresh(){
+    B=new Array(64).fill(null);
+    for(var r=0;r<3;r++)for(var c=0;c<8;c++)if((r+c)%2===1)B[idx(r,c)]={p:-1,k:false};
+    for(var r2=5;r2<8;r2++)for(var c2=0;c2<8;c2++)if((r2+c2)%2===1)B[idx(r2,c2)]={p:1,k:false};
+    sel=null;legal=[];turn=1;locked=false;msg.textContent="Your move. You are blue.";msg.className="msg";
+    render();
+  }
+  function dirs(pc){return pc.k?[[-1,-1],[-1,1],[1,-1],[1,1]]:pc.p===1?[[-1,-1],[-1,1]]:[[1,-1],[1,1]];}
+  // moves for a piece at r,c. returns {step:[[r,c]...], jump:[{to:[r,c],cap:[r,c]}...]}
+  function pieceMoves(r,c){
+    var pc=B[idx(r,c)],step=[],jump=[];
+    dirs(pc).forEach(function(d){
+      var nr=r+d[0],nc=c+d[1];
+      if(inb(nr,nc)&&!B[idx(nr,nc)])step.push([nr,nc]);
+      var jr=r+2*d[0],jc=c+2*d[1];
+      if(inb(jr,jc)&&!B[idx(jr,jc)]&&B[idx(nr,nc)]&&B[idx(nr,nc)].p===-pc.p)
+        jump.push({to:[jr,jc],cap:[nr,nc]});
+    });
+    return {step:step,jump:jump};
+  }
+  function allMoves(player){
+    var jumps=[],steps=[];
+    for(var r=0;r<8;r++)for(var c=0;c<8;c++){
+      var pc=B[idx(r,c)];if(!pc||pc.p!==player)continue;
+      var m=pieceMoves(r,c);
+      m.jump.forEach(function(j){jumps.push({from:[r,c],to:j.to,cap:j.cap});});
+      m.step.forEach(function(s){steps.push({from:[r,c],to:s,cap:null});});
+    }
+    return jumps.length?jumps:steps; // mandatory capture
+  }
+  function render(){
+    boardEl.innerHTML="";
+    var moveTos=legal.map(function(m){return m.to[0]+","+m.to[1];});
+    for(var r=0;r<8;r++)for(var c=0;c<8;c++){
+      var sq=document.createElement("div");
+      sq.className="sq "+((r+c)%2===1?"dark":"light");
+      if(sel&&sel[0]===r&&sel[1]===c)sq.className+=" sel";
+      var isMove=moveTos.indexOf(r+","+c)>=0;
+      if(isMove){sq.className+=" move";sq.dataset.mr=r;sq.dataset.mc=c;
+        sq.addEventListener("click",onMoveTo);}
+      var pc=B[idx(r,c)];
+      if(pc){var d=document.createElement("div");
+        d.className="pc "+(pc.p===1?"you":"cpu")+(pc.k?" king":"");
+        d.dataset.r=r;d.dataset.c=c;
+        if(pc.p===1&&turn===1&&!locked)d.addEventListener("click",onPick);
+        sq.appendChild(d);}
+      boardEl.appendChild(sq);
+    }
+  }
+  function onPick(e){
+    e.stopPropagation();
+    var r=+this.dataset.r,c=+this.dataset.c;
+    var all=allMoves(1);
+    var mine=all.filter(function(m){return m.from[0]===r&&m.from[1]===c;});
+    if(!mine.length)return;
+    sel=[r,c];legal=mine;render();
+  }
+  function onMoveTo(){
+    var r=+this.dataset.mr,c=+this.dataset.mc;
+    var mv=legal.find(function(m){return m.to[0]===r&&m.to[1]===c;});
+    if(!mv)return;
+    applyMove(mv,1,function(){
+      sel=null;legal=[];
+      if(checkEnd())return;
+      turn=-1;locked=true;render();
+      setTimeout(cpuTurn,420);
+    });
+  }
+  function applyMove(mv,player,done){
+    var fp=idx(mv.from[0],mv.from[1]),tp=idx(mv.to[0],mv.to[1]);
+    var pc=B[fp];B[fp]=null;B[tp]=pc;
+    if(mv.cap)B[idx(mv.cap[0],mv.cap[1])]=null;
+    // crown
+    if(!pc.k&&((player===1&&mv.to[0]===0)||(player===-1&&mv.to[0]===7)))pc.k=true;
+    render();
+    // multi-jump continuation
+    if(mv.cap&&!( !pc.k && ((player===1&&mv.to[0]===0)||(player===-1&&mv.to[0]===7)) )){
+      var more=pieceMoves(mv.to[0],mv.to[1]).jump;
+      if(more.length){
+        if(player===1){
+          sel=[mv.to[0],mv.to[1]];
+          legal=more.map(function(j){return {from:[mv.to[0],mv.to[1]],to:j.to,cap:j.cap};});
+          render();return; // wait for player to continue
+        }else{
+          var j=more[0];
+          return setTimeout(function(){applyMove({from:[mv.to[0],mv.to[1]],to:j.to,cap:j.cap},-1,done);},380);
+        }
+      }
+    }
+    done&&done();
+  }
+  function cpuTurn(){
+    var all=allMoves(-1);
+    if(!all.length){win();return;}
+    // simple heuristic: prefer captures (already forced), then advancing / king-making, else random
+    var caps=all.filter(function(m){return m.cap;});
+    var pool=caps.length?caps:all;
+    var best=pool[0],bestScore=-1e9;
+    pool.forEach(function(m){
+      var s=Math.random();
+      if(m.cap)s+=10;
+      if(m.to[0]===7)s+=3; // crown
+      s+=(7-m.to[0])*0.05; // advance toward you
+      if(s>bestScore){bestScore=s;best=m;}
+    });
+    applyMove(best,-1,function(){
+      if(checkEnd())return;
+      turn=1;locked=false;render();
+    });
+  }
+  function checkEnd(){
+    var youLeft=B.some(function(p){return p&&p.p===1;});
+    var cpuLeft=B.some(function(p){return p&&p.p===-1;});
+    if(!cpuLeft){win();return true;}
+    if(!youLeft){lose();return true;}
+    // stalemate: current player to move has no moves
+    var next=turn===1?-1:1;
+    if(!allMoves(next).length){ if(next===1)lose(); else win(); return true; }
+    return false;
+  }
+  function win(){locked=true;wins++;localStorage.setItem("ocheckers.wins",String(wins));
+    document.getElementById("wins").textContent=wins;
+    msg.textContent="You win!";msg.className="msg win";render();}
+  function lose(){locked=true;msg.textContent="Red wins \u2014 try again.";msg.className="msg lose";render();}
+  document.getElementById("new").addEventListener("click",fresh);
+  fresh();
+})();
+</script>
+</body>
+</html>

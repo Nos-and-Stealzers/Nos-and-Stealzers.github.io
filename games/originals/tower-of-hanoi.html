@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Tower of Hanoi</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:14px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(520px,96vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#4dd9ff;}
+  .pegs{width:min(520px,96vw);display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+    height:min(46vh,300px);}
+  .peg{position:relative;display:flex;flex-direction:column-reverse;align-items:center;
+    justify-content:flex-start;gap:4px;padding-bottom:12px;cursor:pointer;border-radius:8px;}
+  .peg::before{content:"";position:absolute;bottom:0;left:8%;right:8%;height:8px;background:#35373f;border-radius:4px;}
+  .peg::after{content:"";position:absolute;bottom:8px;width:8px;top:8%;background:#35373f;border-radius:4px;}
+  .peg.sel{background:rgba(77,217,255,.08);box-shadow:inset 0 0 0 2px #4dd9ff;}
+  .disk{height:24px;border-radius:5px;z-index:1;box-shadow:0 2px 4px rgba(0,0,0,.5);}
+  .disk.lift{outline:2px solid #fff;}
+  .msg{min-height:20px;font-weight:700;text-align:center;}
+  .msg.win{color:#3fb950;}
+  .row{display:flex;gap:8px;width:min(520px,96vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:11px;
+    font:inherit;cursor:pointer;border-radius:6px;}
+  button:hover{border-color:#4dd9ff;color:#4dd9ff;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:520px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Tower of Hanoi</h1><div class="sc">moves <b id="moves">0</b> &middot; best <b id="best">\u2014</b></div></div>
+  <div class="pegs" id="pegs"></div>
+  <div class="msg" id="msg">Move the whole stack to the right peg.</div>
+  <div class="row"><button id="new">Reset</button><button id="disks" data-n="4">Disks: 4</button></div>
+  <div class="hint">Tap a peg to lift its top disk, tap another to drop it. A larger disk can never sit on a smaller one. Minimum is 2&#8319;\u22121 moves.</div>
+<script>
+(function(){
+  "use strict";
+  var COLORS=["#ff5c66","#f2b705","#3fb950","#4dd9ff","#b06cff","#ff8a3d","#ff6fae"];
+  var pegsEl=document.getElementById("pegs"),msg=document.getElementById("msg");
+  var movesEl=document.getElementById("moves"),bestEl=document.getElementById("best");
+  var disksBtn=document.getElementById("disks");
+  var N=4,pegs,moves,sel,over;
+  var best=JSON.parse(localStorage.getItem("ohanoi.best")||"{}");
+  function fresh(){
+    pegs=[[],[],[]];
+    for(var i=N;i>=1;i--)pegs[0].push(i);
+    moves=0;sel=null;over=false;
+    movesEl.textContent=0;bestEl.textContent=best[N]||"\u2014";
+    msg.textContent="Move the whole stack to the right peg.";msg.className="msg";
+    render();
+  }
+  function render(){
+    pegsEl.innerHTML="";
+    for(var p=0;p<3;p++){
+      var el=document.createElement("div");el.className="peg"+(sel===p?" sel":"");
+      el.dataset.p=p;el.addEventListener("click",onPeg);
+      pegs[p].forEach(function(size,i){
+        var d=document.createElement("div");d.className="disk";
+        if(sel===p&&i===pegs[p].length-1)d.className+=" lift";
+        d.style.width=(28+size/N*66)+"%";
+        d.style.background=COLORS[(size-1)%COLORS.length];
+        el.appendChild(d);
+      });
+      pegsEl.appendChild(el);
+    }
+  }
+  function onPeg(){
+    if(over)return;
+    var p=+this.dataset.p;
+    if(sel===null){if(!pegs[p].length)return;sel=p;render();return;}
+    if(sel===p){sel=null;render();return;}
+    var from=pegs[sel],to=pegs[p];
+    var disk=from[from.length-1];
+    if(to.length&&to[to.length-1]<disk){
+      msg.textContent="Can't place a larger disk on a smaller one.";
+      sel=null;render();
+      setTimeout(function(){if(!over){msg.textContent="Move the whole stack to the right peg.";}},900);
+      return;
+    }
+    to.push(from.pop());moves++;movesEl.textContent=moves;sel=null;render();
+    if(pegs[2].length===N){
+      over=true;
+      var min=Math.pow(2,N)-1;
+      msg.textContent="Solved in "+moves+" moves! (min "+min+")";msg.className="msg win";
+      if(!best[N]||moves<best[N]){best[N]=moves;localStorage.setItem("ohanoi.best",JSON.stringify(best));
+        bestEl.textContent=moves;}
+    }
+  }
+  document.getElementById("new").addEventListener("click",fresh);
+  disksBtn.addEventListener("click",function(){
+    N=N>=6?3:N+1;this.textContent="Disks: "+N;fresh();});
+  fresh();
+})();
+</script>
+</body>
+</html>

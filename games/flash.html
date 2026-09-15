@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flash Player</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d10; overflow: hidden; }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage ruffle-player, #stage > * { width: 100%; height: 100%; }
+  .msg {
+    color: #cbd5e1; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-align: center; max-width: 34ch; padding: 24px;
+  }
+  .msg b { color: #f1f5f9; display: block; margin-bottom: 6px; font-size: 17px; }
+  .spin {
+    width: 34px; height: 34px; margin: 0 auto 16px; border-radius: 50%;
+    border: 3px solid #263041; border-top-color: #f97316; animation: r 0.8s linear infinite;
+  }
+  @keyframes r { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="msg" id="boot"><div class="spin"></div>Loading Flash player…</div>
+</div>
+
+<script>
+/* Self-hosted Flash player.
+ *
+ * Runs any .swf through Ruffle (the open-source Flash emulator), loaded from
+ * the official jsDelivr package — this replaces the dead third-party Ruffle
+ * CDN the old Flash pages depended on, which is why they had stopped working.
+ *
+ * Usage:  flash.html?swf=<absolute-or-relative url to a .swf>
+ * The SWF url must be same-origin OR served with permissive CORS; the arcade's
+ * Flash SWFs live on GitHub Pages, which sends Access-Control-Allow-Origin: *.
+ */
+(function () {
+  "use strict";
+  var stage = document.getElementById("stage");
+  var boot  = document.getElementById("boot");
+
+  function fail(title, detail) {
+    stage.innerHTML =
+      '<div class="msg"><b>' + title + '</b>' + (detail || "") + '</div>';
+  }
+
+  var params = new URLSearchParams(location.search);
+  var swf = params.get("swf") || params.get("url") || params.get("src");
+  if (!swf) { fail("No game specified", "This player needs a ?swf= link."); return; }
+
+  /* Only allow http(s) targets — no javascript:, data:, etc. */
+  if (!/^https?:\/\//i.test(swf) && swf.charAt(0) !== "/" && !/^[\w.-]+\//.test(swf)) {
+    fail("Invalid game link", ""); return;
+  }
+
+  var RUFFLE = "https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@latest/ruffle.js";
+
+  var s = document.createElement("script");
+  s.src = RUFFLE;
+  s.onload = start;
+  s.onerror = function () {
+    fail("Couldn't load the Flash player",
+      "The Ruffle emulator failed to download. Check your connection and reload.");
+  };
+  document.head.appendChild(s);
+
+  function start() {
+    try {
+      var ruffle = window.RufflePlayer && window.RufflePlayer.newest
+        ? window.RufflePlayer.newest() : null;
+      if (!ruffle) { fail("Flash player unavailable", ""); return; }
+
+      var player = ruffle.createPlayer();
+      stage.innerHTML = "";
+      stage.appendChild(player);
+
+      /* Sensible defaults for arcade play: fill the frame, autoplay, no Ruffle
+         context menu leaking our internals, letterbox so nothing is cropped. */
+      player.load({
+        url: swf,
+        autoplay: "on",
+        unmuteOverlay: "visible",
+        letterbox: "on",
+        contextMenu: "off",
+        scale: "showAll",
+        wmode: "opaque",
+        allowScriptAccess: false,
+        favorLocalstorage: true,
+        splashScreen: false
+      }).catch(function (e) {
+        fail("This Flash game couldn't start",
+          "The game file may be missing or unsupported. (" +
+          (e && e.message ? e.message : "load error") + ")");
+      });
+
+      /* Keep focus in the game so keyboard controls work immediately. */
+      window.setTimeout(function () { try { player.focus(); } catch (x) {} }, 300);
+    } catch (e) {
+      fail("Flash player error", e && e.message ? e.message : "");
+    }
+  }
+})();
+</script>
+</body>
+</html>

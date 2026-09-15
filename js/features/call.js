@@ -123,7 +123,17 @@
      see who is actually connected — a black rectangle is worse than a name. */
   function tileFor(userId, label) {
     var peer = state.peers[userId];
-    if (peer && peer.el) return peer.el;
+    if (peer && peer.el && peer.el.isConnected) return peer.el;
+
+    /* Self isn't tracked in state.peers, and a reconnecting peer may have lost
+       its entry, so also reuse any tile already in the DOM for this id. Without
+       this, toggling camera / screen share (which each call tileFor again) kept
+       stamping out a fresh duplicate tile for the same person. */
+    var existing = tiles.querySelector('[data-peer="' + String(userId) + '"]');
+    if (existing) {
+      if (peer) peer.el = existing;
+      return existing;
+    }
 
     var tile = el("div", "calltile");
     tile.dataset.peer = String(userId);
@@ -363,6 +373,28 @@
       var s = state.screen.getVideoTracks()[0];
       if (s) pc.addTrack(s, state.screen);
     }
+
+    /* Guarantee exactly one bidirectional video channel up front, even on an
+       audio-only call. Two payoffs:
+        - a camera or screen turned on later is a plain replaceTrack (no
+          renegotiation, which this simple signaller doesn't do reliably), and
+        - the OTHER side's camera, added the same way, arrives over an
+          already-negotiated receive channel — which is why remote video had
+          stopped showing up. */
+    var hasVideoSender = pc.getSenders().some(function (s2) {
+      return s2.track && s2.track.kind === "video";
+    });
+    if (!hasVideoSender) {
+      try { pc.addTransceiver("video", { direction: "sendrecv" }); } catch (e) {}
+    }
+
+    /* Safety net: if anything still forces a renegotiation, only the side that
+       owns the offer for this pair acts, so the two ends can't offer at once. */
+    pc.addEventListener("negotiationneeded", function () {
+      if (!shouldOffer(userId)) return;
+      if (pc.signalingState !== "stable") return;
+      offerTo(userId);
+    });
 
     pc.addEventListener("icecandidate", function (e) {
       if (e.candidate) send(userId, "ice", e.candidate.toJSON());

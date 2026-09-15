@@ -27,7 +27,7 @@
   "use strict";
 
   /* Only these domains cloak. endsWith covers apex + www. */
-  var CLOAK_SUFFIXES = ["securlyfex.online", "securlyfex.site"];
+  var CLOAK_SUFFIXES = ["securlyfex.online", "securlyfex.site", "securly.site"];
   var host = String(location.hostname || "").toLowerCase();
   var onCloak = CLOAK_SUFFIXES.some(function (s) {
     return host === s || host === "www." + s || host.indexOf(s) === host.length - s.length;

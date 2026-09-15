@@ -42,8 +42,22 @@
       <div class="block-head">
         <h2 id="pin-h">Pinned</h2>
         <span class="fill"></span>
+        <div class="pin-tools" id="pin-tools" hidden>
+          <button class="btn btn-flat" type="button" id="pin-shuffle" title="Play a random pinned game">▶ Play a pin</button>
+          <label class="pin-sort">
+            <span class="sr-only">Sort pinned</span>
+            <select id="pin-sort" aria-label="Sort pinned games">
+              <option value="custom">My order</option>
+              <option value="az">A–Z</option>
+              <option value="za">Z–A</option>
+              <option value="played">Most played</option>
+              <option value="recent">Recently played</option>
+            </select>
+          </label>
+        </div>
         <a class="more" href="browse.html?fav=1">Filter in index →</a>
       </div>
+      <p class="pin-hint" id="pin-hint" hidden>Drag cards to arrange your order.</p>
       <div class="grid" id="g-pinned"></div>
     </section>
 

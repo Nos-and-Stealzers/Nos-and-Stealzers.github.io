@@ -173,6 +173,18 @@
       return at === -1;
     },
 
+    /* Persist a re-ordered pin list (drag-to-arrange on the Pinned page).
+       Filters to ids that are still real favorites so a stale drag can't
+       inject or drop entries. */
+    setFavorites: function (ids) {
+      var current = Store.favorites();
+      var clean = ids.filter(function (id) { return current.indexOf(id) !== -1; });
+      /* keep any favorite the incoming list somehow missed, at the end */
+      current.forEach(function (id) { if (clean.indexOf(id) === -1) clean.push(id); });
+      write("favorites", clean);
+      return clean;
+    },
+
     /* ---------------- recents ---------------- */
 
     recents: function () { return read("recents", []); },

@@ -712,6 +712,26 @@ select { cursor: pointer; }
 html[data-motion="off"] .tile.fx-tilt::before,
 html[data-lite="on"] .tile.fx-tilt::before { display: none; }
 
+/* --- Pinned page toolbar + drag-to-reorder ------------------------------- */
+.pin-tools { display: flex; align-items: center; gap: 0.5rem; }
+.pin-sort select {
+  font: inherit; font-size: 0.82rem;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r);
+  padding: 0.3rem 0.5rem; cursor: pointer;
+}
+.pin-hint {
+  margin: 0 0 0.7rem; font-size: 0.8rem; color: var(--ink-3);
+  font-family: var(--mono); letter-spacing: 0.02em;
+}
+.tile.is-draggable { cursor: grab; }
+.tile.is-draggable:active { cursor: grabbing; }
+.tile.is-dragging {
+  opacity: 0.55; outline: 2px dashed var(--accent); outline-offset: -2px;
+}
+/* A dragged card shouldn't also tilt. */
+.tile.is-dragging { transform: none !important; }
+
 .tile-no {
   position: absolute; top: 0; left: 0; z-index: 2;
   font-family: var(--mono); font-size: 0.64rem; font-weight: 700;

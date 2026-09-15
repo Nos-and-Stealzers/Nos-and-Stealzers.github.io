@@ -65,6 +65,8 @@ router.get("/feedback/mine", A.requireUser, (req, res) => {
 
 /* ------------------------------------------------------------ moderation */
 
+/* Owner outranks admin, so it must be allowed everywhere admin is — leaving
+   it out here locked the highest account out of the feedback queue. */
 const staff = A.requireRole("owner", "admin", "mod");
 
 router.get("/admin/feedback", staff, (req, res) => {

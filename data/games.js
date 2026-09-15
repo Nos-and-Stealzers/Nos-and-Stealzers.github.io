@@ -23028,5 +23028,19 @@ window.GAME_CATALOG = [
     "embed": "allowed",
     "schoolRisk": "low",
     "featured": false
+  },
+  {
+    "id": "polytrack-modded",
+    "title": "PolyTrack (Modded)",
+    "category": "racing",
+    "description": "Low-poly TrackMania-style racer with loops, jumps and a track editor. Modded build with 50+ tracks that plays right in the page. Unofficial unblocked mod; original by Kodub.",
+    "gradient": "linear-gradient(135deg, #22d3ee, #0e5f6b)",
+    "source": "https://nos-and-stealzers.github.io/polytrack/",
+    "direct": "https://nos-and-stealzers.github.io/polytrack/",
+    "platform": "web",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "host": "polytrack",
+    "notice": "Unofficial mod / reupload for unblocked play. Original game by Kodub — play the official version at https://www.crazygames.com/game/polytrack"
   }
 ];

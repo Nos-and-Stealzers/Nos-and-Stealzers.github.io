@@ -668,6 +668,50 @@ select { cursor: pointer; }
 .tile:hover .tile-art > img.badge,
 .tile:focus-within .tile-art > img.badge { transform: scale(1.09); }
 
+/* --- 3D pointer tilt (motion-fx.js) -------------------------------------- */
+/* The card becomes a 3D stage while the pointer is over it; children can sit
+   on nearer planes. transform-style must be preserved for the art lift to
+   read as depth rather than a flat scale. A soft light tracks the cursor via
+   --mx/--my. Everything here is transform/opacity only, so it composites on
+   the GPU. When motion is off / lite / reduced, motion-fx.js never adds the
+   class, so none of this engages. */
+.tile.fx-tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.08s ease-out;
+  z-index: 5;
+}
+.tile.fx-tilt .tile-art {
+  transform-style: preserve-3d;
+  transition: transform 0.12s ease-out;
+}
+.tile.fx-tilt::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 4;
+  border-radius: var(--r);
+  pointer-events: none;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--accent) 22%, transparent),
+    transparent 60%
+  );
+  opacity: 0.7;
+  mix-blend-mode: soft-light;
+}
+/* Return glide when the pointer leaves (class removed): a slightly longer,
+   eased settle so cards don't snap flat. */
+.grid .tile, .grid-sm .tile, .strip .tile { transition: transform 0.3s ease; }
+.marquee.fx-tilt { transform-style: preserve-3d; transition: transform 0.1s ease-out; }
+.marquee.fx-tilt .marquee-art { transition: transform 0.14s ease-out; }
+/* Older engines without color-mix still get a usable (accent-less) glow. */
+@supports not (background: color-mix(in srgb, red, blue)) {
+  .tile.fx-tilt::before {
+    background: radial-gradient(240px circle at var(--mx,50%) var(--my,50%),
+      rgba(255,255,255,0.18), transparent 60%);
+  }
+}
+html[data-motion="off"] .tile.fx-tilt::before,
+html[data-lite="on"] .tile.fx-tilt::before { display: none; }
+
 .tile-no {
   position: absolute; top: 0; left: 0; z-index: 2;
   font-family: var(--mono); font-size: 0.64rem; font-weight: 700;

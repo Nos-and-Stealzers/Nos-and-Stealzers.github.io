@@ -8,15 +8,12 @@
   var el = window.UI.el;
 
   var NAV = [
-    { href: "index.html", icon: "◧", label: "Overview" },
+    { href: "index.html", icon: "◧", label: "Home" },
     { href: "browse.html", icon: "▤", label: "All games", count: function () { return window.Catalog.all.length; } },
     { href: "categories.html", icon: "◫", label: "Categories", count: function () { return window.Catalog.categories.length; } },
     { href: "library.html", icon: "★", label: "Pinned", count: function () { return window.Store.favorites().length; } },
     { href: "campus-plus.html", icon: "▶", label: "Campus+" },
-    { href: "stats.html", icon: "◔", label: "Activity" },
-    { href: "feedback.html", icon: "✎", label: "Feedback" },
-    { href: "support.html", icon: "☂", label: "Support" },
-    { href: "about.html", icon: "?", label: "Manual" }
+    { href: "stats.html", icon: "◔", label: "Activity" }
   ];
 
   /* Social always shows once a backend answers, signed in or not — hiding it
@@ -37,7 +34,7 @@
   var TABS = [
     { href: "index.html", icon: "◧", label: "Home" },
     { href: "browse.html", icon: "▤", label: "Games" },
-    { href: "categories.html", icon: "◫", label: "Cats" },
+    { href: "categories.html", icon: "◫", label: "Categories" },
     { href: "library.html", icon: "★", label: "Pinned" },
     { href: "stats.html", icon: "◔", label: "You" }
   ];
@@ -60,7 +57,7 @@
     brand.appendChild(el("span", "mark", SITE.mark));
     var names = el("span");
     names.appendChild(el("span", "name", SITE.name));
-    names.appendChild(el("span", "sub", SITE.build + " · " + SITE.domain));
+    names.appendChild(el("span", "sub", "Pick a game. Make it yours."));
     brand.appendChild(names);
     aside.appendChild(brand);
 
@@ -99,17 +96,20 @@
     account.id = "rail-account-nav";
     nav.appendChild(account);
 
-    nav.appendChild(el("span", "label", "Shortlists"));
+    var extras = el("details", "rail-extras");
+    extras.appendChild(el("summary", null, "More ways to explore"));
     [
-      { href: "browse.html?embed=1", icon: "▶", label: "Plays in page",
-        count: function () { return window.Catalog.filter({ embeddableOnly: true }).length; } },
-      { href: "browse.html?risk=low", icon: "✓", label: "Stable only",
-        count: function () { return window.Catalog.filter({ lowRiskOnly: true }).length; } },
-      { href: "browse.html?sort=random", icon: "⇄", label: "Shuffled" },
-      { href: "browse.html?sort=played", icon: "▲", label: "Your most played" }
+      { href: "browse.html?embed=1", icon: "▶", label: "Play in this tab" },
+      { href: "browse.html?risk=low", icon: "✓", label: "Reliable games" },
+      { href: "browse.html?sort=played", icon: "◔", label: "Most played" },
+      { href: "feedback.html", icon: "✎", label: "Send feedback" },
+      { href: "support.html", icon: "?", label: "Help & support" },
+      { href: "about.html", icon: "ⓘ", label: "About the arcade" }
     ].forEach(function (item) {
-      nav.appendChild(navLink(item, ""));
+      if (item.href === here) extras.open = true;
+      extras.appendChild(navLink(item, here));
     });
+    nav.appendChild(extras);
 
     aside.appendChild(nav);
 

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Light Cycles</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(460px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  canvas{background:#111318;border:1px solid #2a2c33;width:min(460px,94vw);height:auto;touch-action:none;image-rendering:pixelated;}
+  .row{display:flex;gap:8px;width:min(460px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+  .over{color:#c02a3f;font-weight:700;min-height:16px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Light Cycles</h1><div class="sc">wins <b id="w">0</b> &middot; best <b id="b">0</b></div></div>
+  <canvas id="c" width="440" height="440"></canvas>
+  <div class="over" id="over"></div>
+  <div class="row"><button id="start">New round</button><button id="pause">Pause</button></div>
+  <div class="hint">You are cyan. Turn to survive; walls and trails are death. Beat the amber AI. Arrows / WASD &middot; swipe on touch &middot; Space to pause</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var G=44,CELL=cv.width/G;
+  var grid,p,ai,timer=null,speed=70,running=false,dead=false;
+  var wins=0,best=+(localStorage.getItem("olightcycles.best")||0);
+  document.getElementById("b").textContent=best;
+
+  function reset(){
+    grid=new Array(G*G).fill(0);
+    p={x:8,y:22,dx:1,dy:0,alive:true};
+    ai={x:35,y:22,dx:-1,dy:0,alive:true};
+    grid[idx(p.x,p.y)]=1;grid[idx(ai.x,ai.y)]=2;
+    dead=false;document.getElementById("over").textContent="";
+    draw();run();
+  }
+  function idx(x,y){return y*G+x;}
+  function free(x,y){return x>=0&&y>=0&&x<G&&y<G&&grid[idx(x,y)]===0;}
+  function run(){running=true;document.getElementById("pause").textContent="Pause";
+    clearInterval(timer);timer=setInterval(tick,speed);}
+  function stop(){running=false;document.getElementById("pause").textContent="Resume";clearInterval(timer);}
+
+  function aiThink(){
+    // greedy: keep going straight if safe, else turn to side with most open space
+    var opts=[[ai.dx,ai.dy],[ai.dy,-ai.dx],[-ai.dy,ai.dx]];
+    var bestOpt=null,bestScore=-1;
+    for(var i=0;i<opts.length;i++){
+      var nx=ai.x+opts[i][0],ny=ai.y+opts[i][1];
+      if(!free(nx,ny))continue;
+      var sc=flood(nx,ny)+(i===0?2:0);
+      if(sc>bestScore){bestScore=sc;bestOpt=opts[i];}
+    }
+    if(bestOpt){ai.dx=bestOpt[0];ai.dy=bestOpt[1];}
+  }
+  function flood(sx,sy){
+    // bounded flood fill to estimate open space
+    var seen={},stack=[[sx,sy]],n=0;
+    while(stack.length&&n<60){
+      var cur=stack.pop(),x=cur[0],y=cur[1],k=x+","+y;
+      if(seen[k]||!free(x,y))continue;seen[k]=1;n++;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+    return n;
+  }
+  function step(who,val){
+    var nx=who.x+who.dx,ny=who.y+who.dy;
+    if(!free(nx,ny)){who.alive=false;return;}
+    who.x=nx;who.y=ny;grid[idx(nx,ny)]=val;
+  }
+  function tick(){
+    aiThink();
+    step(p,1);step(ai,2);
+    // head-on same cell
+    if(p.x===ai.x&&p.y===ai.y){p.alive=false;ai.alive=false;}
+    draw();
+    if(!p.alive||!ai.alive){
+      dead=true;stop();
+      var msg;
+      if(p.alive&&!ai.alive){wins++;document.getElementById("w").textContent=wins;
+        if(wins>best){best=wins;localStorage.setItem("olightcycles.best",best);document.getElementById("b").textContent=best;}
+        msg="You win! \u2014 New round";}
+      else if(!p.alive&&ai.alive){wins=0;document.getElementById("w").textContent=0;msg="You crashed \u2014 New round";}
+      else {msg="Draw \u2014 New round";}
+      document.getElementById("over").style.color=p.alive&&!ai.alive?"#3fb950":"#c02a3f";
+      document.getElementById("over").textContent=msg;
+    }
+  }
+  function draw(){
+    ctx.fillStyle="#111318";ctx.fillRect(0,0,cv.width,cv.height);
+    for(var y=0;y<G;y++)for(var x=0;x<G;x++){
+      var v=grid[idx(x,y)];if(!v)continue;
+      ctx.fillStyle=v===1?"#2b6fff":"#c99a1e";
+      ctx.fillRect(x*CELL,y*CELL,CELL,CELL);
+    }
+    ctx.fillStyle="#7fd4ff";ctx.fillRect(p.x*CELL,p.y*CELL,CELL,CELL);
+    ctx.fillStyle="#f2c94c";ctx.fillRect(ai.x*CELL,ai.y*CELL,CELL,CELL);
+  }
+  function turn(dx,dy){
+    if((dx&&p.dx)||(dy&&p.dy))return; // no reverse/same-axis
+    p.dx=dx;p.dy=dy;
+  }
+  document.addEventListener("keydown",function(e){
+    var k=e.key.toLowerCase();
+    if(k==="arrowup"||k==="w"){turn(0,-1);e.preventDefault();}
+    else if(k==="arrowdown"||k==="s"){turn(0,1);e.preventDefault();}
+    else if(k==="arrowleft"||k==="a"){turn(-1,0);e.preventDefault();}
+    else if(k==="arrowright"||k==="d"){turn(1,0);e.preventDefault();}
+    else if(k===" "){e.preventDefault();if(!dead){running?stop():run();}}
+  });
+  var sx,sy;
+  cv.addEventListener("touchstart",function(e){var t=e.touches[0];sx=t.clientX;sy=t.clientY;e.preventDefault();},{passive:false});
+  cv.addEventListener("touchend",function(e){
+    if(sx==null)return;var t=e.changedTouches[0];var dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.max(Math.abs(dx),Math.abs(dy))<20)return;
+    if(Math.abs(dx)>Math.abs(dy))turn(dx>0?1:-1,0);else turn(0,dy>0?1:-1);
+    sx=sy=null;
+  },{passive:true});
+  document.getElementById("start").addEventListener("click",reset);
+  document.getElementById("pause").addEventListener("click",function(){if(!dead)running?stop():run();});
+  reset();
+})();
+</script>
+</body>
+</html>

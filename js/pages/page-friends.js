@@ -119,8 +119,9 @@
       var results = document.getElementById("results");
       var hint = document.getElementById("find-hint");
 
+      var searchSeq = 0;
       function looksLikeCode(v) {
-        return /^[A-Za-z0-9]{3}[- ]?[A-Za-z0-9]{3}$/.test(v.trim());
+        return /^[A-Za-z0-9]{3}[- ][A-Za-z0-9]{3}$/.test(v.trim());
       }
 
       function show(users) {
@@ -130,48 +131,44 @@
         });
       }
 
+      function search() {
+        var value = findBox.value.trim();
+        var seq = ++searchSeq;
+        results.innerHTML = "";
+        if (value.replace(/^@/, "").length < 2) {
+          hint.textContent = "Type at least two characters, or use a code with a dash: ABC-123.";
+          results.removeAttribute("aria-busy");
+          return Promise.resolve();
+        }
+        hint.textContent = "Searching…";
+        results.setAttribute("aria-busy", "true");
+        var request = looksLikeCode(value)
+          ? API.lookupCode(value).then(function (res) {
+              return { users: [Object.assign({}, res.user, { relation: res.relation })] };
+            })
+          : API.searchUsers(value.replace(/^@/, ""));
+        return request.then(function (res) {
+          if (seq !== searchSeq || value !== findBox.value.trim()) return;
+          hint.textContent = res.users.length
+            ? res.users.length + " found. Choose who to add below."
+            : "No people found. Check the username or try their friend code (ABC-123).";
+          show(res.users);
+        }).catch(function (err) {
+          if (seq === searchSeq) hint.textContent = err.message || "Search failed. Try again.";
+        }).then(function () {
+          if (seq === searchSeq) results.removeAttribute("aria-busy");
+        });
+      }
       document.getElementById("add-form").addEventListener("submit", function (event) {
         event.preventDefault();
-        var value = findBox.value.trim();
-        if (!value) return;
-
-        /* A code is exact, so resolve it and show who it belongs to before
-           firing off a request — you should see who you're adding. */
-        if (looksLikeCode(value)) {
-          API.lookupCode(value).then(function (res) {
-            hint.textContent = "Found @" + res.user.username + ".";
-            show([Object.assign(res.user, { relation: res.relation })]);
-          }).catch(function (err) {
-            hint.textContent = err.message;
-            results.innerHTML = "";
-          });
-          return;
-        }
-
-        handlers.add({ username: value.replace(/^@/, "") })
-          .then(function () { findBox.value = ""; results.innerHTML = ""; })
-          .catch(function (err) { hint.textContent = err.message; });
+        search();
       });
-
-      findBox.addEventListener("input", UI.debounce(function () {
-        var q = findBox.value.trim();
-        if (looksLikeCode(q)) {
-          hint.textContent = "Looks like a friend code — press enter to look it up.";
-          results.innerHTML = "";
-          return;
-        }
-        if (q.length < 2) {
-          results.innerHTML = "";
-          hint.textContent = "Start typing to search, or paste a code like ABC-123 and hit enter.";
-          return;
-        }
-        API.searchUsers(q).then(function (res) {
-          hint.textContent = res.users.length
-            ? res.users.length + " match" + (res.users.length === 1 ? "" : "es")
-            : "Nobody by that name. If they gave you a code, paste it instead.";
-          show(res.users);
-        }).catch(function (err) { hint.textContent = err.message; });
-      }, 220));
+      var delayedSearch = UI.debounce(search, 220);
+      findBox.addEventListener("input", function () {
+        ++searchSeq; // invalidate immediately, not after the debounce delay
+        results.innerHTML = "";
+        delayedSearch();
+      });
 
       /* ---- lists ---- */
       function load() {

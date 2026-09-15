@@ -101,6 +101,35 @@ app.use("/api", (req, res) => res.status(404).json({ error: "No such endpoint." 
 
 /* --------------------------------------------------------- static frontend */
 
+/* The bundled server is a complete deployment, not a static preview of a
+   different provider. Leave the on-disk config unchanged for static hosting. */
+app.get("/js/core/config.js", (req, res, next) => {
+  require("fs").readFile(path.join(SITE, "js/core/config.js"), "utf8", (err, source) => {
+    if (err) return next(err);
+    res.setHeader("Cache-Control", "no-store");
+    res.type("application/javascript").send(source +
+      '\nwindow.SITE.backend = "node"; window.SITE.apiBase = "";\n');
+  });
+});
+
+/* Never expose the database, backend source, SQL or development tooling.
+   Only the deployable frontend directories and root documents are public. */
+app.use((req, res, next) => {
+  let pathname;
+  try { pathname = decodeURIComponent(req.path).replace(/\\/g, "/"); }
+  catch { return res.status(400).end(); }
+  const parts = pathname.split("/").filter(Boolean);
+  const publicDirs = new Set(["assets", "css", "data", "games", "js", "workbench"]);
+  const rootFiles = new Set(["manifest.json", "robots.txt", "sitemap.xml", "sw.js"]);
+  const rootDocument = parts.length === 1 && /^[a-z0-9-]+(?:\.html)?$/i.test(parts[0]);
+  if (parts.some(part => part.startsWith(".")) ||
+      (parts.length && !publicDirs.has(parts[0]) && !rootDocument &&
+       !(parts.length === 1 && rootFiles.has(parts[0])))) {
+    return res.status(404).sendFile(path.join(SITE, "404.html"));
+  }
+  next();
+});
+
 app.use(express.static(SITE, {
   extensions: ["html"],
   setHeaders(res, file) {

@@ -12,19 +12,18 @@
     host.appendChild(art);
 
     var body = UI.el("div", "marquee-body");
-    body.appendChild(UI.el("span", "label", "No. 01 · " + game.categoryLabel));
+    body.appendChild(UI.el("span", "label", "Today’s pick · " + game.categoryLabel));
     var h = UI.el("h2");
     var link = UI.el("a", null, game.title);
     link.href = UI.playHref(game);
     link.style.color = "inherit";
     h.appendChild(link);
     body.appendChild(h);
-    body.appendChild(UI.el("p", null, game.description || "No description on file."));
+    body.appendChild(UI.el("p", null, game.description || "Discover something new in your browser."));
 
     var specs = UI.el("div", "marquee-specs");
-    specs.appendChild(UI.el("span", null, "launch · " + UI.launchLabel(game).toLowerCase()));
-    specs.appendChild(UI.el("span", null, "compat · " + UI.riskLabel(game).toLowerCase()));
-    specs.appendChild(UI.el("span", null, "host · " + game.platform));
+    specs.appendChild(UI.el("span", null, UI.launchLabel(game)));
+    specs.appendChild(UI.el("span", null, UI.riskLabel(game)));
     body.appendChild(specs);
 
     var acts = UI.el("div", "marquee-acts");
@@ -43,6 +42,26 @@
     host.appendChild(body);
   }
 
+  /* A short count-up on the three numeric readouts. It reads as the index
+     tallying itself on arrival rather than a static figure dropped in. Skipped
+     entirely under lite mode or a reduced-motion preference, where the final
+     value is written straight away. */
+  function countUp(node, target) {
+    var reduce = document.documentElement.dataset.lite === "on" ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (reduce || target <= 0) { node.textContent = target; return; }
+    var start = null, dur = Math.min(900, 260 + target * 4);
+    function step(ts) {
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / dur);
+      var eased = 1 - Math.pow(1 - t, 3);      // ease-out cubic
+      node.textContent = Math.round(eased * target);
+      if (t < 1) window.requestAnimationFrame(step);
+      else node.textContent = target;
+    }
+    window.requestAnimationFrame(step);
+  }
+
   function init() {
     var Catalog = window.Catalog;
     var Store = window.Store;
@@ -50,9 +69,9 @@
 
     var inPage = Catalog.all.filter(function (g) { return g.embeddable; });
 
-    document.getElementById("r-games").textContent = Catalog.all.length;
-    document.getElementById("r-cats").textContent = Catalog.categories.length;
-    document.getElementById("r-inpage").textContent = inPage.length;
+    countUp(document.getElementById("r-games"), Catalog.all.length);
+    countUp(document.getElementById("r-cats"), Catalog.categories.length);
+    countUp(document.getElementById("r-inpage"), inPage.length);
     document.getElementById("r-time").textContent = UI.formatDuration(Store.totalSeconds());
     document.getElementById("r-date").textContent =
       new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -79,8 +98,8 @@
 
     document.getElementById("sug-why").textContent = Store.totalPlays()
       ? "based on what you play"
-      : "based on the whole index";
-    UI.render(document.getElementById("g-suggested"), Catalog.forYou(8), { numbered: true });
+      : "A few games to get you started";
+    UI.render(document.getElementById("g-suggested"), Catalog.forYou(8), { numbered: false });
 
     var cats = document.getElementById("g-cats");
     Catalog.categories.forEach(function (cat) {

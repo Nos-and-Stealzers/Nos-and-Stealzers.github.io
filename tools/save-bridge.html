@@ -45,10 +45,8 @@
    * matched dots — so arcadecampushub.online.evil.com satisfied it, and any
    * attacker who registered that could read every save on this origin.
    * A wildcard that spans a dot spans a domain boundary; it must never. */
-  var ALLOWED_PATTERNS = [
-    /^https:\/\/[a-z0-9-]+\.vercel\.app$/i,
-    /^https:\/\/([a-z0-9-]+\.)?arcadecampushub\.online$/i
-  ];
+  // Add exact, trusted preview origins to ALLOWED; never trust all Vercel tenants.
+  var ALLOWED_PATTERNS = [];
 
   function permitted(origin) {
     if (ALLOWED.indexOf(origin) !== -1) return true;
@@ -325,10 +323,12 @@
   }
 
   window.addEventListener("message", function (event) {
-    if (!permitted(event.origin)) return;
+    if (!permitted(event.origin) || event.source !== window.parent || window.parent === window) return;
 
     var msg = event.data;
     if (!msg || msg.channel !== "ach-save-bridge") return;
+    if (!((typeof msg.id === "string" && msg.id.length > 0 && msg.id.length <= 128) ||
+          (typeof msg.id === "number" && Number.isSafeInteger(msg.id) && msg.id > 0))) return;
 
     var reply = { channel: "ach-save-bridge", id: msg.id, ok: true };
 

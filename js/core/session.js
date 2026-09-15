@@ -18,7 +18,40 @@
     document.dispatchEvent(new CustomEvent(name, { detail: detail }));
   }
 
+  var epoch = 0;
+  var revision = 0;
+  var slots = Object.create(null);
+  var OWNER = "ach:save-owner";
+  var owner = "guest";
+  try { owner = window.localStorage.getItem(OWNER) || "guest"; } catch (e) {}
+
+  function identity(next) { return next ? "user:" + String(next.id) : "guest"; }
+  function ownsLocal() {
+    try { return (window.localStorage.getItem(OWNER) || "guest") === owner; }
+    catch (e) { return true; }
+  }
+  function persistLocal() {
+    if (!ownsLocal()) return;
+    var snapshot = window.Store.exportAll();
+    slots[owner] = snapshot;
+    try { window.localStorage.setItem("ach:save-slot:" + owner, JSON.stringify(snapshot)); }
+    catch (e) { emit("session:sync-error", { error: "Local backup storage is unavailable." }); }
+  }
   function setUser(next) {
+    var nextOwner = identity(next);
+    if (nextOwner !== owner) {
+      persistLocal();
+      window.clearTimeout(pushTimer);
+      pushTimer = null;
+      epoch++;
+      revision++;
+      owner = nextOwner;
+      var saved = slots[owner];
+      try { saved = JSON.parse(window.localStorage.getItem("ach:save-slot:" + owner)) || saved; }
+      catch (e) {}
+      window.Store.importAll(saved || { version: 2, favorites: [], recents: [], stats: {}, ratings: {} }, { silent: true });
+      try { window.localStorage.setItem(OWNER, owner); } catch (e) {}
+    }
     user = next || null;
     emit("session:change", { user: user });
     return user;
@@ -28,15 +61,36 @@
 
   /* Push the local save up and adopt whatever the server merges back, so a
      second device never wipes what the first one built up. */
+  var activePush = null;
   function pushSave() {
-    if (!user) return Promise.resolve(null);
-    return window.API.putSave(window.Store.exportAll())
+    if (!user || !ownsLocal()) return Promise.resolve(null);
+    if (activePush && activePush.epoch === epoch) return activePush.promise;
+    window.clearTimeout(pushTimer);
+    pushTimer = null;
+    var started = epoch, changed = revision;
+    persistLocal();
+    var operation = { epoch: started };
+    activePush = operation;
+    operation.promise = Promise.resolve().then(function () {
+      if (started !== epoch || !ownsLocal()) return null;
+      return window.API.putSave(window.Store.exportAll());
+    })
       .then(function (res) {
+        if (!res || started !== epoch || !ownsLocal()) return null;
+        if (changed !== revision) { schedulePush(); return null; }
         window.Store.importAll(res.save, { silent: true });
+        persistLocal();
         emit("session:synced", { at: res.updatedAt });
         return res.save;
       })
-      .catch(function () { return null; });   // offline is not an error here
+      .catch(function (err) {
+        if (started === epoch) emit("session:sync-error", { error: err.message || "Sync failed; local copy retained." });
+        return null;
+      }).then(function (result) {
+        if (activePush === operation) activePush = null;
+        return result;
+      });
+    return operation.promise;
   }
 
   /* Coalesce bursts of local changes into one upload. */
@@ -155,10 +209,17 @@
   /* Any local change while signed in eventually reaches the server. */
   document.addEventListener("store:change", function (event) {
     if (event.detail && event.detail.silent) return;
+    revision++;
+    persistLocal();
     schedulePush();
   });
   window.addEventListener("beforeunload", function () {
     if (user && pushTimer) { window.clearTimeout(pushTimer); pushSave(); }
+  });
+
+  window.addEventListener("online", pushSave);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { persistLocal(); pushSave(); }
   });
 
   boot();

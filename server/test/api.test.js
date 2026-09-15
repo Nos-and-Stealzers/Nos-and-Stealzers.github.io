@@ -12,6 +12,8 @@ const os = require("os");
 const DB = path.join(os.tmpdir(), "arcade-test-" + Date.now() + ".db");
 process.env.ARCADE_DB = DB;
 process.env.NODE_ENV = "test";
+// Keep the bootstrap admin distinct from the configured owner tested below.
+process.env.ARCADE_OWNER = "stealzers";
 
 const app = require("../app");
 
@@ -819,6 +821,15 @@ function client() {
        r.data.user && r.data.user.role);
     ok("owner reports as staff", r.data.user.isStaff === true);
     ok("owner outranks admin", r.data.user.rank === 3);
+
+    r = await own.get("/api/admin/feedback?state=triaged");
+    ok("owner can read the feedback queue", r.status === 200 &&
+       Array.isArray(r.data.feedback), JSON.stringify(r.data));
+    const feedbackId = (await bob.get("/api/feedback/mine")).data.feedback[0].id;
+    r = await own.patch(`/api/admin/feedback/${feedbackId}`, { reply: "Owner reviewed this." });
+    ok("owner can moderate feedback", r.status === 200, JSON.stringify(r.data));
+    r = await bob.get("/api/feedback/mine");
+    ok("owner feedback reply is persisted", r.data.feedback[0].reply === "Owner reviewed this.");
 
     const ownerId = (await admin.get("/api/admin/users")).data.users
       .find((u) => u.username === "Stealzers").id;

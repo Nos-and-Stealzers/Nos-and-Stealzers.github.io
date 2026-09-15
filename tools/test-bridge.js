@@ -78,14 +78,15 @@ function browser({ storage = {}, cookies = {}, pathname = "/" } = {}) {
   vm.runInContext(script, win, { filename: "save-bridge.html" });
 
   let seq = 0;
-  function send(action, extra = {}, origin = HUB) {
+  function send(action, extra = {}, origin = HUB, foreign = false) {
     return new Promise((resolve) => {
       const id = "m" + (++seq);
       const event = {
         origin,
         data: Object.assign({ channel: "ach-save-bridge", id, action }, extra),
-        source: { postMessage: (reply) => resolve(reply) }
+        source: foreign ? { postMessage: resolve } : win.parent
       };
+      win.parent.postMessage = resolve;
       listeners.forEach((fn) => fn(event));
       /* An ignored message never answers; don't hang the suite over it. */
       setTimeout(() => resolve(null), 60);
@@ -103,8 +104,10 @@ function browser({ storage = {}, cookies = {}, pathname = "/" } = {}) {
     ok("a stranger is ignored", (await b.send("ping", {}, "https://evil.example")) === null);
     ok("a lookalike domain is ignored",
        (await b.send("ping", {}, "https://arcadecampushub.online.evil.com")) === null);
-    ok("a vercel preview is answered",
-       !!(await b.send("ping", {}, "https://websitegames-abc123.vercel.app")));
+    ok("unlisted Vercel tenants are ignored",
+       (await b.send("ping", {}, "https://websitegames-abc123.vercel.app")) === null);
+    ok("a same-origin sibling is ignored", (await b.send("ping", {}, HUB, true)) === null);
+    ok("missing request id is ignored", (await b.send("ping", {id:null})) === null);
   }
 
   console.log("\nreading");

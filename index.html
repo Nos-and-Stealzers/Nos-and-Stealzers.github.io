@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Arcade Campus Hub — every playable thing, indexed</title>
+  <title>Arcade Campus Hub — Find your next favorite game</title>
   <meta name="description" content="A local-first browser arcade: hundreds of games with compatibility flags, pinning, playtime tracking and eight skins. No accounts needed, no tracking.">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#0c0d10">
+  <meta name="theme-color" content="#101722">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Arcade Campus Hub">
   <meta property="og:description" content="Hundreds of browser games, indexed. Local-first, no accounts.">
@@ -17,6 +17,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="canonical" href="https://arcadecampushub.online/">
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
 </head>
@@ -26,11 +27,21 @@
 
   <main class="main" id="main">
 
-    <header class="page-head">
-      <span class="label">Overview</span>
-      <h1>Everything playable, in one index.</h1>
-      <p>No launcher, no account, no waiting on someone else's server. What you pin,
-         what you play and how long for stays in this browser.</p>
+    <header class="page-head home-head">
+      <span class="label">Your browser arcade</span>
+      <h1>What will you play today?</h1>
+      <p>Find a new favorite or jump back into a familiar game. Your library starts here.</p>
+      <form class="home-search" role="search" action="browse.html" method="get">
+        <label class="sr-only" for="home-search">Search all games</label>
+        <input type="search" id="home-search" name="q" placeholder="Search games, genres, or a favorite title" autocomplete="off">
+        <button class="btn btn-cta" type="submit">Find a game</button>
+      </form>
+      <div class="home-shortcuts" aria-label="Explore games">
+        <a href="browse.html">Browse all games <span aria-hidden="true">→</span></a>
+        <a href="browse.html?local=1&amp;embed=1">Guaranteed to load</a>
+        <a href="library.html">Your pinned games</a>
+        <a href="browse.html?sort=random">Surprise me</a>
+      </div>
       <div class="readout">
         <span>titles <b id="r-games">—</b></span>
         <span>categories <b id="r-cats">—</b></span>
@@ -51,7 +62,7 @@
 
     <section class="block" id="b-resume" hidden aria-labelledby="resume-h">
       <div class="block-head">
-        <h2 id="resume-h">Resume</h2>
+        <h2 id="resume-h">Recently played</h2>
         <span class="fill"></span>
         <a class="more" href="library.html">History →</a>
       </div>
@@ -78,16 +89,16 @@
 
     <section class="block" aria-labelledby="sug-h">
       <div class="block-head">
-        <h2 id="sug-h">Suggested</h2>
+        <h2 id="sug-h">Picked for you</h2>
         <span class="fill"></span>
-        <span class="more dimmer" id="sug-why">based on the whole index</span>
+        <span class="more dimmer" id="sug-why">A few games to get you started</span>
       </div>
       <div class="grid" id="g-suggested"></div>
     </section>
 
     <section class="block" aria-labelledby="cat-h">
       <div class="block-head">
-        <h2 id="cat-h">Index by category</h2>
+        <h2 id="cat-h">Find your kind of game</h2>
         <span class="fill"></span>
         <a class="more" href="categories.html">All →</a>
       </div>
@@ -96,7 +107,7 @@
 
     <section class="block" aria-labelledby="ip-h">
       <div class="block-head">
-        <h2 id="ip-h">Runs in the page</h2>
+        <h2 id="ip-h">Play right here</h2>
         <span class="fill"></span>
         <a class="more" href="browse.html?embed=1&amp;risk=low">See all →</a>
       </div>

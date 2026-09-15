@@ -65,7 +65,7 @@ router.get("/feedback/mine", A.requireUser, (req, res) => {
 
 /* ------------------------------------------------------------ moderation */
 
-const staff = A.requireRole("admin", "mod");
+const staff = A.requireRole("owner", "admin", "mod");
 
 router.get("/admin/feedback", staff, (req, res) => {
   const state = STATES.includes(req.query.state) ? req.query.state : "new";

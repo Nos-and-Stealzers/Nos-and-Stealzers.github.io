@@ -84,7 +84,8 @@
        could forge a "ready" or a save-bridge reply and inject fake save data
        or resolve a pending request early. */
     var known = Object.keys(frames).some(function (origin) {
-      return frames[origin].iframe.contentWindow === event.source;
+      return frames[origin].iframe.contentWindow === event.source &&
+        event.origin === targetOriginOf(origin);
     });
     if (!known) return;
 
@@ -96,7 +97,7 @@
     }
 
     var pending = waiting[msg.id];
-    if (!pending) return;
+    if (!pending || event.source !== pending.source || event.origin !== pending.origin) return;
     delete waiting[msg.id];
     window.clearTimeout(pending.timer);
     if (msg.ok) pending.resolve(msg);
@@ -160,6 +161,8 @@
       return new Promise(function (resolve, reject) {
         var id = ++seq;
         waiting[id] = {
+          source: entry.iframe.contentWindow,
+          origin: targetOriginOf(origin),
           resolve: resolve,
           reject: reject,
           timer: window.setTimeout(function () {

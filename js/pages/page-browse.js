@@ -136,6 +136,7 @@
         var cat = Catalog.categories.filter(function (c) { return c.id === state.category; })[0];
         return cat ? cat.label : "All games";
       }
+      if (state.local) return "Hosted here";
       if (state.embed) return "Plays in page";
       if (state.risk) return "Stable only";
       return "All games";

@@ -7,6 +7,9 @@
   var lastId = 0;
   var poll = null;
   var pending = null;      // staged image awaiting send
+  var drafts = Object.create(null);
+  var activeId = null;
+  var sending = Object.create(null);
   var openSeq = 0;         // guards against a slow open() landing after a newer one
 
   function init() {
@@ -269,6 +272,15 @@
       }
 
       function open(id) {
+        if (activeId != null) drafts[activeId] = { text: bodyBox.value, image: pending };
+        activeId = id;
+        var draft = drafts[id] || { text: "", image: null };
+        bodyBox.value = draft.text;
+        pending = draft.image;
+        drawPending();
+        current = null;
+        compose.hidden = true;
+        sendBtn.disabled = !!sending[id];
         window.clearInterval(poll);
         lastId = 0;
         log.innerHTML = "";
@@ -322,16 +334,22 @@
         });
       }
 
+      var ticking = null;
       function tick() {
-        if (!current) return;
+        if (!current || ticking === openSeq || document.hidden) return;
+        var seq = openSeq;
+        ticking = seq;
         API.thread(current.id, lastId).then(function (res) {
+          if (seq !== openSeq || !current) return;
           if (!res.messages.length) return;
           var atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
           addMessages(res.messages);
           if (atBottom) log.scrollTop = log.scrollHeight;
           loadList();
           window.Session.refreshBadges();
-        }).catch(function () { /* transient */ });
+        }).catch(function () { /* retry on next poll */ }).then(function () {
+          if (ticking === seq) ticking = null;
+        });
       }
 
       /* ------------------------------------------------------ attaching */
@@ -384,30 +402,39 @@
       function submit(event) {
         if (event) event.preventDefault();
         var text = bodyBox.value.trim();
-        if ((!text && !pending) || !current) return;
+        if ((!text && !pending) || !current || !current.canSend || sending[current.id]) return;
 
+        var id = current.id;
+        var original = bodyBox.value;
         var image = pending;
+        sending[id] = true;
         sendBtn.disabled = true;
 
-        API.send(current.id, text, image).then(function (res) {
-          bodyBox.value = "";
-          bodyBox.style.height = "auto";
-          pending = null;
-          drawPending();
-          addMessages([res.message]);
-          log.scrollTop = log.scrollHeight;
+        API.send(id, text, image).then(function (res) {
+          var saved = drafts[id];
+          if (saved && saved.text === original) saved.text = "";
+          if (saved && saved.image === image) saved.image = null;
+          if (activeId === id) {
+            if (bodyBox.value === original) bodyBox.value = "";
+            if (pending === image) pending = null;
+            drawPending();
+            if (current && current.id === id) {
+              addMessages([res.message]);
+              log.scrollTop = log.scrollHeight;
+            }
+          }
           loadList();
         }).catch(function (err) {
           UI.toast(err.message);
         }).then(function () {
-          sendBtn.disabled = false;
-          bodyBox.focus();
+          delete sending[id];
+          if (activeId === id) sendBtn.disabled = false;
         });
       }
 
       compose.addEventListener("submit", submit);
       bodyBox.addEventListener("keydown", function (event) {
-        if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submit(); }
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); submit(); }
       });
       bodyBox.addEventListener("input", function () {
         bodyBox.style.height = "auto";

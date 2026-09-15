@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Peg Solitaire</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(400px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  #board{display:grid;grid-template-columns:repeat(7,44px);grid-template-rows:repeat(7,44px);
+    gap:4px;background:#15171c;border:1px solid #2a2c33;padding:8px;}
+  .hole{border-radius:50%;}
+  .hole.void{background:transparent;}
+  .hole.empty{background:#1b1d23;border:1px solid #2a2c33;}
+  .hole.peg{background:#4f8cff;border:1px solid #6b9dff;cursor:pointer;}
+  .hole.peg:hover{background:#6b9dff;}
+  .hole.sel{background:#f2b705;border-color:#f2b705;box-shadow:0 0 0 2px #f2b70544;}
+  .hole.target{background:#243; border:1px dashed #3fb950;cursor:pointer;}
+  .row{display:flex;gap:8px;width:min(400px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:min(400px,94vw);}
+  .over{min-height:16px;font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Peg Solitaire</h1><div class="sc">pegs <b id="pegs">32</b> &middot; best <b id="b">32</b></div></div>
+  <div id="board"></div>
+  <div class="over" id="over"></div>
+  <div class="row"><button id="undo">Undo</button><button id="new">New game</button></div>
+  <div class="hint">Tap a peg, then a highlighted empty hole two steps away to jump over (and remove) the peg between. Leave one peg to win. Lower best = better.</div>
+<script>
+(function(){
+  "use strict";
+  var board=document.getElementById("board");
+  // 7x7 cross board: -1 void, 0 empty, 1 peg
+  var layout=[
+    [-1,-1,1,1,1,-1,-1],
+    [-1,-1,1,1,1,-1,-1],
+    [1,1,1,1,1,1,1],
+    [1,1,1,0,1,1,1],
+    [1,1,1,1,1,1,1],
+    [-1,-1,1,1,1,-1,-1],
+    [-1,-1,1,1,1,-1,-1]
+  ];
+  var g,sel=null,history=[];
+  var best=+(localStorage.getItem("opegsol.best")||99);
+  if(best<99)document.getElementById("b").textContent=best;
+
+  function clone(a){return a.map(function(r){return r.slice();});}
+  function reset(){
+    g=clone(layout);sel=null;history=[];
+    document.getElementById("over").textContent="";
+    render();
+  }
+  function pegCount(){var n=0;g.forEach(function(r){r.forEach(function(v){if(v===1)n++;});});return n;}
+  function inb(r,c){return r>=0&&c>=0&&r<7&&c<7&&g[r][c]!==-1;}
+  function canJump(r,c,tr,tc){
+    if(!inb(r,c)||!inb(tr,tc))return false;
+    if(g[r][c]!==1||g[tr][tc]!==0)return false;
+    if(Math.abs(tr-r)+Math.abs(tc-c)!==2)return false;
+    var mr=(r+tr)/2,mc=(c+tc)/2;
+    return g[mr][mc]===1;
+  }
+  function targets(r,c){
+    var out=[];
+    [[-2,0],[2,0],[0,-2],[0,2]].forEach(function(d){
+      var tr=r+d[0],tc=c+d[1];
+      if(canJump(r,c,tr,tc))out.push([tr,tc]);
+    });
+    return out;
+  }
+  function anyMoves(){
+    for(var r=0;r<7;r++)for(var c=0;c<7;c++)if(g[r][c]===1&&targets(r,c).length)return true;
+    return false;
+  }
+  function render(){
+    board.innerHTML="";
+    var tset={};
+    if(sel)targets(sel[0],sel[1]).forEach(function(t){tset[t[0]+","+t[1]]=1;});
+    for(var r=0;r<7;r++)for(var c=0;c<7;c++){
+      var d=document.createElement("div");d.className="hole";
+      var v=g[r][c];
+      if(v===-1)d.className+=" void";
+      else if(v===1)d.className+=" peg";
+      else d.className+=" empty";
+      if(sel&&sel[0]===r&&sel[1]===c)d.className+=" sel";
+      if(tset[r+","+c])d.className+=" target";
+      d.dataset.r=r;d.dataset.c=c;
+      d.addEventListener("click",onClick);
+      board.appendChild(d);
+    }
+    document.getElementById("pegs").textContent=pegCount();
+  }
+  function onClick(e){
+    var r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+    if(g[r][c]===1){ sel=[r,c]; render(); return; }
+    if(sel&&g[r][c]===0&&canJump(sel[0],sel[1],r,c)){
+      history.push(clone(g));
+      var mr=(sel[0]+r)/2,mc=(sel[1]+c)/2;
+      g[sel[0]][sel[1]]=0;g[mr][mc]=0;g[r][c]=1;
+      sel=null;render();checkEnd();
+    }
+  }
+  function checkEnd(){
+    var n=pegCount(),over=document.getElementById("over");
+    if(n===1){
+      over.style.color="#3fb950";over.textContent="Perfect! One peg left \u2014 a win.";
+      saveBest(n);
+    } else if(!anyMoves()){
+      over.style.color="#c02a3f";over.textContent="No moves left \u2014 "+n+" pegs remain.";
+      saveBest(n);
+    }
+  }
+  function saveBest(n){
+    if(n<best){best=n;localStorage.setItem("opegsol.best",best);document.getElementById("b").textContent=best;}
+  }
+  document.getElementById("undo").addEventListener("click",function(){
+    if(history.length){g=history.pop();sel=null;document.getElementById("over").textContent="";render();}
+  });
+  document.getElementById("new").addEventListener("click",reset);
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Same Game</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(420px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  #board{display:grid;gap:3px;background:#15171c;border:1px solid #2a2c33;padding:6px;}
+  .cell{width:30px;height:30px;border-radius:3px;transition:transform 0.1s,opacity 0.1s;}
+  .cell.blank{background:transparent;}
+  .cell.tap{cursor:pointer;}
+  .cell.hl{outline:2px solid #fff;outline-offset:-2px;}
+  .row{display:flex;gap:8px;width:min(420px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:min(420px,94vw);}
+  .over{min-height:16px;font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Same Game</h1><div class="sc">score <b id="s">0</b> &middot; best <b id="b">0</b></div></div>
+  <div id="board"></div>
+  <div class="over" id="over"></div>
+  <div class="row"><button id="new">New game</button></div>
+  <div class="hint">Tap a group of 2+ touching same-color tiles to clear them. Bigger groups score more (n-2)&sup2;. Columns collapse down and left. Clear everything for a bonus.</div>
+<script>
+(function(){
+  "use strict";
+  var W=12,H=10,COLORS=["#e5484d","#4f8cff","#3fb950","#f2b705","#a371f7"];
+  var board=document.getElementById("board");
+  var g,score=0,best=+(localStorage.getItem("osamegame.best")||0),over=false;
+  document.getElementById("b").textContent=best;
+
+  function reset(){
+    g=[];for(var c=0;c<W;c++){var col=[];for(var r=0;r<H;r++)col.push((Math.random()*COLORS.length)|0);g.push(col);}
+    score=0;over=false;document.getElementById("s").textContent=0;
+    document.getElementById("over").textContent="";
+    render();
+  }
+  function render(hlSet){
+    board.style.gridTemplateColumns="repeat("+W+", 30px)";
+    board.innerHTML="";
+    // render row by row (top r=H-1 down). We store columns bottom-up index 0 = bottom.
+    for(var r=H-1;r>=0;r--){
+      for(var c=0;c<W;c++){
+        var v=g[c][r];
+        var d=document.createElement("div");
+        d.className="cell"+(v==null?" blank":" tap");
+        if(v!=null)d.style.background=COLORS[v];
+        if(hlSet&&hlSet[c+","+r])d.className+=" hl";
+        d.dataset.c=c;d.dataset.r=r;
+        if(v!=null)d.addEventListener("click",onTap);
+        d.addEventListener("mouseenter",onHover);
+        d.addEventListener("mouseleave",function(){render();});
+        board.appendChild(d);
+      }
+    }
+  }
+  function groupAt(c,r){
+    var v=g[c][r];if(v==null)return [];
+    var seen={},stack=[[c,r]],out=[];
+    while(stack.length){
+      var cur=stack.pop(),cc=cur[0],rr=cur[1],k=cc+","+rr;
+      if(seen[k])continue;
+      if(cc<0||rr<0||cc>=W||rr>=H)continue;
+      if(g[cc][rr]!==v)continue;
+      seen[k]=1;out.push([cc,rr]);
+      stack.push([cc+1,rr],[cc-1,rr],[cc,rr+1],[cc,rr-1]);
+    }
+    return out;
+  }
+  function onHover(e){
+    if(over)return;
+    var c=+e.currentTarget.dataset.c,r=+e.currentTarget.dataset.r;
+    if(g[c]==null||g[c][r]==null)return;
+    var grp=groupAt(c,r);if(grp.length<2)return;
+    var hl={};grp.forEach(function(p){hl[p[0]+","+p[1]]=1;});
+    render(hl);
+  }
+  function onTap(e){
+    if(over)return;
+    var c=+e.currentTarget.dataset.c,r=+e.currentTarget.dataset.r;
+    var grp=groupAt(c,r);
+    if(grp.length<2)return;
+    grp.forEach(function(p){g[p[0]][p[1]]=null;});
+    score+=(grp.length-2)*(grp.length-2);
+    collapse();
+    document.getElementById("s").textContent=score;
+    render();
+    checkEnd();
+  }
+  function collapse(){
+    // gravity within columns (index 0 = bottom)
+    for(var c=0;c<W;c++){
+      g[c]=g[c].filter(function(v){return v!=null;});
+      while(g[c].length<H)g[c].push(null);
+    }
+    // remove empty columns, shift left
+    var cols=g.filter(function(col){return col.some(function(v){return v!=null;});});
+    while(cols.length<W)cols.push(new Array(H).fill(null));
+    g=cols;
+  }
+  function movesLeft(){
+    for(var c=0;c<W;c++)for(var r=0;r<H;r++)if(g[c][r]!=null&&groupAt(c,r).length>=2)return true;
+    return false;
+  }
+  function checkEnd(){
+    if(movesLeft())return;
+    over=true;
+    var remain=0;g.forEach(function(col){col.forEach(function(v){if(v!=null)remain++;});});
+    var ov=document.getElementById("over");
+    if(remain===0){score+=1000;document.getElementById("s").textContent=score;
+      ov.style.color="#3fb950";ov.textContent="Board cleared! +1000 bonus";}
+    else{ov.style.color="#8a8f99";ov.textContent="No moves left \u2014 "+remain+" tiles remain.";}
+    if(score>best){best=score;localStorage.setItem("osamegame.best",best);document.getElementById("b").textContent=best;}
+  }
+  document.getElementById("new").addEventListener("click",reset);
+  reset();
+})();
+</script>
+</body>
+</html>

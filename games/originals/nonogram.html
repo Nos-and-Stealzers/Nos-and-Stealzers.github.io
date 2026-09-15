@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Nonogram</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(460px,94vw);align-items:baseline;}
+  h1{font-size:26px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  #wrap{display:inline-grid;background:#15171c;border:1px solid #2a2c33;padding:6px;}
+  .cell,.clue,.corner{box-sizing:border-box;display:flex;align-items:center;justify-content:center;}
+  .corner{}
+  .clue{color:#8a8f99;font-size:11px;line-height:1.05;white-space:pre;text-align:center;padding:1px;}
+  .clue.col{flex-direction:column;}
+  .cell{border:1px solid #23252b;cursor:pointer;background:#1b1d23;}
+  .cell.fill{background:#4f8cff;border-color:#4f8cff;}
+  .cell.x{color:#c02a3f;font-size:13px;}
+  .cell.x::after{content:"\00d7";}
+  .cell.done{background:#3fb950;border-color:#3fb950;}
+  .row{display:flex;gap:8px;width:min(460px,94vw);}
+  button{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  button.on{border-color:#4f8cff;color:#4f8cff;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;max-width:min(460px,94vw);}
+  .over{color:#3fb950;font-weight:700;min-height:16px;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Nonogram</h1><div class="sc">solved <b id="cnt">0</b> &middot; best <b id="b">0</b></div></div>
+  <div id="wrap"></div>
+  <div class="over" id="over"></div>
+  <div class="row"><button id="mode" class="on">Mode: Fill</button><button id="new">New puzzle</button></div>
+  <div class="hint">Fill cells so each row/column matches its number runs. Tap toggles fill; switch mode to mark blanks with &times;. Solve without mistakes.</div>
+<script>
+(function(){
+  "use strict";
+  var N=5, wrap=document.getElementById("wrap");
+  var sol, state, mode="fill", solved=false;
+  var streak=+(localStorage.getItem("ononogram.best")||0);
+  var count=0;
+  document.getElementById("b").textContent=streak;
+
+  function genSolution(){
+    // random with 40-70% fill, ensure no empty row/col
+    while(true){
+      var g=[], any=true;
+      for(var r=0;r<N;r++){var row=[];for(var c=0;c<N;c++)row.push(Math.random()<0.55?1:0);g.push(row);}
+      var ok=true;
+      for(var r2=0;r2<N;r2++){if(g[r2].every(function(v){return v===0;}))ok=false;}
+      for(var c2=0;c2<N;c2++){var e=true;for(var r3=0;r3<N;r3++)if(g[r3][c2])e=false;if(e)ok=false;}
+      if(ok)return g;
+    }
+  }
+  function runs(arr){
+    var out=[],n=0;
+    for(var i=0;i<arr.length;i++){if(arr[i]){n++;}else if(n){out.push(n);n=0;}}
+    if(n)out.push(n);
+    return out.length?out:[0];
+  }
+  function build(){
+    sol=genSolution();solved=false;
+    state=[];for(var r=0;r<N;r++){var row=[];for(var c=0;c<N;c++)row.push(0);state.push(row);}
+    document.getElementById("over").textContent="";
+    render(true);
+  }
+  function render(rebuild){
+    if(rebuild){
+      wrap.innerHTML="";
+      wrap.style.gridTemplateColumns="46px repeat("+N+", 36px)";
+      wrap.style.gridTemplateRows="46px repeat("+N+", 36px)";
+      // corner
+      var corner=document.createElement("div");corner.className="corner";wrap.appendChild(corner);
+      // column clues
+      for(var c=0;c<N;c++){
+        var col=[];for(var r=0;r<N;r++)col.push(sol[r][c]);
+        var d=document.createElement("div");d.className="clue col";d.textContent=runs(col).join("\n");wrap.appendChild(d);
+      }
+      for(var r2=0;r2<N;r2++){
+        var rc=document.createElement("div");rc.className="clue";rc.textContent=runs(sol[r2]).join(" ");wrap.appendChild(rc);
+        for(var c2=0;c2<N;c2++){
+          var cell=document.createElement("div");cell.className="cell";cell.dataset.r=r2;cell.dataset.c=c2;
+          cell.addEventListener("click",onCell);wrap.appendChild(cell);
+        }
+      }
+    }
+    paint();
+  }
+  function paint(){
+    var cells=wrap.querySelectorAll(".cell");
+    cells.forEach(function(cell){
+      var r=+cell.dataset.r,c=+cell.dataset.c,s=state[r][c];
+      cell.classList.toggle("fill",s===1&&!solved);
+      cell.classList.toggle("x",s===2);
+      cell.classList.toggle("done",solved&&sol[r][c]===1);
+    });
+  }
+  function onCell(e){
+    if(solved)return;
+    var r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+    if(mode==="fill"){
+      if(state[r][c]===1){state[r][c]=0;}
+      else if(sol[r][c]===1){state[r][c]=1;}
+      else{ mistake(); return; }
+    } else {
+      state[r][c]=state[r][c]===2?0:2;
+    }
+    paint();checkWin();
+  }
+  function mistake(){
+    streakBreak();
+    document.getElementById("over").style.color="#c02a3f";
+    document.getElementById("over").textContent="Wrong cell \u2014 streak reset. New puzzle.";
+    solved=true;paint();
+    setTimeout(build,900);
+  }
+  function streakBreak(){ /* streak already tracked via count */ }
+  function checkWin(){
+    for(var r=0;r<N;r++)for(var c=0;c<N;c++){
+      if(sol[r][c]===1&&state[r][c]!==1)return;
+    }
+    solved=true;count++;
+    document.getElementById("cnt").textContent=count;
+    if(count>streak){streak=count;localStorage.setItem("ononogram.best",streak);document.getElementById("b").textContent=streak;}
+    document.getElementById("over").style.color="#3fb950";
+    document.getElementById("over").textContent="Solved! \u2014 next puzzle";
+    paint();
+    setTimeout(build,900);
+  }
+  document.getElementById("mode").addEventListener("click",function(){
+    mode=mode==="fill"?"mark":"fill";
+    this.textContent="Mode: "+(mode==="fill"?"Fill":"Mark \u00d7");
+    this.classList.toggle("on",mode==="fill");
+  });
+  document.getElementById("new").addEventListener("click",function(){
+    if(!solved){count=0;document.getElementById("cnt").textContent=0;}
+    build();
+  });
+  build();
+})();
+</script>
+</body>
+</html>

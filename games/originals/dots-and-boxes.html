@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Dots and Boxes</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(460px,94vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:14px;display:flex;gap:14px;}
+  .sc .you b{color:#4dd9ff;} .sc .cpu b{color:#ff6b5c;}
+  .sc span{color:#8a8f99;}
+  canvas{background:#15171c;border:1px solid #2a2c33;touch-action:manipulation;max-width:94vw;height:auto;cursor:pointer;}
+  .row{display:flex;gap:8px;width:min(460px,94vw);}
+  button,select{flex:1;background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:10px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .msg{min-height:18px;font-weight:700;}
+  .turn-you{color:#4dd9ff;} .turn-cpu{color:#ff6b5c;} .win{color:#3fb950;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Dots &amp; Boxes</h1>
+    <div class="sc"><span class="you">you <b id="sy">0</b></span><span class="cpu">cpu <b id="sc">0</b></span></div>
+  </div>
+  <div class="msg turn-you" id="msg">Your turn</div>
+  <canvas id="c" width="440" height="440"></canvas>
+  <div class="row">
+    <select id="size"><option value="3">3 x 3</option><option value="4" selected>4 x 4</option><option value="5">5 x 5</option></select>
+    <select id="diff"><option value="1">Easy</option><option value="2" selected>Normal</option><option value="3">Hard</option></select>
+    <button id="new">New game</button>
+  </div>
+  <div class="hint">Click an empty edge to draw a line. Complete a box to claim it and go again. Most boxes wins.</div>
+<script>
+(function(){
+  "use strict";
+  var cv=document.getElementById("c"),ctx=cv.getContext("2d");
+  var N,pad,gap,dot,hEdges,vEdges,owner,scoreYou,scoreCpu,turn,gameOver,diff;
+  // hEdges[r][c] horizontal edge below dot-row r (0..N) spanning col c (0..N-1)
+  // vEdges[r][c] vertical edge (row r 0..N-1) at col line c (0..N)
+
+  function init(){
+    N=+document.getElementById("size").value;
+    diff=+document.getElementById("diff").value;
+    hEdges=[];vEdges=[];owner=[];
+    for(var r=0;r<=N;r++){hEdges.push(new Array(N).fill(false));}
+    for(var r=0;r<N;r++){vEdges.push(new Array(N+1).fill(false));}
+    for(var r=0;r<N;r++){owner.push(new Array(N).fill(0));}
+    scoreYou=0;scoreCpu=0;turn=1;gameOver=false;
+    layout();draw();setMsg();
+  }
+  function layout(){
+    var W=Math.min(440,Math.floor(window.innerWidth*0.9));
+    cv.width=W;cv.height=W;
+    pad=28;gap=(W-pad*2)/N;dot=5;
+  }
+  function dotXY(r,c){return {x:pad+c*gap,y:pad+r*gap};}
+
+  function edgesFilledFor(r,c){
+    return (hEdges[r][c]?1:0)+(hEdges[r+1][c]?1:0)+(vEdges[r][c]?1:0)+(vEdges[r][c+1]?1:0);
+  }
+  // Apply an edge. Returns number of boxes completed by this move.
+  function applyEdge(type,r,c,player){
+    if(type==="h")hEdges[r][c]=true;else vEdges[r][c]=true;
+    var gained=0;
+    // check boxes adjacent to this edge
+    var boxes=[];
+    if(type==="h"){ if(r>0)boxes.push([r-1,c]); if(r<N)boxes.push([r,c]); }
+    else { if(c>0)boxes.push([r,c-1]); if(c<N)boxes.push([r,c]); }
+    boxes.forEach(function(b){
+      if(b[0]>=0&&b[0]<N&&b[1]>=0&&b[1]<N&&owner[b[0]][b[1]]===0&&edgesFilledFor(b[0],b[1])===4){
+        owner[b[0]][b[1]]=player;gained++;
+      }
+    });
+    return gained;
+  }
+  function availableEdges(){
+    var list=[];
+    for(var r=0;r<=N;r++)for(var c=0;c<N;c++)if(!hEdges[r][c])list.push(["h",r,c]);
+    for(var r=0;r<N;r++)for(var c=0;c<=N;c++)if(!vEdges[r][c])list.push(["v",r,c]);
+    return list;
+  }
+  function totalEdges(){return (N+1)*N + N*(N+1);}
+  function filledEdges(){var n=0;for(var r=0;r<=N;r++)for(var c=0;c<N;c++)if(hEdges[r][c])n++;for(var r=0;r<N;r++)for(var c=0;c<=N;c++)if(vEdges[r][c])n++;return n;}
+
+  // does this edge complete a box (3rd side) -> would give free box
+  function boxesGainedIfPlayed(type,r,c){
+    var boxes=[],g=0;
+    if(type==="h"){ if(r>0)boxes.push([r-1,c]); if(r<N)boxes.push([r,c]); }
+    else { if(c>0)boxes.push([r,c-1]); if(c<N)boxes.push([r,c]); }
+    boxes.forEach(function(b){ if(edgesFilledFor(b[0],b[1])===3)g++; });
+    return g;
+  }
+  // does playing this edge create a 3-sided box (gift to opponent)?
+  function createsThreeSided(type,r,c){
+    var boxes=[];
+    if(type==="h"){ if(r>0)boxes.push([r-1,c]); if(r<N)boxes.push([r,c]); }
+    else { if(c>0)boxes.push([r,c-1]); if(c<N)boxes.push([r,c]); }
+    for(var i=0;i<boxes.length;i++){var b=boxes[i];if(edgesFilledFor(b[0],b[1])===2)return true;}
+    return false;
+  }
+
+  function cpuChoose(){
+    var avail=availableEdges();
+    // 1. any move that completes a box
+    var completing=avail.filter(function(e){return boxesGainedIfPlayed(e[0],e[1],e[2])>0;});
+    if(completing.length)return completing[(Math.random()*completing.length)|0];
+    // 2. safe moves (don't create a 3rd side)
+    var safe=avail.filter(function(e){return !createsThreeSided(e[0],e[1],e[2]);});
+    if(diff>=2 && safe.length)return safe[(Math.random()*safe.length)|0];
+    if(diff===1 && safe.length && Math.random()<0.6)return safe[(Math.random()*safe.length)|0];
+    if(safe.length)return safe[(Math.random()*safe.length)|0];
+    // 3. forced to give away — on hard, give away the smallest chain
+    return avail[(Math.random()*avail.length)|0];
+  }
+
+  function endCheck(){
+    if(filledEdges()>=totalEdges()){
+      gameOver=true;
+      var m=document.getElementById("msg");
+      m.className="msg win";
+      m.textContent=scoreYou>scoreCpu?("You win "+scoreYou+"\u2013"+scoreCpu+"!"):
+        scoreYou<scoreCpu?("CPU wins "+scoreCpu+"\u2013"+scoreYou):("Tie "+scoreYou+"\u2013"+scoreCpu);
+      return true;
+    }
+    return false;
+  }
+  function setMsg(){
+    if(gameOver)return;
+    var m=document.getElementById("msg");
+    m.className="msg "+(turn===1?"turn-you":"turn-cpu");
+    m.textContent=turn===1?"Your turn":"CPU thinking...";
+  }
+
+  function playerMove(type,r,c){
+    if(gameOver||turn!==1)return;
+    if(type==="h"?hEdges[r][c]:vEdges[r][c])return;
+    var g=applyEdge(type,r,c,1);
+    scoreYou+=g;updateScore();draw();
+    if(endCheck())return;
+    if(g===0){turn=2;setMsg();setTimeout(cpuTurn,420);}
+    else setMsg();
+  }
+  function cpuTurn(){
+    if(gameOver)return;
+    var e=cpuChoose();
+    if(!e){turn=1;setMsg();return;}
+    var g=applyEdge(e[0],e[1],e[2],2);
+    scoreCpu+=g;updateScore();draw();
+    if(endCheck())return;
+    if(g>0){setTimeout(cpuTurn,420);}
+    else{turn=1;setMsg();}
+  }
+  function updateScore(){
+    document.getElementById("sy").textContent=scoreYou;
+    document.getElementById("sc").textContent=scoreCpu;
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    // filled boxes
+    for(var r=0;r<N;r++)for(var c=0;c<N;c++){
+      if(owner[r][c]){
+        var p=dotXY(r,c);
+        ctx.fillStyle=owner[r][c]===1?"rgba(77,217,255,0.16)":"rgba(255,107,92,0.16)";
+        ctx.fillRect(p.x,p.y,gap,gap);
+        ctx.fillStyle=owner[r][c]===1?"#4dd9ff":"#ff6b5c";
+        ctx.font="bold "+Math.floor(gap*0.4)+"px ui-monospace,monospace";
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.fillText(owner[r][c]===1?"Y":"C",p.x+gap/2,p.y+gap/2);
+      }
+    }
+    // edges
+    ctx.lineCap="round";
+    for(var r=0;r<=N;r++)for(var c=0;c<N;c++){
+      var a=dotXY(r,c),b=dotXY(r,c+1);
+      ctx.strokeStyle=hEdges[r][c]?"#e8eaed":"#2c2f37";ctx.lineWidth=hEdges[r][c]?4:2;
+      ctx.beginPath();ctx.moveTo(a.x+dot,a.y);ctx.lineTo(b.x-dot,b.y);ctx.stroke();
+    }
+    for(var r=0;r<N;r++)for(var c=0;c<=N;c++){
+      var a=dotXY(r,c),b=dotXY(r+1,c);
+      ctx.strokeStyle=vEdges[r][c]?"#e8eaed":"#2c2f37";ctx.lineWidth=vEdges[r][c]?4:2;
+      ctx.beginPath();ctx.moveTo(a.x,a.y+dot);ctx.lineTo(b.x,b.y-dot);ctx.stroke();
+    }
+    // dots
+    ctx.fillStyle="#8a8f99";
+    for(var r=0;r<=N;r++)for(var c=0;c<=N;c++){var p=dotXY(r,c);
+      ctx.beginPath();ctx.arc(p.x,p.y,dot,0,Math.PI*2);ctx.fill();}
+  }
+
+  function hit(mx,my){
+    // find nearest edge within tolerance
+    var best=null,bestD=gap*0.4;
+    // horizontal edges
+    for(var r=0;r<=N;r++)for(var c=0;c<N;c++){
+      if(hEdges[r][c])continue;
+      var a=dotXY(r,c),b=dotXY(r,c+1);
+      var cx=(a.x+b.x)/2,cy=a.y;
+      var d=Math.hypot(mx-cx,my-cy);
+      if(mx>a.x-6&&mx<b.x+6&&d<bestD){bestD=d;best=["h",r,c];}
+    }
+    for(var r=0;r<N;r++)for(var c=0;c<=N;c++){
+      if(vEdges[r][c])continue;
+      var a=dotXY(r,c),b=dotXY(r+1,c);
+      var cx=a.x,cy=(a.y+b.y)/2;
+      var d=Math.hypot(mx-cx,my-cy);
+      if(my>a.y-6&&my<b.y+6&&d<bestD){bestD=d;best=["v",r,c];}
+    }
+    return best;
+  }
+  function pointerHandler(e){
+    if(turn!==1||gameOver)return;
+    var rect=cv.getBoundingClientRect();
+    var scale=cv.width/rect.width;
+    var t=e.touches?e.touches[0]:e;
+    var mx=(t.clientX-rect.left)*scale, my=(t.clientY-rect.top)*scale;
+    var edge=hit(mx,my);
+    if(edge)playerMove(edge[0],edge[1],edge[2]);
+  }
+  cv.addEventListener("click",pointerHandler);
+
+  document.getElementById("new").onclick=init;
+  document.getElementById("size").onchange=init;
+  document.getElementById("diff").onchange=init;
+  window.addEventListener("resize",function(){layout();draw();});
+  init();
+})();
+</script>
+</body>
+</html>

@@ -10,10 +10,12 @@
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/social-refresh.css">
+  <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
 </head>
-<body>
+<body class="social-page friends-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <div data-shell="chrome"></div>
 
@@ -22,13 +24,17 @@
     <header class="page-head">
       <span class="label">Social</span>
       <h1>Friends</h1>
+      <p class="social-intro">Find your people. Keep the next game one message away.</p>
       <div class="readout">
-        <span>friends <b id="r-friends">0</b></span>
-        <span>online <b id="r-online">0</b></span>
-        <span>incoming <b id="r-in">0</b></span>
-        <span>sent <b id="r-out">0</b></span>
+        <span>friends <b id="r-friends">—</b></span>
+        <span>online <b id="r-online">—</b></span>
+        <span>incoming <b id="r-in">—</b></span>
+        <span>sent <b id="r-out">—</b></span>
       </div>
     </header>
+    <div class="social-feedback"><p id="social-status" role="status">Loading your people…</p><button id="social-retry" class="btn btn-sm" type="button" hidden>Retry</button></div>
+    <nav class="social-sections" aria-label="Friend lists"><a href="#b-friends">Your friends</a><a href="#b-incoming">Incoming</a><a href="#b-outgoing">Sent requests</a><a href="#b-blocked">Blocked</a></nav>
+    <div class="social-discovery">
 
     <section class="block">
       <div class="block-head"><h2>Your friend code</h2><span class="fill"></span></div>
@@ -52,28 +58,30 @@
           <label for="find" class="sr-only">Username or friend code</label>
           <input type="search" id="find" placeholder="Type a username or paste a friend code…"
                  autocomplete="off" autocapitalize="none" spellcheck="false">
-          <button class="btn btn-cta" type="submit" id="add-btn">Send request</button>
+          <button class="btn btn-cta" type="submit" id="add-btn">Find people</button>
         </form>
-        <p class="tiny dimmer" id="find-hint" style="margin:0.7rem 0 0">
+        <p class="tiny dimmer" id="find-hint" role="status" style="margin:0.7rem 0 0">
           Start typing to search, or paste a code like <code>ABC-123</code> and hit enter.
         </p>
         <div class="people" id="results" style="margin-top:0.8rem"></div>
       </div>
     </section>
 
-    <section class="block" id="b-incoming" hidden>
+    </div>
+    <div class="social-roster">
+    <section class="block" id="b-incoming">
       <div class="block-head">
         <h2>Requests for you</h2><span class="fill"></span>
       </div>
       <div class="people" id="incoming"></div>
     </section>
 
-    <section class="block" id="b-outgoing" hidden>
+    <section class="block" id="b-outgoing">
       <div class="block-head"><h2>Sent</h2><span class="fill"></span></div>
       <div class="people" id="outgoing"></div>
     </section>
 
-    <section class="block">
+    <section class="block" id="b-friends">
       <div class="block-head">
         <h2>Your friends</h2><span class="fill"></span>
         <a class="more" href="messages.html">Messages →</a>
@@ -81,11 +89,12 @@
       <div class="people" id="friends"></div>
     </section>
 
-    <section class="block" id="b-blocked" hidden>
+    <section class="block" id="b-blocked">
       <div class="block-head"><h2>Blocked</h2><span class="fill"></span></div>
       <div class="people" id="blocked"></div>
     </section>
 
+    </div>
     <div data-shell="foot"></div>
   </main>
 

@@ -10,10 +10,12 @@
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/social-refresh.css">
+  <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
 </head>
-<body>
+<body class="social-page messages-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <div data-shell="chrome"></div>
 
@@ -22,10 +24,16 @@
     <header class="page-head" style="padding-bottom:1rem;margin-bottom:1.2rem">
       <span class="label">Social</span>
       <h1>Messages</h1>
+      <p class="social-intro">Make a plan. Share a moment. Keep playing.</p>
     </header>
 
     <div class="dm" id="dm">
-      <aside class="dm-list" id="thread-list" aria-label="Conversations"></aside>
+      <aside class="dm-sidebar" aria-label="Conversations">
+        <div class="dm-sidebar-head"><h2>Conversations</h2><label class="sr-only" for="thread-search">Search conversations</label><input id="thread-search" type="search" placeholder="Search conversations" autocomplete="off"></div>
+        <p id="thread-status" class="social-status" role="status">Loading conversations…</p>
+        <button type="button" id="thread-retry" class="btn btn-sm" hidden>Retry</button>
+        <div class="dm-list" id="thread-list"></div>
+      </aside>
 
       <section class="dm-panel" id="panel">
         <div class="dm-empty" id="dm-empty">
@@ -34,8 +42,10 @@
         </div>
 
         <div class="dm-open" id="dm-open" hidden>
+          <button type="button" id="dm-back" class="btn btn-flat dm-back">← Conversations</button>
           <header class="dm-head" id="dm-head"></header>
-          <div class="dm-log" id="log" tabindex="0" aria-live="polite" aria-relevant="additions"></div>
+          <p id="conversation-status" class="social-status" role="status"></p>
+          <div class="dm-log" id="log" role="log" aria-label="Messages" tabindex="0" aria-live="polite" aria-relevant="additions"></div>
           <form class="dm-compose" id="compose">
             <label for="body" class="sr-only">Message</label>
             <textarea id="body" rows="1" maxlength="2000" placeholder="Write a message…"></textarea>

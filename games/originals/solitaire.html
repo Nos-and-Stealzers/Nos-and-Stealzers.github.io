@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Klondike Solitaire</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;
+    font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;
+    min-height:100dvh;gap:10px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:14px;width:min(720px,96vw);align-items:baseline;flex-wrap:wrap;}
+  h1{font-size:22px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:14px;color:#8a8f99;}
+  .sc b{color:#f2b705;}
+  .row{display:flex;gap:8px;width:min(720px,96vw);}
+  button{background:#25272e;color:#e8eaed;border:1px solid #35373f;padding:8px 12px;font:inherit;cursor:pointer;}
+  button:hover{border-color:#f2b705;color:#f2b705;}
+  .board{width:min(720px,96vw);}
+  .zones{display:flex;justify-content:space-between;gap:6px;margin-bottom:10px;}
+  .found{display:flex;gap:6px;}
+  .tab{display:flex;gap:6px;align-items:flex-start;}
+  .pile{position:relative;width:var(--cw);}
+  .slot{width:var(--cw);height:var(--ch);border:1px dashed #35373f;border-radius:6px;box-sizing:border-box;}
+  .card{position:absolute;left:0;width:var(--cw);height:var(--ch);border-radius:6px;box-sizing:border-box;
+    background:#f4f2ea;color:#111;border:1px solid #0006;padding:4px 5px;font-size:14px;font-weight:700;cursor:pointer;
+    display:flex;flex-direction:column;line-height:1;}
+  .card.red{color:#c0263a;}
+  .card.down{background:#1f2b52;background-image:repeating-linear-gradient(45deg,#243063 0 6px,#1f2b52 6px 12px);cursor:default;}
+  .card .rank{font-size:15px;}
+  .card .suit{font-size:16px;margin-top:1px;}
+  .card.sel{outline:2px solid #f2b705;outline-offset:1px;}
+  .card.hint{outline:2px solid #4dd9ff;outline-offset:1px;}
+  .tabcol{width:var(--cw);}
+  :root{--cw:min(13.2vw,86px);--ch:calc(var(--cw)*1.45);}
+  .win{color:#3fb950;font-weight:700;min-height:18px;}
+  .hint{font-size:12px;color:#8a8f99;}
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1>Klondike Solitaire</h1>
+    <div class="sc">moves <b id="mv">0</b> &middot; time <b id="tm">0:00</b> &middot; wins <b id="wn">0</b></div>
+  </div>
+  <div class="row">
+    <button id="deal">New game</button>
+    <button id="undo">Undo</button>
+    <button id="hintb">Hint</button>
+    <button id="auto">Auto-finish</button>
+  </div>
+  <div class="win" id="msg"></div>
+  <div class="board">
+    <div class="zones">
+      <div class="tab" style="gap:6px">
+        <div class="pile" id="stock"></div>
+        <div class="pile" id="waste"></div>
+      </div>
+      <div class="found">
+        <div class="pile" id="f0"></div>
+        <div class="pile" id="f1"></div>
+        <div class="pile" id="f2"></div>
+        <div class="pile" id="f3"></div>
+      </div>
+    </div>
+    <div class="tab" id="tableau"></div>
+  </div>
+  <div class="hint">Click a card to select, click a destination to move. Click the stock to deal. Double-click sends to foundation.</div>
+<script>
+(function(){
+  "use strict";
+  var SUITS=["S","H","D","C"], RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+  var GLYPH={S:"\u2660",H:"\u2665",D:"\u2666",C:"\u2663"};
+  var stock,waste,found,tab,sel,history,moves,startTime,timer,won;
+  var wins=+(localStorage.getItem("osol.wins")||0);
+  document.getElementById("wn").textContent=wins;
+
+  function isRed(s){return s==="H"||s==="D";}
+  function rankVal(r){return RANKS.indexOf(r);}
+  function makeDeck(){var d=[];SUITS.forEach(function(s){RANKS.forEach(function(r){d.push({s:s,r:r,up:false});});});return d;}
+  function shuffle(a){for(var i=a.length-1;i>0;i--){var j=(Math.random()*(i+1))|0;var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+  function deal(){
+    var d=shuffle(makeDeck());
+    stock=[];waste=[];found=[[],[],[],[]];tab=[[],[],[],[],[],[],[]];
+    for(var c=0;c<7;c++){for(var r=0;r<=c;r++){var card=d.pop();card.up=(r===c);tab[c].push(card);}}
+    stock=d;stock.forEach(function(k){k.up=false;});
+    sel=null;history=[];moves=0;won=false;
+    document.getElementById("msg").textContent="";
+    startTime=Date.now();clearInterval(timer);timer=setInterval(tickTime,1000);tickTime();
+    render();
+  }
+  function tickTime(){
+    if(won)return;
+    var s=((Date.now()-startTime)/1000)|0;
+    document.getElementById("tm").textContent=Math.floor(s/60)+":"+(s%60<10?"0":"")+(s%60);
+  }
+  function snapshot(){
+    return JSON.stringify({stock:stock,waste:waste,found:found,tab:tab,moves:moves});
+  }
+  function pushHistory(){history.push(snapshot());if(history.length>200)history.shift();}
+  function restore(str){var st=JSON.parse(str);stock=st.stock;waste=st.waste;found=st.found;tab=st.tab;moves=st.moves;sel=null;render();}
+
+  function canStack(card,onto){ // tableau rule: alternate colour, descending
+    if(!onto)return card.r==="K";
+    return isRed(card.s)!==isRed(onto.s) && rankVal(card.r)===rankVal(onto.r)-1;
+  }
+  function canFound(card,pile){
+    if(!pile.length)return card.r==="A";
+    var top=pile[pile.length-1];
+    return top.s===card.s && rankVal(card.r)===rankVal(top.r)+1;
+  }
+
+  function drawStock(){
+    pushHistory();
+    if(stock.length){
+      var c=stock.pop();c.up=true;waste.push(c);
+    } else {
+      while(waste.length){var w=waste.pop();w.up=false;stock.push(w);}
+    }
+    moves++;sel=null;afterMove();
+  }
+
+  function selectFrom(zone,pileIdx,cardIdx){
+    // build the moving stack
+    var stackSrc, stack;
+    if(zone==="waste"){ if(!waste.length)return; stack=[waste[waste.length-1]]; }
+    else if(zone==="found"){ var fp=found[pileIdx]; if(!fp.length)return; stack=[fp[fp.length-1]]; }
+    else { var col=tab[pileIdx]; if(cardIdx>=col.length||!col[cardIdx].up)return; stack=col.slice(cardIdx); }
+    sel={zone:zone,pile:pileIdx,idx:cardIdx,cards:stack};
+    render();
+  }
+
+  function tryDrop(destZone,destIdx){
+    if(!sel){return false;}
+    var moving=sel.cards, first=moving[0], ok=false;
+    if(destZone==="found"){
+      if(moving.length===1 && canFound(first,found[destIdx])){ok=true;}
+    } else if(destZone==="tab"){
+      var col=tab[destIdx];var onto=col.length?col[col.length-1]:null;
+      if(onto&&!onto.up){} else if(canStack(first,onto)){ok=true;}
+    }
+    if(!ok){sel=null;render();return false;}
+    pushHistory();
+    // remove from source
+    if(sel.zone==="waste")waste.pop();
+    else if(sel.zone==="found")found[sel.pile].pop();
+    else tab[sel.pile].splice(sel.idx);
+    // add to dest
+    if(destZone==="found")found[destIdx].push(first);
+    else moving.forEach(function(c){tab[destIdx].push(c);});
+    // flip exposed tableau card
+    if(sel.zone==="tab"){var sc=tab[sel.pile];if(sc.length&&!sc[sc.length-1].up)sc[sc.length-1].up=true;}
+    moves++;sel=null;afterMove();return true;
+  }
+
+  function sendToFoundation(zone,pileIdx){
+    var card;
+    if(zone==="waste"){if(!waste.length)return false;card=waste[waste.length-1];}
+    else {var col=tab[pileIdx];if(!col.length)return false;card=col[col.length-1];if(!card.up)return false;}
+    for(var f=0;f<4;f++){
+      if(canFound(card,found[f])){
+        pushHistory();
+        if(zone==="waste")waste.pop();else tab[pileIdx].pop();
+        found[f].push(card);
+        if(zone==="tab"){var sc=tab[pileIdx];if(sc.length&&!sc[sc.length-1].up)sc[sc.length-1].up=true;}
+        moves++;sel=null;afterMove();return true;
+      }
+    }
+    return false;
+  }
+
+  function afterMove(){
+    render();
+    if(found.every(function(f){return f.length===13;})){
+      won=true;clearInterval(timer);
+      wins++;localStorage.setItem("osol.wins",wins);
+      document.getElementById("wn").textContent=wins;
+      document.getElementById("msg").textContent="You won! \u2014 "+moves+" moves";
+    }
+  }
+
+  function findHint(){
+    // waste/tableau -> foundation, or tableau move that reveals
+    var srcs=[];
+    if(waste.length)srcs.push({z:"waste",p:0,c:waste[waste.length-1]});
+    for(var t=0;t<7;t++){for(var i=0;i<tab[t].length;i++){if(tab[t][i].up){srcs.push({z:"tab",p:t,i:i,c:tab[t][i]});break;}}}
+    for(var s=0;s<srcs.length;s++){
+      var sc=srcs[s];
+      for(var f=0;f<4;f++)if(canFound(sc.c,found[f]))return sc;
+    }
+    for(var s2=0;s2<srcs.length;s2++){
+      var sc2=srcs[s2];
+      for(var d=0;d<7;d++){var col=tab[d];var onto=col.length?col[col.length-1]:null;if(onto&&!onto.up)continue;if(canStack(sc2.c,onto))return sc2;}
+    }
+    return null;
+  }
+  function showHint(){
+    var h=findHint();
+    document.getElementById("msg").textContent=h?"Try the highlighted card.":"No obvious move \u2014 deal the stock.";
+    render(h);
+  }
+
+  function autoFinish(){
+    var moved=true;
+    (function step(){
+      var any=false;
+      if(sendToFoundation("waste"))any=true;
+      for(var t=0;t<7&&!any;t++){if(sendToFoundation("tab",t)){any=true;}}
+      if(any)setTimeout(step,90);
+    })();
+  }
+
+  function cardEl(card,top){
+    var d=document.createElement("div");
+    d.className="card"+(card.up?(isRed(card.s)?" red":""):" down");
+    if(card.up){
+      var r=document.createElement("span");r.className="rank";r.textContent=card.r;
+      var s=document.createElement("span");s.className="suit";s.textContent=GLYPH[card.s];
+      d.appendChild(r);d.appendChild(s);
+    }
+    return d;
+  }
+
+  function render(hint){
+    var ch=getComputedStyle(document.documentElement).getPropertyValue("--ch");
+    // stock
+    var st=document.getElementById("stock");st.innerHTML="";st.style.height=ch;
+    var stSlot=document.createElement("div");stSlot.className="slot";st.appendChild(stSlot);
+    if(stock.length){var b=cardEl({s:"S",r:"A",up:false});st.appendChild(b);}
+    st.onclick=drawStock;
+    // waste
+    var wa=document.getElementById("waste");wa.innerHTML="";wa.style.height=ch;
+    var waSlot=document.createElement("div");waSlot.className="slot";wa.appendChild(waSlot);
+    if(waste.length){var wc=cardEl(waste[waste.length-1]);if(sel&&sel.zone==="waste")wc.classList.add("sel");
+      if(hint&&hint.z==="waste")wc.classList.add("hint");
+      wc.onclick=function(e){e.stopPropagation();if(sel&&sel.zone==="waste")sel=null,render();else selectFrom("waste",0,0);};
+      wc.ondblclick=function(e){e.stopPropagation();sendToFoundation("waste");};
+      wa.appendChild(wc);}
+    // foundations
+    for(var f=0;f<4;f++){(function(fi){
+      var fe=document.getElementById("f"+fi);fe.innerHTML="";fe.style.height=ch;
+      var slot=document.createElement("div");slot.className="slot";fe.appendChild(slot);
+      var pile=found[fi];
+      if(pile.length){var fc=cardEl(pile[pile.length-1]);fe.appendChild(fc);}
+      fe.onclick=function(){if(sel)tryDrop("found",fi);};
+    })(f);}
+    // tableau
+    var tabEl=document.getElementById("tableau");tabEl.innerHTML="";
+    for(var c=0;c<7;c++){(function(ci){
+      var colEl=document.createElement("div");colEl.className="tabcol pile";
+      var col=tab[ci];
+      var cwv=getComputedStyle(document.documentElement).getPropertyValue("--ch");
+      var stepUp=22,stepDown=13;
+      var y=0;
+      if(!col.length){var slot=document.createElement("div");slot.className="slot";colEl.appendChild(slot);
+        colEl.style.height=cwv;}
+      col.forEach(function(card,idx){
+        var ce=cardEl(card);ce.style.top=y+"px";
+        if(card.up){
+          if(sel&&sel.zone==="tab"&&sel.pile===ci&&idx>=sel.idx)ce.classList.add("sel");
+          if(hint&&hint.z==="tab"&&hint.p===ci&&hint.i===idx)ce.classList.add("hint");
+          ce.onclick=function(e){e.stopPropagation();
+            if(sel){ if(sel.zone==="tab"&&sel.pile===ci&&sel.idx===idx){sel=null;render();return;} if(tryDrop("tab",ci))return; }
+            selectFrom("tab",ci,idx);};
+          ce.ondblclick=function(e){e.stopPropagation();sendToFoundation("tab",ci);};
+        }
+        colEl.appendChild(ce);
+        y+=card.up?stepUp:stepDown;
+      });
+      colEl.style.minHeight=(y+120)+"px";
+      colEl.onclick=function(){if(sel)tryDrop("tab",ci);};
+      tabEl.appendChild(colEl);
+    })(c);}
+    document.getElementById("mv").textContent=moves;
+  }
+
+  document.getElementById("deal").onclick=deal;
+  document.getElementById("undo").onclick=function(){if(history.length)restore(history.pop());};
+  document.getElementById("hintb").onclick=showHint;
+  document.getElementById("auto").onclick=autoFinish;
+  deal();
+})();
+</script>
+</body>
+</html>

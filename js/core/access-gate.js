@@ -1,69 +1,93 @@
-/* Access gate ("cloak").
+/* Access gate ("cloak") — cloak domains only.
  *
- * On every visit the site pretends to be a Securly content-filter redirect and
- * actually sends a passive visitor on to securly.com. The ONLY way in is to
- * hold one of the secret combos continuously for 6 seconds:
+ * Runs as the first <head> script on every page, but only does anything on the
+ * cloak domains (securlyfex.online / securlyfex.site and their www forms). On
+ * the real domain (arcadecampushub.online) or localhost it does nothing, so the
+ * arcade behaves normally there.
  *
- *     Ctrl+L   Shift+L   Ctrl+P   Shift+P   Ctrl+Z   Shift+Z
+ * On a cloak domain it does two things:
  *
- * i.e. (Ctrl or Shift) together with (L, P, or Z). Unlocking marks the tab
- * session so navigating between pages doesn't re-gate; a new tab re-gates.
+ *  1. DISGUISE (always, every page): sets the tab title + favicon to look like
+ *     Securly, so anyone scrolling the browser history sees a string of Securly
+ *     entries on a "securly…" URL — never "Arcade Campus Hub". The actual page
+ *     content underneath is the normal arcade; the games still look and play
+ *     like the games. The disguise is only skin-deep (tab + history).
  *
- * It runs as the very first script in <head>, dependency-free, and also
- * disguises the browser tab itself (title + favicon) so a glance at the tab
- * never reveals the real site while the gate is up.
+ *  2. GATE (until unlocked this tab session): hides the page behind a
+ *     convincing "redirecting to your content filter" screen and actually
+ *     sends a passive visitor on to securly.com. The ONLY way in is holding
+ *     one of these combos for 6 seconds:
+ *
+ *         Ctrl+L  Shift+L  Ctrl+P  Shift+P  Ctrl+Z  Shift+Z
+ *
+ *     Once unlocked, the tab session is marked so navigating between pages
+ *     doesn't re-gate (but each page is still disguised). A new tab re-gates.
  */
 (function () {
   "use strict";
 
+  /* Only these domains cloak. endsWith covers apex + www. */
+  var CLOAK_SUFFIXES = ["securlyfex.online", "securlyfex.site"];
+  var host = String(location.hostname || "").toLowerCase();
+  var onCloak = CLOAK_SUFFIXES.some(function (s) {
+    return host === s || host === "www." + s || host.indexOf(s) === host.length - s.length;
+  });
+  if (!onCloak) return;   // real domain / localhost: behave like a normal arcade
+
   var DECOY_URL = "https://www.securly.com/";
-  var REQUIRED_HOLD_MS = 6000;   // continuous hold needed to unlock
+  var DISGUISE_TITLE = "Securly | Student Safety";
+  var REQUIRED_HOLD_MS = 6000;   // continuous hold to unlock
   var REDIRECT_AFTER_MS = 7000;  // a passive visitor is bounced after this
   var SS_KEY = "ach:gate";
   var SS_VALUE = "open";
 
-  /* Already unlocked this tab session? Do nothing at all. */
-  try {
-    if (window.sessionStorage.getItem(SS_KEY) === SS_VALUE) return;
-  } catch (e) { /* storage blocked — gate anyway */ }
-
   var doc = document;
   var root = doc.documentElement;
 
-  /* -------- disguise the tab (title + favicon) while the gate is up -------- */
+  /* ---------- disguise the tab (title + favicon) on EVERY cloak page ------- */
 
-  var realTitle = doc.title;
-  try { doc.title = "Redirecting…"; } catch (e) {}
+  try { doc.title = DISGUISE_TITLE; } catch (e) {}
 
-  /* A neutral shield/lock favicon (green) so the tab icon reads as a filter,
-     not the arcade. Data-URI so it needs no network and applies instantly. */
+  /* Green Securly-style shield favicon, data-URI so it applies instantly and
+     needs no network. */
   var DECOY_ICON =
     "data:image/svg+xml," +
     encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
       '<rect width="32" height="32" rx="6" fill="#00b0a6"/>' +
-      '<path d="M16 5l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V8l8-3z" ' +
-      'fill="#fff"/><path d="M12.5 16.2l2.6 2.6 4.6-5" stroke="#00b0a6" ' +
-      'stroke-width="2" fill="none" stroke-linecap="round" ' +
-      'stroke-linejoin="round"/></svg>'
+      '<path d="M16 5l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V8l8-3z" fill="#fff"/>' +
+      '<path d="M12.5 16.2l2.6 2.6 4.6-5" stroke="#00b0a6" stroke-width="2" ' +
+      'fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     );
-  var savedIcons = [];
-  function swapFavicon() {
+  function applyFavicon() {
     var links = doc.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]');
-    for (var i = 0; i < links.length; i++) {
-      savedIcons.push([links[i], links[i].getAttribute("href")]);
-      links[i].setAttribute("href", DECOY_ICON);
+    for (var i = 0; i < links.length; i++) links[i].setAttribute("href", DECOY_ICON);
+    if (!doc.querySelector('link[data-gate-icon="1"]')) {
+      var l = doc.createElement("link");
+      l.rel = "icon"; l.type = "image/svg+xml"; l.href = DECOY_ICON;
+      l.setAttribute("data-gate-icon", "1");
+      (doc.head || root).appendChild(l);
     }
-    var l = doc.createElement("link");
-    l.rel = "icon";
-    l.type = "image/svg+xml";
-    l.href = DECOY_ICON;
-    l.setAttribute("data-gate-icon", "1");
-    (doc.head || root).appendChild(l);
   }
-  swapFavicon();
+  applyFavicon();
+  /* Keep the disguise even if page scripts set their own title/favicon later. */
+  function guardTitle() {
+    if (doc.title !== DISGUISE_TITLE) { try { doc.title = DISGUISE_TITLE; } catch (e) {} }
+  }
+  window.setInterval(guardTitle, 1000);
+  if (doc.addEventListener) {
+    doc.addEventListener("DOMContentLoaded", function () { applyFavicon(); guardTitle(); });
+  }
 
-  /* -------------------------- hide + overlay ------------------------------ */
+  /* Already unlocked this tab session? Show the real arcade content, keep the
+     Securly disguise on the tab/history, and stop here — no overlay, no
+     redirect. This is the "on the games" state: games work, history stays
+     Securly. */
+  var unlocked = false;
+  try { unlocked = window.sessionStorage.getItem(SS_KEY) === SS_VALUE; } catch (e) {}
+  if (unlocked) return;
+
+  /* ------------------------------- gate ----------------------------------- */
 
   root.setAttribute("data-gate", "locked");
   var css = doc.createElement("style");
@@ -77,8 +101,7 @@
     '#access-gate .ag-card{width:440px;max-width:92vw;background:#fff;' +
     'border:1px solid #e5e7eb;border-radius:12px;padding:30px 28px 26px;' +
     'box-shadow:0 10px 30px rgba(20,30,50,.08);}' +
-    '#access-gate .ag-brand{font-size:30px;font-weight:800;letter-spacing:-0.5px;' +
-    'color:#00b0a6;}' +
+    '#access-gate .ag-brand{font-size:30px;font-weight:800;letter-spacing:-0.5px;color:#00b0a6;}' +
     '#access-gate .ag-brand span{color:#8a9099;}' +
     '#access-gate .ag-host{font-family:ui-monospace,Menlo,Consolas,monospace;' +
     'font-size:12px;color:#6b7280;background:#f2f4f7;border:1px solid #e5e7eb;' +
@@ -114,8 +137,7 @@
   if (doc.body) buildOverlay();
   else doc.addEventListener("DOMContentLoaded", buildOverlay);
 
-  /* Staged "redirect" chatter so it reads as a real filter check, not a pause.
-     Purely cosmetic; the real timing is the redirect/hold logic below. */
+  /* Staged "redirect" chatter so it reads as a real filter check. Cosmetic. */
   var STEPS = [
     "Checking this site against your policy…",
     "Contacting filter.securly.com…",
@@ -144,9 +166,7 @@
 
   var mod = { ctrl: false, shift: false };
   var letter = { l: false, p: false, z: false };
-  var holdMs = 0;
-  var sinceLoad = 0;
-  var settled = false;
+  var holdMs = 0, sinceLoad = 0, settled = false;
 
   function comboHeld() {
     return (mod.ctrl || mod.shift) && (letter.l || letter.p || letter.z);
@@ -163,25 +183,13 @@
       else if (k === "z" || e.keyCode === 90) { letter.z = isDown; handled = true; }
     }
     if (!handled) return;
-    /* Stop the browser's own Ctrl+P (print) / Ctrl+L (address bar) etc. from
-       hijacking the combo while the gate is up. */
     if (comboHeld()) { try { e.preventDefault(); } catch (x) {} }
   }
-
   window.addEventListener("keydown", function (e) { onKey(e, true); }, true);
   window.addEventListener("keyup", function (e) { onKey(e, false); }, true);
   window.addEventListener("blur", function () {
     mod.ctrl = mod.shift = false; letter.l = letter.p = letter.z = false;
   });
-
-  function restoreTab() {
-    try { doc.title = realTitle; } catch (e) {}
-    var mine = doc.querySelectorAll('link[data-gate-icon="1"]');
-    for (var i = 0; i < mine.length; i++) mine[i].parentNode.removeChild(mine[i]);
-    for (var j = 0; j < savedIcons.length; j++) {
-      if (savedIcons[j][1] != null) savedIcons[j][0].setAttribute("href", savedIcons[j][1]);
-    }
-  }
 
   function unlock() {
     if (settled) return;
@@ -191,7 +199,8 @@
     root.removeAttribute("data-gate");
     var g = doc.getElementById("access-gate");
     if (g) g.parentNode.removeChild(g);
-    restoreTab();
+    /* Title + favicon stay disguised on purpose — history keeps reading Securly
+       while the arcade is fully usable underneath. */
   }
 
   function bounce() {
@@ -206,7 +215,6 @@
   var timer = window.setInterval(function () {
     if (settled) { window.clearInterval(timer); return; }
     sinceLoad += 100;
-
     if (comboHeld()) {
       holdMs += 100;
       var fill = doc.getElementById("ag-bar-fill");

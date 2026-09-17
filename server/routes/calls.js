@@ -32,13 +32,42 @@ const KINDS = ["audio", "video", "screen"];
 const SIGNALS = ["offer", "answer", "ice", "bye"];
 
 /* ICE servers handed to the browser. STUN is free and public. TURN relays
-   media when a network blocks direct connections — school networks often do —
-   and it is the one piece that costs money, so it is opt-in through env
-   rather than assumed. Without it, calls still work on most networks. */
-function iceServers() {
-  const list = [
-    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
-  ];
+   media when a network blocks direct connections (mobile data, school/work
+   firewalls, symmetric NAT). Two ways to supply TURN, in priority order:
+
+     1. Cloudflare Realtime TURN (free, 1,000 GB/mo): set
+          CLOUDFLARE_TURN_KEY_ID and CLOUDFLARE_TURN_API_TOKEN
+        and this mints fresh short-lived credentials per request.
+     2. A static relay of your own: set TURN_URL, TURN_USER, TURN_PASS.
+
+   With neither set, calls fall back to STUN only (works on open networks).
+   Set TURN_DISABLED=1 to force STUN-only regardless. */
+const STUN = { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] };
+
+async function iceServers() {
+  const list = [STUN];
+  if (process.env.TURN_DISABLED === "1") return list;
+
+  const cfId = process.env.CLOUDFLARE_TURN_KEY_ID;
+  const cfToken = process.env.CLOUDFLARE_TURN_API_TOKEN;
+  if (cfId && cfToken && typeof fetch === "function") {
+    try {
+      const r = await fetch(
+        "https://rtc.live.cloudflare.com/v1/turn/keys/" +
+          encodeURIComponent(cfId) + "/credentials/generate-ice-servers",
+        {
+          method: "POST",
+          headers: { Authorization: "Bearer " + cfToken, "Content-Type": "application/json" },
+          body: JSON.stringify({ ttl: 86400 }),
+        }
+      );
+      if (r.ok) {
+        const data = await r.json();
+        if (data && Array.isArray(data.iceServers)) return list.concat(data.iceServers);
+      }
+    } catch (e) { /* fall through to static / STUN */ }
+  }
+
   if (process.env.TURN_URL && process.env.TURN_USER && process.env.TURN_PASS) {
     list.push({
       urls: process.env.TURN_URL.split(",").map((s) => s.trim()).filter(Boolean),
@@ -49,8 +78,8 @@ function iceServers() {
   return list;
 }
 
-router.get("/calls/ice", A.requireUser, (req, res) => {
-  res.json({ iceServers: iceServers(), maxPeers: MAX_PEERS });
+router.get("/calls/ice", A.requireUser, async (req, res) => {
+  res.json({ iceServers: await iceServers(), maxPeers: MAX_PEERS });
 });
 
 function sweep() {

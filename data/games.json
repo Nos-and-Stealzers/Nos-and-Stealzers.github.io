@@ -1,5 +1,47 @@
 [
   {
+    "id": "flash-bleach-vs-naruto",
+    "title": "Bleach vs Naruto",
+    "category": "action",
+    "description": "The classic anime fighting game — Bleach vs Naruto. Pick your favorite ninja or soul reaper and brawl it out. Runs right here through Ruffle, self-hosted so it always works.",
+    "gradient": "linear-gradient(135deg, #f97316, #7f1d1d)",
+    "source": "games/flash.html?swf=/games/swf/bleach-vs-naruto.swf",
+    "direct": "games/flash.html?swf=/games/swf/bleach-vs-naruto.swf",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "icon": "",
+    "dateAdded": "2026-09-17"
+  },
+  {
+    "id": "flash-super-smash-flash-2",
+    "title": "Super Smash Flash 2",
+    "category": "action",
+    "description": "The legendary Smash Bros-style flash brawler with Mario, Sonic, Naruto and dozens more. Knock your rivals off the stage. Self-hosted and playable through Ruffle.",
+    "gradient": "linear-gradient(135deg, #2563eb, #0b1e40)",
+    "source": "games/flash.html?swf=/games/swf/super-smash-flash-2.swf",
+    "direct": "games/flash.html?swf=/games/swf/super-smash-flash-2.swf",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "icon": "",
+    "dateAdded": "2026-09-17"
+  },
+  {
+    "id": "flash-mario-combat",
+    "title": "Mario Combat",
+    "category": "action",
+    "description": "Super Mario brawler — beat-'em-up action with Mario's sprites and combo attacks. A flash classic, self-hosted here and playable through Ruffle.",
+    "gradient": "linear-gradient(135deg, #dc2626, #1c1917)",
+    "source": "games/flash.html?swf=/games/swf/mario-combat.swf",
+    "direct": "games/flash.html?swf=/games/swf/mario-combat.swf",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "icon": "",
+    "dateAdded": "2026-09-17"
+  },
+  {
     "id": "original-solitaire",
     "title": "Klondike Solitaire",
     "category": "cards",

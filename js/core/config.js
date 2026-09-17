@@ -73,6 +73,26 @@
     /* Used when backend === "node". Empty means same origin. */
     apiBase: "",
 
+    /* ---------------------------------------------------------------
+       TURN relay for voice/video calls.
+
+       Calls now get their TURN relay from the /api/turn serverless
+       function (Cloudflare Realtime TURN — free, 1,000 GB/mo, credentials
+       minted server-side so no secret ships to the browser). That is the
+       primary and recommended path; see api/turn.js.
+
+       This block is only a STATIC FALLBACK used when /api/turn is
+       unreachable or not configured. It is disabled by default because
+       there is no reliable free no-signup TURN server to hard-code — the
+       old public ones (OpenRelay etc.) now reject with allocate errors.
+       To use your own relay without the serverless function, set
+       enabled:true and fill `servers` with { urls, username, credential }.
+       --------------------------------------------------------------- */
+    turn: {
+      enabled: false,
+      servers: []
+    },
+
     defaults: {
       skin: "noir",            // see `skins` below
       lite: false,             // drop motion + grid overlay on slow hardware

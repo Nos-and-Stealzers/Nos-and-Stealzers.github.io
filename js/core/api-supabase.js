@@ -21,6 +21,54 @@
   var URL_BASE = String(conf.url || "").replace(/\/+$/, "");
   var ANON = String(conf.anonKey || "");
 
+  /* ICE servers for calls. Preference order:
+       1. GET /api/turn — Cloudflare Realtime TURN with fresh, short-lived
+          credentials minted server-side (token stays off the public client).
+          This is the relay that makes calls connect through mobile data,
+          school/work firewalls and symmetric NAT.
+       2. Static SITE.turn servers from config.js (if any are set).
+       3. Google STUN only (works on open networks).
+     The result is cached briefly so the three call entry points don't each
+     fire their own request within one call setup. */
+  var _iceCache = null;
+  var _iceCacheAt = 0;
+
+  function iceStatic() {
+    var list = [
+      { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
+    ];
+    var turn = SITE.turn || {};
+    if (turn.enabled !== false && Array.isArray(turn.servers)) {
+      turn.servers.forEach(function (s) { if (s && s.urls) list.push(s); });
+    }
+    return list;
+  }
+
+  function iceFetch() {
+    // Reuse a fresh result (credentials are long-lived; 5 min cache is plenty).
+    if (_iceCache && (Date.now() - _iceCacheAt) < 5 * 60 * 1000) {
+      return Promise.resolve(_iceCache);
+    }
+    if (typeof window.fetch !== "function") return Promise.resolve(iceStatic());
+    var base = String((SITE.apiBase || "")).replace(/\/+$/, "");
+    return window.fetch(base + "/api/turn", { credentials: "omit" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && Array.isArray(d.iceServers) && d.iceServers.length) {
+          // If the endpoint has real TURN, use it; otherwise merge with any
+          // static TURN configured in config.js so we still get a relay.
+          var list = d.turn ? d.iceServers : iceStatic();
+          _iceCache = list; _iceCacheAt = Date.now();
+          return list;
+        }
+        return iceStatic();
+      })
+      .catch(function () { return iceStatic(); });
+  }
+
+  /* Synchronous fallback kept for any legacy caller. */
+  function iceList() { return iceStatic(); }
+
   /* No fetch means no backend, full stop. Bailing here keeps callers on their
      normal error path instead of a ReferenceError that would leave
      Session.ready pending forever and hang every gated page. */
@@ -1114,14 +1162,10 @@
     /* --- calling --- */
 
     /* Signalling only; the media is peer-to-peer and never reaches Supabase.
-       STUN is Google's free public service, so there is nothing to pay for
-       and nothing to configure. */
+       ICE servers come from /api/turn (Cloudflare TURN) with STUN fallback. */
     iceServers: function () {
-      return Promise.resolve({
-        iceServers: [
-          { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
-        ],
-        maxPeers: 4
+      return iceFetch().then(function (list) {
+        return { iceServers: list, maxPeers: 4 };
       });
     },
 
@@ -1131,10 +1175,8 @@
         t: payload.threadId ? Number(payload.threadId) : null,
         call_kind: payload.kind || "audio"
       }).then(function (id) {
-        return API.pollSignals(id).then(function (res) {
-          return { call: res.call, iceServers: [
-            { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
-          ] };
+        return Promise.all([API.pollSignals(id), iceFetch()]).then(function (arr) {
+          return { call: arr[0].call, iceServers: arr[1] };
         });
       });
     },
@@ -1148,13 +1190,11 @@
 
     joinCall: function (id) {
       return rpc("join_call", { c: Number(id) }).then(function () {
-        return API.pollSignals(id).then(function (res) {
+        return Promise.all([API.pollSignals(id), iceFetch()]).then(function (arr) {
           return {
-            call: res.call,
+            call: arr[0].call,
             self: session ? session.user.id : null,
-            iceServers: [
-              { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
-            ]
+            iceServers: arr[1]
           };
         });
       });

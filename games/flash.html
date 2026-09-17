@@ -55,6 +55,18 @@
     fail("Invalid game link", ""); return;
   }
 
+  /* Some SWFs (e.g. multi-file games that loadMovie sub-SWFs, or use
+     ExternalInterface) refuse to start unless script access is allowed. That
+     is only safe for SWFs we host ourselves — a same-origin/relative path —
+     never for an arbitrary cross-origin ?swf= a link could point at. So we
+     enable it exclusively for same-origin targets. */
+  var sameOrigin = (function () {
+    try {
+      if (!/^https?:\/\//i.test(swf)) return true;   // relative/root-relative = same origin
+      return new URL(swf, location.href).origin === location.origin;
+    } catch (e) { return false; }
+  })();
+
   var RUFFLE = "https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@latest/ruffle.js";
 
   var s = document.createElement("script");
@@ -86,7 +98,7 @@
         contextMenu: "off",
         scale: "showAll",
         wmode: "opaque",
-        allowScriptAccess: false,
+        allowScriptAccess: sameOrigin,
         favorLocalstorage: true,
         splashScreen: false
       }).catch(function (e) {

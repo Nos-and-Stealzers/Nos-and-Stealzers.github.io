@@ -22,13 +22,28 @@
   var seq = 0;
   var waiting = {};     // id -> { resolve, reject, timer }
 
+  /* GitHub Pages serves every repo from ONE origin (arcadecampushub.github.io)
+     — the path (/hd_fnaf, /eaglercraft, /games-huge …) does NOT create a
+     separate storage bucket. localStorage and IndexedDB are scoped to the
+     ORIGIN, so all of those games physically share the same storage. Backing
+     them up under path-derived keys therefore made SEVEN rows that each held a
+     full copy of the same shared bucket and clobbered one another on restore —
+     which is exactly why big-save games (FNAF World, every Eaglercraft build)
+     "only worked locally". The correct unit is the origin: dedupe hosts to one
+     representative base URL per real origin, and key the cloud row by the
+     origin host alone. */
   function hostsFromConfig() {
     var out = [];
+    var seen = {};
     var map = (window.SITE && window.SITE.gameHosts) || {};
     Object.keys(map).forEach(function (key) {
-      var origin = String(map[key] || "").replace(/\/+$/, "");
-      if (!origin) return;
-      if (out.indexOf(origin) === -1) out.push(origin);
+      var base = String(map[key] || "").replace(/\/+$/, "");
+      if (!base) return;
+      var origin;
+      try { origin = new URL(base).origin; } catch (e) { origin = base; }
+      if (seen[origin]) return;          // same origin already covered
+      seen[origin] = true;
+      out.push(base);                    // keep a real path for bridgeUrl()
     });
     return out;
   }
@@ -53,25 +68,15 @@
     return origin.replace(/\/+$/, "") + "/save-bridge.html";
   }
 
-  /* Several game hosts are separate repos served as GitHub Pages *project*
-     sites under the SAME account domain (arcadecampushub.github.io/games-huge,
-     .../flashgames, .../hd_fnaf, .../eaglercraft all share the hostname
-     "arcadecampushub.github.io" and differ only by path). Keying saves by
-     `new URL(origin).host` alone collapsed every one of those into the same
-     string, so putGameSave()/getGameSave() for four unrelated hosts all hit
-     the same row: whichever backup ran last silently overwrote the others,
-     and restoring could push one game's world into a different game's
-     origin. The path's first segment (the repo name) has to be part of the
-     key so distinct project sites stay distinct. The result still has to
-     satisfy the server's host validator ([A-Za-z0-9._-]{1,64}) — no slashes —
-     so the segment and hostname are joined with a dot instead of a path. */
+  /* The cloud-row key for an origin. Because storage is per-ORIGIN (see
+     hostsFromConfig), this is the origin host alone — NOT the repo path.
+     Every game served from the same origin therefore shares one save row,
+     which matches the single storage bucket they actually share. The result
+     still satisfies the server's host validator ([A-Za-z0-9._-]{1,64}). */
   function keyFor(origin) {
     try {
-      var u = new URL(origin);
-      var seg = u.pathname.replace(/^\/+|\/+$/g, "").split("/")[0] || "";
-      var key = seg ? seg + "." + u.host : u.host;
-      return key.slice(0, 64);
-    } catch (e) { return origin; }
+      return new URL(origin).host.slice(0, 64);
+    } catch (e) { return String(origin).slice(0, 64); }
   }
 
   window.addEventListener("message", function (event) {

@@ -148,7 +148,14 @@
    * rebuilt on the way back in.
    */
 
-  var IDB_BUDGET = 3 * 1024 * 1024;   // per origin, encoded
+  /* Budget for one origin's IndexedDB snapshot, encoded. The server accepts a
+     4 MB row (put_game_save), and that whole budget is for THIS origin's saves
+     (localStorage + cookies are tiny beside a Unity/Eaglercraft IDB dump), so
+     the relay budget is sized just under it to leave headroom for the JSON
+     envelope and the small stores. An earlier 3 MB cap silently dropped whole
+     databases — a real Eaglercraft world or FNAF World Unity save is bigger —
+     which is why those "only worked locally". */
+  var IDB_BUDGET = 3800 * 1024;   // per origin, encoded (server row cap is 4 MB)
 
   function b64(bytes) {
     var out = "";
@@ -217,10 +224,12 @@
     return indexedDB.databases().then(function (list) {
       var out = {};
       var used = 0;
+      var dropped = [];      // DBs skipped because the budget was already full
 
       return (list || []).reduce(function (chain, info) {
         return chain.then(function () {
-          if (!info.name || used > IDB_BUDGET) return;
+          if (!info.name) return;
+          if (used > IDB_BUDGET) { dropped.push(info.name); return; }
           return openDb(info.name).then(function (db) {
             var stores = Array.prototype.slice.call(db.objectStoreNames);
             if (!stores.length) { db.close(); return; }
@@ -256,6 +265,7 @@
                     var text = JSON.stringify(dbOut);
                     used += text.length;
                     if (used <= IDB_BUDGET) out[info.name] = dbOut;
+                    else dropped.push(info.name);
                     db.close();
                     resolve();
                   }
@@ -267,7 +277,7 @@
           }).catch(function () { /* locked or blocked — skip it */ });
         });
       }, Promise.resolve()).then(function () {
-        return { data: out, unsupported: false, bytes: used };
+        return { data: out, unsupported: false, bytes: used, dropped: dropped };
       });
     }).catch(function () { return { data: {}, unsupported: true }; });
   }
@@ -344,6 +354,7 @@
         reply.idb = idb.data;
         reply.idbUnsupported = idb.unsupported;
         reply.idbBytes = idb.bytes || 0;
+        reply.idbDropped = idb.dropped || [];
         send(event, reply);
       }, function () { send(event, reply); });
       return;

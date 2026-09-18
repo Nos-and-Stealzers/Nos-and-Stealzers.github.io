@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Cookie Empire</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100dvh;gap:14px;padding:16px;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent;}
+  h1{font-size:22px;margin:6px 0 0;letter-spacing:-1px;}
+  .count{font-size:30px;font-weight:700;color:#f2b705;}
+  .rate{font-size:13px;color:#8a8f99;margin-top:-8px;}
+  #cookie{font-size:96px;cursor:pointer;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5));transition:transform .06s;}
+  #cookie:active{transform:scale(.92);}
+  .shop{width:min(460px,96vw);display:flex;flex-direction:column;gap:8px;}
+  .item{display:flex;align-items:center;gap:12px;background:#15171c;border:1px solid #2a2c33;border-radius:10px;padding:10px 12px;cursor:pointer;transition:.12s;}
+  .item:hover{border-color:#f2b705;}
+  .item.locked{opacity:.5;cursor:not-allowed;}
+  .item .em{font-size:26px;}
+  .item .n{flex:1;}
+  .item .n b{display:block;}
+  .item .n small{color:#8a8f99;}
+  .item .cost{color:#f2b705;font-weight:700;white-space:nowrap;}
+  .owned{color:#4dd9ff;font-size:12px;}
+</style>
+</head>
+<body>
+  <h1>Cookie Empire</h1>
+  <div class="count"><span id="count">0</span> cookies</div>
+  <div class="rate" id="rate">0 / sec</div>
+  <div id="cookie">🍪</div>
+  <div class="shop" id="shop"></div>
+<script>
+(function(){
+  "use strict";
+  var save=JSON.parse(localStorage.getItem("cookieEmpire")||"null");
+  var cookies=save?save.cookies:0, owned=save?save.owned:{};
+  var items=[
+    {id:"cursor",em:"👆",name:"Cursor",desc:"+0.2/sec",base:15,cps:0.2},
+    {id:"grandma",em:"👵",name:"Grandma",desc:"+1/sec",base:100,cps:1},
+    {id:"farm",em:"🌾",name:"Cookie Farm",desc:"+5/sec",base:600,cps:5},
+    {id:"factory",em:"🏭",name:"Factory",desc:"+20/sec",base:3000,cps:20},
+    {id:"bank",em:"🏦",name:"Cookie Bank",desc:"+70/sec",base:12000,cps:70},
+    {id:"temple",em:"🛕",name:"Temple",desc:"+250/sec",base:60000,cps:250},
+    {id:"rocket",em:"🚀",name:"Rocket Co.",desc:"+1000/sec",base:300000,cps:1000}
+  ];
+  var cntEl=document.getElementById("count"),rateEl=document.getElementById("rate"),shop=document.getElementById("shop");
+  function cost(it){return Math.ceil(it.base*Math.pow(1.15,owned[it.id]||0));}
+  function cps(){var t=0;items.forEach(function(it){t+=(owned[it.id]||0)*it.cps;});return t;}
+  function fmt(n){n=Math.floor(n);if(n<1e3)return n;if(n<1e6)return (n/1e3).toFixed(1)+"K";if(n<1e9)return (n/1e6).toFixed(1)+"M";return (n/1e9).toFixed(2)+"B";}
+  function render(){
+    cntEl.textContent=fmt(cookies);rateEl.textContent=fmt(cps())+" / sec";
+    shop.innerHTML="";
+    items.forEach(function(it){
+      var c=cost(it),can=cookies>=c;
+      var d=document.createElement("div");d.className="item"+(can?"":" locked");
+      d.innerHTML='<span class="em">'+it.em+'</span><span class="n"><b>'+it.name+'</b><small>'+it.desc+
+        '</small></span><span class="cost">'+fmt(c)+' 🍪 <span class="owned">×'+(owned[it.id]||0)+'</span></span>';
+      d.addEventListener("click",function(){var cc=cost(it);if(cookies>=cc){cookies-=cc;owned[it.id]=(owned[it.id]||0)+1;render();}});
+      shop.appendChild(d);
+    });
+  }
+  document.getElementById("cookie").addEventListener("click",function(){cookies+=1+cps()*0.02;render();});
+  setInterval(function(){cookies+=cps()/10;cntEl.textContent=fmt(cookies);},100);
+  setInterval(function(){render();localStorage.setItem("cookieEmpire",JSON.stringify({cookies:cookies,owned:owned}));},2000);
+  render();
+})();
+</script>
+</body>
+</html>

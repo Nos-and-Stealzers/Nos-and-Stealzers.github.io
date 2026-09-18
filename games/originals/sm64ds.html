@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Super Mario 64 DS</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;color:#e8eaed;font-family:ui-monospace,Menlo,Consolas,monospace;overflow:hidden;}
+  #game{width:100vw;height:100dvh;}
+  .fallback{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;box-sizing:border-box;}
+  .fallback h1{font-size:22px;margin:0;color:#f2b705;}
+  .fallback p{color:#9aa4b2;max-width:52ch;line-height:1.5;font-size:14px;}
+  .fallback input{width:min(560px,90vw);background:#15171c;border:1px solid #2a2c33;color:#e8eaed;border-radius:8px;padding:10px;font:inherit;}
+  .fallback button{background:#f2b705;color:#0c0d10;border:0;border-radius:8px;padding:10px 18px;font:inherit;font-weight:700;cursor:pointer;}
+  .fallback small{color:#6a6f79;}
+</style>
+</head>
+<body>
+  <div id="game"></div>
+  <div class="fallback" id="fallback" hidden>
+    <h1>🎮 Super Mario 64 DS</h1>
+    <p>This runs a Nintendo DS emulator (EmulatorJS) right in your browser. It needs
+       a Super Mario 64 DS ROM file (<code>.nds</code>). For copyright reasons the
+       ROM isn't bundled — point it at a ROM URL, or load one from your device.
+       Save states are kept on this device automatically.</p>
+    <input id="romurl" placeholder="Paste a direct .nds ROM URL, then press Enter">
+    <div>
+      <button id="loadurl">Load from URL</button>
+      <button id="loadfile">Load from my device</button>
+      <input id="filepick" type="file" accept=".nds,.zip" style="display:none">
+    </div>
+    <small>Tip: put a ROM at <code>games/roms/sm64ds.nds</code> in the repo and it loads automatically.</small>
+  </div>
+<script>
+(function(){
+  "use strict";
+  var DEFAULT_ROM = "games/roms/sm64ds.nds";      // auto-load if present in the repo
+  var CORE = "nds";
+  var g = document.getElementById("game"), fb = document.getElementById("fallback");
+
+  function head(url){ return fetch(url,{method:"HEAD"}).then(function(r){return r.ok;}).catch(function(){return false;}); }
+
+  function boot(romUrl){
+    fb.hidden = true;
+    // EmulatorJS global config
+    window.EJS_player = "#game";
+    window.EJS_core = CORE;
+    window.EJS_gameUrl = romUrl;
+    window.EJS_gameName = "Super Mario 64 DS";
+    window.EJS_pathtodata = "https://cdn.jsdelivr.net/npm/emulatorjs@stable/data/";
+    window.EJS_startOnLoaded = true;
+    // Save states live in IndexedDB on THIS origin, so they persist and sync
+    // through the arcade's normal save system.
+    window.EJS_defaultOptions = { "save-state-location": "browser" };
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/emulatorjs@stable/data/loader.js";
+    document.body.appendChild(s);
+  }
+
+  // Try the repo ROM first; otherwise show the loader UI.
+  head(DEFAULT_ROM).then(function(ok){
+    if (ok) { boot(DEFAULT_ROM); return; }
+    fb.hidden = false;
+  });
+
+  document.getElementById("loadurl").addEventListener("click", function(){
+    var u = document.getElementById("romurl").value.trim();
+    if (u) boot(u);
+  });
+  document.getElementById("romurl").addEventListener("keydown", function(e){
+    if (e.key === "Enter") document.getElementById("loadurl").click();
+  });
+  document.getElementById("loadfile").addEventListener("click", function(){
+    document.getElementById("filepick").click();
+  });
+  document.getElementById("filepick").addEventListener("change", function(e){
+    var f = e.target.files && e.target.files[0];
+    if (f) boot(URL.createObjectURL(f));
+  });
+})();
+</script>
+</body>
+</html>

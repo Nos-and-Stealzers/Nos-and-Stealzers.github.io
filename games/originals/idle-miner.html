@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Idle Miner</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;min-height:100dvh;gap:12px;padding:16px;box-sizing:border-box;user-select:none;}
+  h1{font-size:22px;margin:4px 0;}
+  .bar{width:min(460px,96vw);display:flex;gap:16px;font-size:14px;}
+  .bar b{color:#f2b705;}
+  #rock{width:min(300px,80vw);aspect-ratio:1;background:radial-gradient(circle at 40% 35%,#4a4f5a,#23262d);border-radius:20px;
+    display:flex;align-items:center;justify-content:center;font-size:80px;cursor:pointer;border:2px solid #35373f;transition:transform .05s;}
+  #rock:active{transform:scale(.96);}
+  .depthbar{width:min(460px,96vw);height:8px;background:#1d2027;border-radius:4px;overflow:hidden;}
+  .depthbar > i{display:block;height:100%;background:linear-gradient(90deg,#4dd9ff,#f2b705);width:0;transition:width .2s;}
+  .up{width:min(460px,96vw);display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .btn{background:#15171c;border:1px solid #2a2c33;border-radius:10px;padding:10px;cursor:pointer;text-align:left;transition:.12s;}
+  .btn:hover{border-color:#4dd9ff;} .btn.locked{opacity:.5;cursor:not-allowed;}
+  .btn b{display:block;} .btn small{color:#8a8f99;}
+  .hint{font-size:12px;color:#8a8f99;}
+</style>
+</head>
+<body>
+  <h1>⛏️ Idle Miner</h1>
+  <div class="bar"><span>gold <b id="gold">0</b></span><span>depth <b id="depth">0</b>m</span><span style="margin-left:auto">/sec <b id="ps">0</b></span></div>
+  <div class="depthbar"><i id="dfill"></i></div>
+  <div id="rock">🪨</div>
+  <div class="up" id="up"></div>
+  <div class="hint">Tap the rock to mine. Buy upgrades — deeper layers pay more.</div>
+<script>
+(function(){
+  "use strict";
+  var save=JSON.parse(localStorage.getItem("idleMiner")||"null");
+  var gold=save?save.gold:0, depth=save?save.depth:0, pick=save?save.pick:1, drills=save?save.drills:0, layer=save?save.layer:0;
+  var layers=["Dirt","Coal","Iron","Silver","Gold","Ruby","Diamond","Obsidian","Mithril","Core"];
+  var g=document.getElementById("gold"),dp=document.getElementById("depth"),ps=document.getElementById("ps"),
+      fill=document.getElementById("dfill"),rock=document.getElementById("rock"),up=document.getElementById("up");
+  var emojis=["🪨","⚫","🔩","⚪","🟡","🔴","💎","🟣","🔷","🌟"];
+  function mult(){return 1+layer*0.6;}
+  function perClick(){return pick*mult();}
+  function perSec(){return drills*2*mult();}
+  function fmt(n){n=Math.floor(n);if(n<1e3)return n;if(n<1e6)return (n/1e3).toFixed(1)+"K";return (n/1e6).toFixed(2)+"M";}
+  var upgrades=[
+    {id:"pick",name:"Sharper Pick",get:function(){return "+"+ (mult()).toFixed(1)+"/tap";},cost:function(){return Math.ceil(20*Math.pow(1.18,pick));},buy:function(){pick++;}},
+    {id:"drill",name:"Auto Drill",get:function(){return "+"+(2*mult()).toFixed(1)+"/sec";},cost:function(){return Math.ceil(60*Math.pow(1.2,drills));},buy:function(){drills++;}},
+    {id:"deeper",name:"Dig Deeper → "+(layers[Math.min(layer+1,9)]),get:function(){return layer<9?"×0.6 more value":"Max depth";},cost:function(){return layer<9?Math.ceil(200*Math.pow(3,layer)):Infinity;},buy:function(){if(layer<9)layer++;}}
+  ];
+  function render(){
+    g.textContent=fmt(gold);dp.textContent=depth;ps.textContent=fmt(perSec());
+    rock.textContent=emojis[layer];
+    fill.style.width=((depth%100))+"%";
+    up.innerHTML="";
+    upgrades.forEach(function(u){var c=u.cost(),can=gold>=c&&c!==Infinity;
+      var b=document.createElement("div");b.className="btn"+(can?"":" locked");
+      b.innerHTML="<b>"+u.name+"</b><small>"+u.get()+" · "+(c===Infinity?"—":fmt(c)+" gold")+"</small>";
+      b.addEventListener("click",function(){var cc=u.cost();if(gold>=cc&&cc!==Infinity){gold-=cc;u.buy();render();}});
+      up.appendChild(b);
+    });
+  }
+  rock.addEventListener("click",function(){gold+=perClick();depth++;render();});
+  setInterval(function(){gold+=perSec()/10;depth+=perSec()>0?1:0;g.textContent=fmt(gold);},100);
+  setInterval(function(){render();localStorage.setItem("idleMiner",JSON.stringify({gold:gold,depth:depth,pick:pick,drills:drills,layer:layer}));},2000);
+  render();
+})();
+</script>
+</body>
+</html>

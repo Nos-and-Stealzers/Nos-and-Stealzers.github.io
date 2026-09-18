@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Word Master</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:14px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  #grid{display:grid;grid-template-rows:repeat(6,1fr);gap:6px;}
+  .r{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .t{width:clamp(38px,13vw,56px);aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+    font-size:clamp(18px,6vw,28px);font-weight:700;text-transform:uppercase;border:2px solid #2a2c33;border-radius:6px;background:#15171c;transition:.15s;}
+  .t.filled{border-color:#4a5160;}
+  .t.hit{background:#3fb950;border-color:#3fb950;color:#0c0d10;}
+  .t.near{background:#e6b800;border-color:#e6b800;color:#0c0d10;}
+  .t.miss{background:#22252c;border-color:#22252c;color:#6a6f79;}
+  #kb{display:flex;flex-direction:column;gap:6px;width:min(500px,96vw);}
+  .kr{display:flex;gap:5px;justify-content:center;}
+  .k{flex:1;min-width:0;background:#2a2d35;border:none;color:#e8eaed;border-radius:6px;padding:12px 4px;font:inherit;font-size:13px;cursor:pointer;}
+  .k.wide{flex:1.6;}
+  .k.hit{background:#3fb950;color:#0c0d10;} .k.near{background:#e6b800;color:#0c0d10;} .k.miss{background:#191b20;color:#5a5f69;}
+  .msg{height:18px;font-size:13px;color:#f2b705;}
+</style>
+</head>
+<body>
+  <h1>Word Master</h1>
+  <div class="msg" id="msg"></div>
+  <div id="grid"></div>
+  <div id="kb"></div>
+<script>
+(function(){
+  "use strict";
+  // A compact answer pool + generous guess acceptance (any 5 letters allowed).
+  var WORDS=["crane","table","ghost","plumb","vivid","joker","query","waltz","fjord","nymph",
+    "brave","cloud","dwarf","flame","glide","haunt","ivory","knack","lemon","mirth","noble",
+    "ocean","pride","quilt","raven","spice","tiger","ultra","vault","witty","zebra","blaze",
+    "charm","depth","eagle","frost","grasp","honey","input","jolly","karma","light","mango"];
+  var answer=WORDS[Math.floor(Math.random()*WORDS.length)];
+  var row=0,col=0,done=false,guess="",grid=document.getElementById("grid"),msg=document.getElementById("msg");
+  var kbState={};
+  for(var r=0;r<6;r++){var rd=document.createElement("div");rd.className="r";rd.id="r"+r;
+    for(var c=0;c<5;c++){var t=document.createElement("div");t.className="t";t.id="t"+r+"_"+c;rd.appendChild(t);}grid.appendChild(rd);}
+  var rows=[["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l"],["ENT","z","x","c","v","b","n","m","DEL"]];
+  var kb=document.getElementById("kb");
+  rows.forEach(function(rr){var d=document.createElement("div");d.className="kr";
+    rr.forEach(function(k){var b=document.createElement("button");b.className="k"+(k.length>1?" wide":"");b.textContent=(k==="DEL"?"⌫":k==="ENT"?"Enter":k);b.dataset.k=k;
+      b.addEventListener("click",function(){key(k);});d.appendChild(b);});kb.appendChild(d);});
+  function say(m){msg.textContent=m;setTimeout(function(){if(msg.textContent===m)msg.textContent="";},1600);}
+  function key(k){
+    if(done)return;
+    if(k==="DEL"){if(col>0){col--;guess=guess.slice(0,-1);paint();}return;}
+    if(k==="ENT"){submit();return;}
+    if(col<5&&/^[a-z]$/.test(k)){guess+=k;col++;paint();}
+  }
+  function paint(){for(var c=0;c<5;c++){var t=document.getElementById("t"+row+"_"+c);t.textContent=guess[c]||"";t.className="t"+(guess[c]?" filled":"");}}
+  function submit(){
+    if(col<5){say("Not enough letters");return;}
+    var res=score(guess,answer);
+    for(var c=0;c<5;c++){var t=document.getElementById("t"+row+"_"+c);t.className="t "+res[c];
+      var kbtn=document.querySelector('.k[data-k="'+guess[c]+'"]');
+      if(kbtn){var pr=kbState[guess[c]];if(res[c]==="hit"||(res[c]==="near"&&pr!=="hit")||(!pr)){kbState[guess[c]]=res[c];kbtn.classList.remove("hit","near","miss");kbtn.classList.add(res[c]);}}
+    }
+    if(guess===answer){done=true;say("Solved in "+(row+1)+"!");return;}
+    row++;col=0;guess="";
+    if(row>=6){done=true;say("The word was "+answer.toUpperCase());}
+  }
+  function score(g,a){
+    var res=["miss","miss","miss","miss","miss"],pool={};
+    for(var i=0;i<5;i++){if(g[i]===a[i])res[i]="hit";else pool[a[i]]=(pool[a[i]]||0)+1;}
+    for(i=0;i<5;i++){if(res[i]==="hit")continue;if(pool[g[i]]>0){res[i]="near";pool[g[i]]--;}}
+    return res;
+  }
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Enter")key("ENT");else if(e.key==="Backspace")key("DEL");
+    else if(/^[a-zA-Z]$/.test(e.key))key(e.key.toLowerCase());
+  });
+})();
+</script>
+</body>
+</html>

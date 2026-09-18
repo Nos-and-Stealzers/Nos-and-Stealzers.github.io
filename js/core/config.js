@@ -106,6 +106,7 @@
       dock: true,              // floating chat, bottom right
       autoBackup: true,        // push game progress to the account as you play
       hideUnavailable: false,  // drop unhosted titles from the index entirely
+      cloakDisguise: "google", // tab title/favicon used by the hidden-tab launcher
       adminKey: "l"            // Ctrl/Cmd + this opens the console (staff only)
     },
 
@@ -113,6 +114,7 @@
     categories: {
       arcade:     { label: "Arcade",     icon: "◈" },
       action:     { label: "Action",     icon: "✷" },
+      fighting:   { label: "Fighting",   icon: "✊" },
       shooter:    { label: "Shooter",    icon: "◘" },
       puzzle:     { label: "Puzzle",     icon: "◱" },
       strategy:   { label: "Strategy",   icon: "⬢" },
@@ -130,6 +132,10 @@
       board:      { label: "Board",      icon: "⛃" },
       trivia:     { label: "Trivia",     icon: "?" },
       music:      { label: "Music",      icon: "♪" },
+      io:         { label: ".io / Online", icon: "⚇" },
+      emulator:   { label: "Emulator",   icon: "▤" },
+      tower:      { label: "Tower Defense", icon: "♜" },
+      escape:     { label: "Escape",     icon: "⚿" },
       multiplayer:{ label: "Multiplayer",icon: "⚭" },
       retro:      { label: "Retro",      icon: "▤" },
       other:      { label: "Other",      icon: "◇" }

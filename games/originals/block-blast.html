@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Block Blast</title>
+<style>
+  html,body{margin:0;height:100%;background:#0c0d10;color:#e8eaed;font-family:ui-monospace,Menlo,Consolas,monospace;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:12px;padding:12px;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .top{display:flex;gap:16px;width:min(420px,94vw);align-items:baseline;}
+  h1{font-size:24px;margin:0;letter-spacing:-1px;}
+  .sc{margin-left:auto;font-size:15px;color:#8a8f99;}.sc b{color:#f2b705;}
+  #grid{background:#15171c;border:1px solid #2a2c33;border-radius:10px;display:grid;
+    grid-template-columns:repeat(8,1fr);gap:3px;padding:6px;width:min(420px,94vw);aspect-ratio:1;box-sizing:border-box;}
+  .c{border-radius:5px;background:#1d2027;}
+  #tray{display:flex;gap:14px;justify-content:center;min-height:80px;align-items:center;}
+  .piece{display:grid;gap:2px;cursor:grab;padding:4px;border-radius:8px;}
+  .piece.used{opacity:.2;pointer-events:none;}
+  .pc{width:16px;height:16px;border-radius:3px;}
+  .hint{font-size:12px;color:#8a8f99;text-align:center;}
+</style>
+</head>
+<body>
+  <div class="top"><h1>Block Blast</h1><div class="sc">score <b id="score">0</b></div></div>
+  <div id="grid"></div>
+  <div id="tray"></div>
+  <div class="hint">Tap a piece then tap the grid to place. Fill full rows or columns to clear them.</div>
+<script>
+(function(){
+  "use strict";
+  var N=8,cells=[],grid=document.getElementById("grid"),tray=document.getElementById("tray");
+  var board=new Array(N*N).fill(0),score=0,sel=null,pieces=[];
+  var COLORS=["#4dd9ff","#f2b705","#3fb950","#ff7043","#b06cff","#ff5c8a"];
+  var SHAPES=[
+    [[0,0]],[[0,0],[0,1]],[[0,0],[0,1],[0,2]],[[0,0],[1,0]],[[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[1,1]],[[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],[[0,1],[1,0],[1,1],[1,2]],[[0,0],[0,1],[0,2],[0,3]]
+  ];
+  var S=document.getElementById("score");
+  for(var i=0;i<N*N;i++){var d=document.createElement("div");d.className="c";d.dataset.i=i;
+    d.addEventListener("click",function(){place(+this.dataset.i);});grid.appendChild(d);cells.push(d);}
+  function paint(){for(var i=0;i<N*N;i++)cells[i].style.background=board[i]||"#1d2027";}
+  function newPieces(){
+    pieces=[];tray.innerHTML="";
+    for(var p=0;p<3;p++){
+      var sh=SHAPES[Math.floor(Math.random()*SHAPES.length)],col=COLORS[Math.floor(Math.random()*COLORS.length)];
+      var maxc=Math.max.apply(null,sh.map(function(s){return s[1];}))+1;
+      var maxr=Math.max.apply(null,sh.map(function(s){return s[0];}))+1;
+      var el=document.createElement("div");el.className="piece";el.style.gridTemplateColumns="repeat("+maxc+",16px)";
+      var map={};sh.forEach(function(s){map[s[0]+"_"+s[1]]=1;});
+      for(var r=0;r<maxr;r++)for(var c=0;c<maxc;c++){var b=document.createElement("div");
+        b.className="pc";b.style.background=map[r+"_"+c]?col:"transparent";el.appendChild(b);}
+      (function(idx,shape,color,node){node.addEventListener("click",function(){
+        if(node.classList.contains("used"))return;
+        document.querySelectorAll(".piece").forEach(function(n){n.style.outline="";});
+        node.style.outline="2px solid #f2b705";sel={shape:shape,color:color,node:node};
+      });})(p,sh,col,el);
+      tray.appendChild(el);pieces.push(el);
+    }
+  }
+  function fits(shape,base){
+    var br=Math.floor(base/N),bc=base%N;
+    for(var i=0;i<shape.length;i++){var r=br+shape[i][0],c=bc+shape[i][1];
+      if(r>=N||c>=N||board[r*N+c])return false;}
+    return true;
+  }
+  function place(base){
+    if(!sel)return;
+    if(!fits(sel.shape,base))return;
+    var br=Math.floor(base/N),bc=base%N;
+    sel.shape.forEach(function(s){board[(br+s[0])*N+(bc+s[1])]=sel.color;});
+    score+=sel.shape.length;
+    sel.node.classList.add("used");sel.node.style.outline="";sel=null;
+    clearLines();paint();S.textContent=score;
+    if(pieces.every(function(p){return p.classList.contains("used");}))newPieces();
+    if(noMoves())setTimeout(function(){alert("No moves left! Score "+score);},80);
+  }
+  function clearLines(){
+    var rowsFull=[],colsFull=[],r,c,i;
+    for(r=0;r<N;r++){var full=true;for(c=0;c<N;c++)if(!board[r*N+c])full=false;if(full)rowsFull.push(r);}
+    for(c=0;c<N;c++){var f2=true;for(r=0;r<N;r++)if(!board[r*N+c])f2=false;if(f2)colsFull.push(c);}
+    rowsFull.forEach(function(r){for(var c=0;c<N;c++)board[r*N+c]=0;});
+    colsFull.forEach(function(c){for(var r=0;r<N;r++)board[r*N+c]=0;});
+    score+=(rowsFull.length+colsFull.length)*10;
+  }
+  function noMoves(){
+    var live=pieces.filter(function(p){return !p.classList.contains("used");});
+    if(!live.length)return false;
+    // rough check: any base where any unused piece fits
+    for(var b=0;b<N*N;b++){
+      for(var s=0;s<SHAPES.length;s++){ if(fits(SHAPES[s],b))return false; }
+    }
+    return true;
+  }
+  newPieces();paint();
+})();
+</script>
+</body>
+</html>

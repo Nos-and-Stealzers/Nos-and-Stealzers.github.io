@@ -245,11 +245,36 @@
   function newTab() {
     var url = game.directUrl || game.sourceUrl;
     if (!url) { window.UI.toast("No launch URL on file"); return; }
-    var win = window.open(url, "_blank", "noopener");
+    /* Open the arcade's OWN play wrapper (same origin as this page), not the
+       raw game URL. This keeps the game running under the SAME top-level
+       origin — and therefore the SAME browser storage partition — whether you
+       play it embedded here or in a separate tab, so progress that a game
+       writes to its own localStorage/IndexedDB is shared between the two
+       instead of splitting into two partitions that never see each other.
+       (That split is exactly why Mario/Sonic/flash saves "didn't carry over".)
+       For genuinely un-embeddable games we still fall back to the raw URL. */
+    var wrapper = "play.html?id=" + encodeURIComponent(game.id) + "&auto=1";
+    var target = game.embeddable ? wrapper : url;
+    var win = window.open(target, "_blank", "noopener");
     if (!win) { window.UI.toast("Pop-up blocked — allow it and retry"); return; }
     window.Store.recordPlay(game.id);
     window.Store.pushRecent(game.id);
     counters();
+  }
+
+  /* Open the game in a URL-less about:blank tab. The address bar and history
+     show nothing about the game or the arcade — the reliable way past a filter
+     that watches URLs. Falls back to a normal new tab if popups are blocked. */
+  function cloakTab() {
+    var url = game.directUrl || game.sourceUrl;
+    if (!url) { window.UI.toast("No launch URL on file"); return; }
+    if (!(window.Cloak && window.Cloak.supported())) { newTab(); return; }
+    var win = window.Cloak.open(url, { disguise: window.Store.settings().cloakDisguise });
+    if (!win) { window.UI.toast("Pop-up blocked — allow it and retry"); return; }
+    window.Store.recordPlay(game.id);
+    window.Store.pushRecent(game.id);
+    counters();
+    window.UI.toast("Opened in a hidden tab");
   }
 
   function fullscreen() {
@@ -446,6 +471,11 @@
           !window.confirm("Open " + game.title + " in a new tab?")) return;
       newTab();
     });
+
+    (function () {
+      var cbtn = $("a-cloak");
+      if (cbtn) cbtn.addEventListener("click", function () { cloakTab(); });
+    })();
 
     $("a-full").addEventListener("click", function () {
       if (!frame) {

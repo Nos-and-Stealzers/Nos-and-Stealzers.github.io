@@ -10,6 +10,12 @@
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Warm up connections to the game-host origins so a game's files start
+       downloading a beat sooner (TLS + DNS already done when the iframe loads). -->
+  <link rel="preconnect" href="https://arcadecampushub.github.io" crossorigin>
+  <link rel="preconnect" href="https://nos-and-stealzers.github.io" crossorigin>
+  <link rel="preconnect" href="https://rawcdn.githack.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
   <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>

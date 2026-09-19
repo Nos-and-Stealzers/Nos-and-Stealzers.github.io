@@ -85,22 +85,26 @@
     [
       ["mute",   "🎙", "Mute",         toggleMute],
       ["cam",    "📷", "Camera",       toggleCam],
-      ["screen", "🖥", "Share screen", toggleScreen],
+      ["screen", "🖥", "Share",        toggleScreen],
       ["full",   "⛶", "Expand",       function () { root.classList.toggle("is-big"); }]
     ].forEach(function (spec) {
-      var b = el("button", "callbtn", spec[1]);
+      var b = el("button", "callbtn");
       b.type = "button";
       b.dataset.act = spec[0];
       b.title = spec[2];
       b.setAttribute("aria-label", spec[2]);
+      b.appendChild(el("span", "callbtn-ico", spec[1]));
+      b.appendChild(el("span", "callbtn-lbl", spec[2]));
       b.addEventListener("click", function () { spec[3](); });
       deck.appendChild(b);
     });
 
-    var end = el("button", "callbtn is-end", "✕");
+    var end = el("button", "callbtn is-end");
     end.type = "button";
     end.title = "Leave the call";
     end.setAttribute("aria-label", "Leave the call");
+    end.appendChild(el("span", "callbtn-ico", "📞"));
+    end.appendChild(el("span", "callbtn-lbl", "End"));
     end.addEventListener("click", function () { hangUp(); });
     deck.appendChild(end);
 

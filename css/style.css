@@ -2497,3 +2497,138 @@ kbd {
   .gd-field { grid-template-columns: minmax(0, 1fr) auto; }
   .gd-field-key { grid-column: 1 / -1; }
 }
+
+/* ==========================================================================
+   28 · CALLS + MESSAGING — 2026 REWORK
+   A cohesive visual + UX overhaul layered on top of the existing markup
+   hooks (.callroot/.callbar/.callbtn/.ring*/.dm-*/.bubble*). Everything below
+   only restyles; no class names were removed, so all JS keeps working.
+   ========================================================================== */
+
+/* ---- Live call panel ---- */
+.callbar {
+  width: min(340px, calc(100vw - 1.5rem));
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
+  backdrop-filter: blur(6px);
+  animation: callbar-in 0.22s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes callbar-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+.callbar-head {
+  padding: 0.6rem 0.85rem;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 22%, var(--surface-2)),
+    var(--surface-2));
+  border-bottom: 1px solid var(--line);
+}
+.callbar-status { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em; }
+.callbar-status::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 0.45rem;
+  border-radius: 50%; background: var(--good); vertical-align: middle;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 70%, transparent);
+  animation: call-live 1.8s ease-out infinite;
+}
+@keyframes call-live { 70%,100% { box-shadow: 0 0 0 6px transparent; } }
+.callbar-timer { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); }
+.callbar-btn { font-size: 1.15rem; border-radius: 8px; padding: 0.15rem 0.45rem; transition: background .12s, color .12s; }
+.callbar-btn:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+.calltiles { gap: 3px; padding: 3px; border-radius: 0; }
+.calltile { border-radius: 8px; aspect-ratio: 4/3; }
+.calltile-name { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; }
+
+/* Larger, clearer control deck: icon on top, label under, pill shapes. */
+.callbar-deck { gap: 0.4rem; padding: 0.7rem 0.6rem; }
+.callbtn {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.5rem 0.3rem; border-radius: 12px;
+  border: 1px solid var(--line-2); background: var(--surface);
+  transition: transform .1s, background .12s, border-color .12s, color .12s;
+}
+.callbtn:hover { transform: translateY(-1px); border-color: var(--accent); }
+.callbtn:active { transform: translateY(0) scale(.96); }
+.callbtn-ico { font-size: 1.15rem; line-height: 1; }
+.callbtn-lbl { font-size: 0.62rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0.01em; }
+.callbtn.is-on { background: var(--accent); border-color: var(--accent); }
+.callbtn.is-on .callbtn-lbl, .callbtn.is-on .callbtn-ico { color: var(--accent-ink); }
+.callbtn.is-end { flex: 0 0 3.4rem; background: var(--bad); border-color: var(--bad); }
+.callbtn.is-end .callbtn-ico { transform: rotate(135deg); }
+.callbtn.is-end .callbtn-ico, .callbtn.is-end .callbtn-lbl { color: #fff; }
+.callbtn.is-end:hover { filter: brightness(1.08); }
+
+/* ---- Incoming call card ---- */
+.ring {
+  width: min(320px, calc(100vw - 1.5rem));
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line-2));
+  border-radius: 16px; padding: 1rem;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.5);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface));
+}
+.ring-who { gap: 0.75rem; margin-bottom: 0.9rem; }
+.ring-who .avatar { width: 3rem; height: 3rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
+.ring-text strong { font-size: 1rem; }
+.ring-kind { font-size: 0.78rem; }
+.ring-kind::before { content: "📞 "; }
+.ring-acts { gap: 0.5rem; }
+.ring-acts .btn { flex: 1; padding: 0.7rem 0.5rem; border-radius: 11px; font-weight: 700; }
+.ring-acts .btn-cta { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); animation: ring-glow 1.6s ease-in-out infinite; }
+@keyframes ring-glow { 50% { box-shadow: 0 4px 22px color-mix(in srgb, var(--accent) 70%, transparent); } }
+.ring-acts .btn-flat { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+/* ==== Messaging ==== */
+.dm { border-radius: 16px; overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.14); }
+
+.dm-item { padding: 0.75rem 0.9rem; }
+.dm-item:hover { background: color-mix(in srgb, var(--accent) 8%, var(--surface-2)); }
+.dm-item.on { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.dm-item .avatar { box-shadow: 0 0 0 2px var(--line); }
+.dm-item-top { font-size: 0.9rem; }
+.dm-item-prev { font-size: 0.78rem; }
+
+.dm-head {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent) 12%, var(--surface-2)), var(--surface-2));
+}
+
+/* Message bubbles: tail, subtle shadow, tighter meta reveal on hover. */
+.dm-log { gap: 0.55rem; scroll-behavior: smooth; }
+.bubble {
+  border-radius: 16px 16px 16px 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  font-size: 0.9rem; line-height: 1.5;
+  transition: transform .08s;
+}
+.bubble-row.mine .bubble {
+  border-radius: 16px 16px 5px 16px;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.bubble-meta { opacity: 0; transition: opacity .15s; }
+.bubble-row:hover .bubble-meta, .bubble-row:focus-within .bubble-meta { opacity: 1; }
+
+/* Compose bar: rounded field + circular send button. */
+.dm-compose { gap: 0.5rem; padding: 0.75rem 0.9rem; align-items: center; }
+.dm-compose textarea {
+  border-radius: 1.4rem; padding: 0.65rem 1rem; min-height: 2.6rem;
+  transition: border-color .12s, box-shadow .12s;
+}
+.dm-compose textarea:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.dm-compose .btn-cta#send {
+  flex: none; width: 2.9rem; height: 2.9rem; padding: 0; border-radius: 50%;
+  font-size: 0; position: relative; display: grid; place-items: center;
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: transform .1s, filter .12s;
+}
+.dm-compose .btn-cta#send::before { content: "➤"; font-size: 1.05rem; line-height: 1; }
+.dm-compose .btn-cta#send:hover { transform: scale(1.06); filter: brightness(1.05); }
+.dm-compose .btn-cta#send:active { transform: scale(0.94); }
+
+@media (max-width: 900px) {
+  /* On phones the call panel spans the bottom as a proper bar. */
+  .callbar { width: 100%; }
+  .callbar-deck { padding: 0.8rem 0.7rem; }
+  .callbtn { padding: 0.6rem 0.3rem; }
+  .callbtn-ico { font-size: 1.3rem; }
+}

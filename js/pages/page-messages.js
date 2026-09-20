@@ -292,6 +292,9 @@
 
         document.getElementById("dm-empty").hidden = true;
         document.getElementById("dm-open").hidden = false;
+        /* On phones the list and the conversation occupy the same screen; adding
+           this class slides the panel into view and reveals the back button. */
+        document.getElementById("dm").classList.add("dm-viewing");
 
         /* A fast click to a second thread must win over a slow response for
            the first one — without this token, switching quickly could paint
@@ -386,14 +389,16 @@
 
       var tools = UI.el("div", "dock-tools");
       [
-        ["▣", "Share a screenshot", function () { return window.Capture.screenshot(); }],
-        ["◉", "Take a photo", function () { return window.Capture.cameraDialog(); }],
-        ["⊞", "Attach an image", function () { return window.Capture.fromFile(); }]
+        ["screenshot", "Screenshot", function () { return window.Capture.screenshot(); }],
+        ["camera", "Photo", function () { return window.Capture.cameraDialog(); }],
+        ["image", "Image", function () { return window.Capture.fromFile(); }]
       ].forEach(function (spec) {
-        var b = UI.el("button", "dock-tool", spec[0]);
+        var b = UI.el("button", "dock-tool");
         b.type = "button";
         b.title = spec[1];
         b.setAttribute("aria-label", spec[1]);
+        b.appendChild(UI.icon(spec[0]));
+        b.appendChild(UI.el("span", "dock-tool-lbl", spec[1]));
         b.addEventListener("click", function () { stage(spec[2]); });
         tools.appendChild(b);
       });
@@ -575,6 +580,15 @@
       }
 
       /* ----------------------------------------------------------- boot */
+
+      /* Mobile back button: return to the conversation list without dropping
+         the open conversation's poll — just re-show the list pane. */
+      var backBtn = document.getElementById("dm-back");
+      if (backBtn) {
+        backBtn.addEventListener("click", function () {
+          document.getElementById("dm").classList.remove("dm-viewing");
+        });
+      }
 
       loadList().then(function () {
         var params = UI.params();

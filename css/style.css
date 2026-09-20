@@ -227,6 +227,13 @@ html[data-text="large"] .tile-desc { -webkit-line-clamp: 3; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Global hidden reset with !important. Several components set display via a
+   class (e.g. .dm-open{display:flex}) which, at equal specificity, beats the
+   UA [hidden]{display:none} rule by source order — so toggling the `hidden`
+   attribute silently did nothing and empty panels stayed on screen. This one
+   line makes the attribute authoritative everywhere. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -1504,9 +1511,25 @@ kbd {
   min-height: 68vh;
   background: var(--surface);
 }
-.dm-list {
+.dm-sidebar {
+  display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--line);
-  overflow-y: auto; max-height: 76vh;
+  background: var(--paper);
+}
+.dm-sidebar-head {
+  padding: 0.75rem 0.9rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.dm-sidebar-head h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+.dm-sidebar-head input {
+  width: 100%; border-radius: 0.7rem; padding: 0.5rem 0.8rem;
+}
+.dm-sidebar .social-status { padding: 0.6rem 0.9rem 0; margin: 0; }
+.dm-sidebar #thread-retry { margin: 0.5rem 0.9rem; }
+.dm-list {
+  border-right: 0;
+  overflow-y: auto; flex: 1; min-height: 0;
   background: var(--paper);
 }
 .dm-item {
@@ -1602,10 +1625,48 @@ kbd {
   background: var(--surface-2);
 }
 
+/* Desktop: two panes side by side; the mobile back button is irrelevant. */
+.dm-back { display: none; }
+
 @media (max-width: 760px) {
-  .dm { grid-template-columns: 1fr; border-radius: 0; }
-  .dm-list { border-right: 0; border-bottom: 1px solid var(--line); max-height: 34vh; }
+  /* Phone master/detail: both panes stack in one column and occupy the full
+     width. By default the list shows; opening a conversation adds .dm-viewing
+     to slide the panel over the top. The back button returns to the list. */
+  .dm {
+    grid-template-columns: 1fr;
+    border-radius: 0;
+    position: relative;
+    min-height: calc(100dvh - 12rem);
+  }
+  .dm-sidebar { max-height: none; }
+  .dm-list { border-right: 0; border-bottom: 1px solid var(--line); max-height: none; }
   .bubble-row { max-width: 88%; }
+
+  /* The conversation pane overlays the list on phones. */
+  .dm-panel {
+    position: absolute; inset: 0; z-index: 3;
+    background: var(--surface);
+    transform: translateX(100%);
+    transition: transform .22s cubic-bezier(.2,.8,.2,1);
+    visibility: hidden;
+  }
+  .dm.dm-viewing .dm-panel { transform: translateX(0); visibility: visible; }
+  /* Hide the list under the panel while a conversation is open so background
+     scrolling and tab order don't leak through. */
+  .dm.dm-viewing .dm-sidebar { visibility: hidden; }
+
+  .dm-back {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    margin: 0.6rem 0.6rem 0; align-self: flex-start;
+  }
+  .dm-open { min-height: 0; }
+  .dm-compose { position: sticky; bottom: 0; background: var(--surface); }
+}
+
+/* Ultra-wide screens: cap the conversation column so lines stay readable and
+   the layout doesn't stretch into a void on 1440p+ monitors. */
+@media (min-width: 1600px) {
+  .dm { grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); }
 }
 
 /* --------------------------------------------------------------------------

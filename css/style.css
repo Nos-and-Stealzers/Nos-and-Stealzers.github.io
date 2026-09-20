@@ -2713,3 +2713,55 @@ kbd {
   color: var(--good); border: 1px solid transparent; border-radius: 10px;
 }
 .dm-head .dm-call-btn:hover { background: var(--good); color: #fff; }
+
+/* ==========================================================================
+   30 · SVG ICON SYSTEM — legible, human buttons
+   Replaces cryptic Unicode glyphs with crisp inline SVGs. Icons inherit color
+   and sit inline with their labels so every button reads at a glance.
+   ========================================================================== */
+
+.svg-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1em; height: 1em; line-height: 0; flex: none;
+}
+.svg-ico svg { display: block; width: 1em; height: 1em; }
+
+/* Any button that holds an icon + text label: space them, center them. */
+.btn .svg-ico, .dm-call-btn .svg-ico, .btn-call .svg-ico { margin-right: 0.4rem; }
+.btn-call {
+  display: inline-flex; align-items: center;
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+  color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
+}
+.btn-call:hover { background: var(--good); color: #fff; border-color: var(--good); }
+
+/* Messages-page header call buttons: icon + label, green, obvious. */
+.dm-head .dm-call-btn {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.4rem 0.7rem; font-weight: 650;
+}
+
+/* Chat-dock compose tools: icon on top, tiny label under — unmistakable. */
+.dock-tools { display: flex; gap: 0.15rem; }
+.dock-tool {
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  padding: 0.35rem 0.45rem; font-size: 1.05rem;
+}
+.dock-tool-lbl { font-size: 0.56rem; font-weight: 600; color: var(--ink-3); letter-spacing: 0.02em; }
+.dock-tool:hover .dock-tool-lbl { color: var(--accent); }
+
+/* Chat-dock header call buttons already green via .dock-call; size the icon. */
+.dock-btn.dock-call .svg-ico { font-size: 1.05rem; }
+.dock-send .svg-ico { font-size: 1.05rem; }
+
+/* Call control deck: the SVG icon sits above the text label. */
+.callbtn-ico { font-size: 1.15rem; display: grid; place-items: center; }
+.callbtn-ico svg { width: 1.15rem; height: 1.15rem; }
+
+/* Incoming-call Answer/Decline: icon + word, colour-coded. */
+.ring-acts .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.ring-answer { background: var(--good); border-color: var(--good); color: #fff; }
+.ring-answer:hover { filter: brightness(1.08); }
+.ring-decline { background: var(--bad); border-color: var(--bad); color: #fff; }
+.ring-decline:hover { filter: brightness(1.08); }
+.ring-decline .svg-ico { transform: rotate(135deg); }

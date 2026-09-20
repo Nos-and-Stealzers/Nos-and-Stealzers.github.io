@@ -206,7 +206,7 @@
                 { label: "Message", kind: "cta", onClick: function () { return handlers.message(u); } },
                 /* Calling a friend was reachable from their profile and from
                    the chat dock, but not from the list of friends. */
-                canCall ? { label: "☎", onClick: function () { return handlers.call(u); } } : null,
+                canCall ? { label: "Call", icon: "phone", cls: "btn-call", onClick: function () { return handlers.call(u); } } : null,
                 { label: "Remove", onClick: function () { return handlers.remove(u); } },
                 /* Blocking was only offered on an incoming request, so the
                    one case it exists for — someone you already accepted

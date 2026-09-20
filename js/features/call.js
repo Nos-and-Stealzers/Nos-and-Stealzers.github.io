@@ -83,17 +83,18 @@
 
     var deck = el("div", "callbar-deck");
     [
-      ["mute",   "🎙", "Mute",         toggleMute],
-      ["cam",    "📷", "Camera",       toggleCam],
-      ["screen", "🖥", "Share",        toggleScreen],
-      ["full",   "⛶", "Expand",       function () { root.classList.toggle("is-big"); }]
+      ["mute",   "mic",    "Mute",   toggleMute],
+      ["cam",    "camera", "Camera", toggleCam],
+      ["screen", "screen", "Share",  toggleScreen],
+      ["full",   "expand", "Expand", function () { root.classList.toggle("is-big"); }]
     ].forEach(function (spec) {
       var b = el("button", "callbtn");
       b.type = "button";
       b.dataset.act = spec[0];
+      b.dataset.icon = spec[1];
       b.title = spec[2];
       b.setAttribute("aria-label", spec[2]);
-      b.appendChild(el("span", "callbtn-ico", spec[1]));
+      b.appendChild(window.UI.icon(spec[1], "callbtn-ico"));
       b.appendChild(el("span", "callbtn-lbl", spec[2]));
       b.addEventListener("click", function () { spec[3](); });
       deck.appendChild(b);
@@ -103,7 +104,7 @@
     end.type = "button";
     end.title = "Leave the call";
     end.setAttribute("aria-label", "Leave the call");
-    end.appendChild(el("span", "callbtn-ico", "📞"));
+    end.appendChild(window.UI.icon("hangup", "callbtn-ico"));
     end.appendChild(el("span", "callbtn-lbl", "End"));
     end.addEventListener("click", function () { hangUp(); });
     deck.appendChild(end);
@@ -356,7 +357,18 @@
 
   function mark(act, on) {
     var b = bar.querySelector('[data-act="' + act + '"]');
-    if (b) b.classList.toggle("is-on", !!on);
+    if (!b) return;
+    b.classList.toggle("is-on", !!on);
+    /* The mic swaps to a struck-through icon when muted, and the label to
+       "Unmute", so the button always says exactly what it will do next. */
+    if (act === "mute") {
+      var ico = window.UI.icon(on ? "micOff" : "mic", "callbtn-ico");
+      var old = b.querySelector(".callbtn-ico");
+      if (old) b.replaceChild(ico, old);
+      var lbl = b.querySelector(".callbtn-lbl");
+      if (lbl) lbl.textContent = on ? "Unmute" : "Mute";
+      b.title = on ? "Unmute" : "Mute";
+    }
   }
 
   /* ------------------------------------------------------ peer plumbing */
@@ -708,8 +720,10 @@
 
     var acts = el("div", "ring-acts");
 
-    var take = el("button", "btn btn-cta btn-sm", "Answer");
+    var take = el("button", "btn btn-cta btn-sm ring-answer");
     take.type = "button";
+    take.appendChild(window.UI.icon(call.kind === "video" ? "video" : "phone"));
+    take.appendChild(el("span", null, "Answer"));
     take.addEventListener("click", function () {
       ringEl.hidden = true;
       answer(call.id, call.kind === "video");
@@ -717,8 +731,10 @@
     acts.appendChild(take);
 
     if (call.kind === "video") {
-      var audioOnly = el("button", "btn btn-sm", "Audio only");
+      var audioOnly = el("button", "btn btn-sm");
       audioOnly.type = "button";
+      audioOnly.appendChild(window.UI.icon("phone"));
+      audioOnly.appendChild(el("span", null, "Audio"));
       audioOnly.addEventListener("click", function () {
         ringEl.hidden = true;
         answer(call.id, false);
@@ -726,8 +742,10 @@
       acts.appendChild(audioOnly);
     }
 
-    var no = el("button", "btn btn-sm btn-flat", "Decline");
+    var no = el("button", "btn btn-sm ring-decline");
     no.type = "button";
+    no.appendChild(window.UI.icon("hangup"));
+    no.appendChild(el("span", null, "Decline"));
     no.addEventListener("click", function () {
       window.API.leaveCall(call.id).catch(function () {});
       dismissRing();

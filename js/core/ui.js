@@ -9,6 +9,36 @@
     return node;
   }
 
+  /* Crisp, self-explanatory inline SVG icons. Stroke-based, inherit color via
+     currentColor, and scale with font-size (1em). Use these instead of Unicode
+     glyphs, which render inconsistently across systems and read as gibberish. */
+  var ICON_PATHS = {
+    phone:      '<path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 11 11 0 0 0 3.5.56 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.3a1 1 0 0 1 1 1 11 11 0 0 0 .56 3.5 1 1 0 0 1-.25 1z"/>',
+    video:      '<rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 6-3v10l-6-3z"/>',
+    camera:     '<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/>',
+    image:      '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/>',
+    screenshot: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5V3m8 2V3M3 10h18"/>',
+    flag:       '<path d="M5 21V4m0 1h11l-2 4 2 4H5"/>',
+    block:      '<circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>',
+    send:       '<path d="m4 12 16-8-6 16-3-6z"/><path d="m11 14 3-3"/>',
+    mic:        '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/>',
+    micOff:     '<path d="M9 5a3 3 0 0 1 6 0v4m0 3a3 3 0 0 1-4.6 2.5M6 11a6 6 0 0 0 9 5.2M12 17v4M4 4l16 16"/>',
+    screen:     '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4"/>',
+    expand:     '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5m11-5v5h-5"/>',
+    hangup:     '<path d="M2.5 12.5c5-4.5 14-4.5 19 0l-2.3 2.6a1.4 1.4 0 0 1-1.7.2l-2.4-1.4a1.4 1.4 0 0 1-.7-1.2v-1.5c-2.4-.8-5-.8-7.4 0v1.5a1.4 1.4 0 0 1-.7 1.2L4 15.3a1.4 1.4 0 0 1-1.7-.2z"/>'
+  };
+  function icon(name, cls) {
+    var span = document.createElement("span");
+    span.className = "svg-ico" + (cls ? " " + cls : "");
+    span.setAttribute("aria-hidden", "true");
+    var p = ICON_PATHS[name] || "";
+    span.innerHTML =
+      '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
+      'stroke-linejoin="round">' + p + '</svg>';
+    return span;
+  }
+
   function playHref(game) {
     return "play.html?id=" + encodeURIComponent(game.id);
   }
@@ -323,6 +353,7 @@
 
   window.UI = {
     el: el,
+    icon: icon,
     pad: pad,
     tile: tile,
     row: row,

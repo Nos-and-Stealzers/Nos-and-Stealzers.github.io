@@ -52,8 +52,15 @@
         acts.innerHTML = "";
 
         function button(label, kind, onClick) {
-          var b = UI.el("button", "btn" + (kind ? " " + kind : ""), label);
+          var b = UI.el("button", "btn" + (kind ? " " + kind : ""));
           b.type = "button";
+          /* label can be a plain string, or [iconName, text] for an icon + label. */
+          if (Array.isArray(label)) {
+            b.appendChild(UI.icon(label[0]));
+            b.appendChild(UI.el("span", null, label[1]));
+          } else {
+            b.textContent = label;
+          }
           b.addEventListener("click", function () {
             b.disabled = true;
             Promise.resolve(onClick())
@@ -108,22 +115,22 @@
           /* Calling is friends-only, and the server says so too — no point
              offering a button that will come back 400. */
           if (user.relation === "friends" && window.Calls && window.Calls.supported()) {
-            button("☎ Call", "", function () {
+            button(["phone", "Call"], "btn-call", function () {
               return window.Calls.start({ userId: user.id, kind: "audio" });
             });
-            button("🎥 Video", "", function () {
+            button(["video", "Video"], "btn-call", function () {
               return window.Calls.start({ userId: user.id, kind: "video" });
             });
           }
 
           if (user.relation !== "blocked") {
-            button("Block", "btn-flat", function () {
+            button(["block", "Block"], "btn-flat", function () {
               if (!window.confirm("Block " + user.username + "?")) return Promise.resolve();
               return API.blockUser(user.username).then(after("Blocked"));
             });
           }
 
-          button("Report", "btn-flat", function () {
+          button(["flag", "Report"], "btn-flat", function () {
             var reason = window.prompt("Why are you reporting " + user.username + "?");
             if (!reason || reason.trim().length < 4) return Promise.resolve();
             return API.report("user", user.username, reason.trim())

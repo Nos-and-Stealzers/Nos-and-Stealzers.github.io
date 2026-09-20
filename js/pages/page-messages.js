@@ -128,12 +128,14 @@
         /* Calling was reachable from the floating dock and from a profile,
            but not from the page whose entire job is this conversation. */
         if (window.Calls && window.Calls.supported()) {
-          [["☎", "Start a voice call", "audio"], ["🎥", "Start a video call", "video"]]
+          [["phone", "Call", "audio"], ["video", "Video", "video"]]
             .forEach(function (spec) {
-              var b = UI.el("button", "btn btn-sm btn-flat", spec[0]);
+              var b = UI.el("button", "btn btn-sm dm-call-btn");
               b.type = "button";
               b.title = spec[1];
               b.setAttribute("aria-label", spec[1]);
+              b.appendChild(UI.icon(spec[0]));
+              b.appendChild(UI.el("span", null, spec[1]));
               b.addEventListener("click", function () {
                 window.Calls.start({ threadId: data.id, kind: spec[2] });
               });

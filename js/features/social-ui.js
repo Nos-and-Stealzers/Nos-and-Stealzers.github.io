@@ -54,9 +54,16 @@
       var acts = el("div", "person-acts");
       opts.actions.forEach(function (action) {
         if (!action) return;
-        var b = el("button", "btn btn-sm" + (action.kind === "cta" ? " btn-cta" : ""));
+        var b = el("button", "btn btn-sm" + (action.kind === "cta" ? " btn-cta" : "") + (action.cls ? " " + action.cls : ""));
         b.type = "button";
-        b.textContent = action.label;
+        if (action.icon) {
+          b.appendChild(window.UI.icon(action.icon));
+          if (action.label) b.appendChild(el("span", null, action.label));
+          b.title = action.title || action.label || "";
+          if (!action.label) b.setAttribute("aria-label", b.title);
+        } else {
+          b.textContent = action.label;
+        }
         b.addEventListener("click", function (event) {
           event.preventDefault();
           b.disabled = true;

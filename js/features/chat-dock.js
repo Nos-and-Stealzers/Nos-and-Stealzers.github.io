@@ -74,14 +74,14 @@
        you're in. Hidden until a conversation is open — there's nobody to
        call from the list view. */
     callBtns = [];
-    [["📞", "Voice call", "audio"], ["🎥", "Video call", "video"]]
+    [["phone", "Voice call", "audio"], ["video", "Video call", "video"]]
       .forEach(function (spec) {
         var b = el("button", "dock-btn dock-call");
         b.type = "button";
         b.hidden = true;
         b.title = spec[1];
         b.setAttribute("aria-label", spec[1]);
-        b.appendChild(el("span", null, spec[0]));
+        b.appendChild(window.UI.icon(spec[0]));
         b.addEventListener("click", function () {
           if (!current) return;
           window.Calls.start({ threadId: current.id, kind: spec[2] });
@@ -114,14 +114,16 @@
     var form = el("form", "dock-compose");
     var tools = el("div", "dock-tools");
     [
-      ["▣", "Share a screenshot", function () { return window.Capture.screenshot(); }],
-      ["◉", "Take a photo", function () { return window.Capture.cameraDialog(); }],
-      ["⊞", "Attach an image", function () { return window.Capture.fromFile(); }]
+      ["screenshot", "Screenshot", function () { return window.Capture.screenshot(); }],
+      ["camera", "Photo", function () { return window.Capture.cameraDialog(); }],
+      ["image", "Image", function () { return window.Capture.fromFile(); }]
     ].forEach(function (spec) {
-      var b = el("button", "dock-tool", spec[0]);
+      var b = el("button", "dock-tool");
       b.type = "button";
       b.title = spec[1];
       b.setAttribute("aria-label", spec[1]);
+      b.appendChild(window.UI.icon(spec[0]));
+      b.appendChild(el("span", "dock-tool-lbl", spec[1]));
       b.addEventListener("click", function () { stage(spec[2]); });
       tools.appendChild(b);
     });
@@ -135,9 +137,11 @@
     inputEl.setAttribute("aria-label", "Message");
     form.appendChild(inputEl);
 
-    var send = el("button", "dock-send", "➤");
+    var send = el("button", "dock-send");
     send.type = "submit";
+    send.title = "Send";
     send.setAttribute("aria-label", "Send");
+    send.appendChild(window.UI.icon("send"));
     form.appendChild(send);
 
     form.addEventListener("submit", function (e) { e.preventDefault(); submit(); });

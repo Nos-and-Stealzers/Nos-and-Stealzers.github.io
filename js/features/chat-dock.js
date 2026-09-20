@@ -74,13 +74,14 @@
        you're in. Hidden until a conversation is open — there's nobody to
        call from the list view. */
     callBtns = [];
-    [["☎", "Start a voice call", "audio"], ["🎥", "Start a video call", "video"]]
+    [["📞", "Voice call", "audio"], ["🎥", "Video call", "video"]]
       .forEach(function (spec) {
-        var b = el("button", "dock-btn", spec[0]);
+        var b = el("button", "dock-btn dock-call");
         b.type = "button";
         b.hidden = true;
         b.title = spec[1];
         b.setAttribute("aria-label", spec[1]);
+        b.appendChild(el("span", null, spec[0]));
         b.addEventListener("click", function () {
           if (!current) return;
           window.Calls.start({ threadId: current.id, kind: spec[2] });

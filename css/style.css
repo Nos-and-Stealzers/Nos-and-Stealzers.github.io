@@ -2968,3 +2968,13 @@ kbd {
   .ai-bubble { max-width: 90%; }
   .ai-cards { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 }
+
+/* Campus AI members-only gate */
+.ai-gate {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 0.6rem; padding: 3rem 1.5rem; margin: auto; max-width: 30rem;
+}
+.ai-gate .svg-ico { font-size: 2.4rem; color: var(--ink-3); }
+.ai-gate h2 { font-size: 1.15rem; }
+.ai-gate p { color: var(--ink-2); font-size: 0.9rem; line-height: 1.55; }
+.ai-gate-acts { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem; }

@@ -146,8 +146,24 @@
     var video = document.createElement("video");
     video.autoplay = true;
     video.playsInline = true;
+    video.setAttribute("playsinline", "");        // iOS Safari needs the attribute
+    video.setAttribute("autoplay", "");
     video.muted = userId === state.self;    // never hear yourself
     tile.appendChild(video);
+
+    /* Dedicated audio sink for REMOTE peers. The video tile is display:none
+       whenever there's no live video (every voice call, and video calls with
+       the camera off), and browsers won't autoplay a hidden <video> — so the
+       audio rode on an element that never started and you heard nothing. A
+       separate always-present <audio autoplay> guarantees the voice comes
+       through regardless of whether the video tile is shown. */
+    if (userId !== state.self) {
+      var audio = document.createElement("audio");
+      audio.autoplay = true;
+      audio.setAttribute("autoplay", "");
+      tile.appendChild(audio);
+      tile._audio = audio;
+    }
 
     var face = el("div", "calltile-face");
     face.appendChild(window.Art.avatar(label || String(userId)));
@@ -159,6 +175,37 @@
     tile._video = video;
     tiles.appendChild(tile);
     return tile;
+  }
+
+  /* Start playback and swallow the autoplay-policy rejection. Browsers block
+     autoplay of media that isn't muted until a user gesture; the Call/Answer
+     click IS that gesture, but media often arrives a beat later, so we also
+     retry on the next pointer/keydown as a safety net. */
+  var _pendingPlays = [];
+  function playMedia(elm) {
+    if (!elm) return;
+    var p = elm.play && elm.play();
+    if (p && p.catch) {
+      p.catch(function () {
+        if (_pendingPlays.indexOf(elm) === -1) _pendingPlays.push(elm);
+        armGesturePlay();
+      });
+    }
+  }
+  var _gestureArmed = false;
+  function armGesturePlay() {
+    if (_gestureArmed) return;
+    _gestureArmed = true;
+    var retry = function () {
+      _pendingPlays.splice(0).forEach(function (elm) {
+        try { var q = elm.play(); if (q && q.catch) q.catch(function () {}); } catch (e) {}
+      });
+      _gestureArmed = false;
+      document.removeEventListener("pointerdown", retry, true);
+      document.removeEventListener("keydown", retry, true);
+    };
+    document.addEventListener("pointerdown", retry, true);
+    document.addEventListener("keydown", retry, true);
   }
 
   /* A tile shows the video element only when a live video track exists;
@@ -250,6 +297,7 @@
       state.camOff = !wantVideo;
       var tile = tileFor(state.self, "You");
       tile._video.srcObject = stream;
+      playMedia(tile._video);
       refreshTile(tile, stream);
       return stream;
     }).catch(function (err) {
@@ -291,6 +339,7 @@
         publishVideo(track);
         var tile = tileFor(state.self, "You");
         tile._video.srcObject = state.local;
+        playMedia(tile._video);
         refreshTile(tile, state.local);
       })
       .catch(function () { window.UI.toast("No camera available."); });
@@ -317,6 +366,7 @@
 
         var tile = tileFor(state.self, "You");
         tile._video.srcObject = stream;
+        playMedia(tile._video);
         tile.classList.add("has-video", "is-screen");
       })
       .catch(function (err) {
@@ -346,9 +396,35 @@
     Object.keys(state.peers).forEach(function (id) {
       var pc = state.peers[id].pc;
       if (!pc) return;
-      var sender = pc.getSenders().filter(function (s) {
-        return s.track ? s.track.kind === "video" : false;
-      })[0];
+
+      /* Find the video sender via TRANSCEIVERS, not by current track. On an
+         audio-only call the pre-negotiated video sender has track === null, so
+         filtering senders by "s.track.kind === video" found nothing and we fell
+         through to addTrack() — which creates a SECOND video m-line and forces a
+         renegotiation this simple signaller doesn't do, leaving remote video
+         permanently black. Reusing the existing sender is a plain replaceTrack,
+         no renegotiation, and the frames flow. */
+      var sender = null;
+      var txs = pc.getTransceivers ? pc.getTransceivers() : [];
+      for (var i = 0; i < txs.length; i++) {
+        var tx = txs[i];
+        var kind = (tx.sender && tx.sender.track && tx.sender.track.kind) ||
+                   (tx.receiver && tx.receiver.track && tx.receiver.track.kind) ||
+                   (tx.mid && /video/i.test(String(tx.mid)) ? "video" : "");
+        if (kind === "video") { sender = tx.sender; 
+          /* Make sure this m-line actually sends now. */
+          try {
+            if (track && tx.direction === "recvonly") tx.direction = "sendrecv";
+            if (track && tx.direction === "inactive") tx.direction = "sendrecv";
+          } catch (e) {}
+          break;
+        }
+      }
+      if (!sender) {
+        sender = pc.getSenders().filter(function (s) {
+          return s.track ? s.track.kind === "video" : false;
+        })[0];
+      }
 
       if (sender) sender.replaceTrack(track);
       else if (track) pc.addTrack(track, state.local || new window.MediaStream([track]));
@@ -417,12 +493,24 @@
     });
 
     pc.addEventListener("track", function (e) {
-      entry.stream = e.streams[0];
-      entry.el._video.srcObject = e.streams[0];
-      refreshTile(entry.el, e.streams[0]);
+      var stream = e.streams[0];
+      entry.stream = stream;
+      /* Route audio to the dedicated <audio> sink and video to the <video>
+         tile. Both get an explicit play() because autoplay of unmuted remote
+         media is otherwise blocked — which is what caused black video and
+         silent audio even when the connection was fine. */
+      entry.el._video.srcObject = stream;
+      playMedia(entry.el._video);
+      if (entry.el._audio) {
+        entry.el._audio.srcObject = stream;
+        playMedia(entry.el._audio);
+      }
+      refreshTile(entry.el, stream);
       /* Tracks can go live after the tile is drawn. */
-      e.streams[0].addEventListener("addtrack", function () {
-        refreshTile(entry.el, e.streams[0]);
+      stream.addEventListener("addtrack", function () {
+        playMedia(entry.el._video);
+        if (entry.el._audio) playMedia(entry.el._audio);
+        refreshTile(entry.el, stream);
       });
     });
 

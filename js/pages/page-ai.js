@@ -40,6 +40,46 @@
     suggestEl = document.getElementById("ai-suggests");
     if (!logEl || !formEl) return;
 
+    /* Campus+ (Arcade+) members only. Wait for the session to resolve, then
+       either unlock the assistant or show the members-only gate. */
+    if (window.Session && window.Session.ready) {
+      window.Session.ready.then(function () {
+        if (window.Session.isPlus && window.Session.isPlus()) start();
+        else gate();
+      });
+    } else {
+      start();   // no backend at all — let it run rather than dead-end
+    }
+  }
+
+  function gate() {
+    var shell = document.querySelector(".ai-shell");
+    var note = document.querySelector(".ai-note");
+    if (note) note.hidden = true;
+    if (!shell) return;
+    shell.innerHTML = "";
+    var box = UI.el("div", "ai-gate");
+    box.appendChild(UI.icon("block"));
+    var signedIn = !!(window.Session && window.Session.user);
+    box.appendChild(UI.el("h2", null, "Campus AI is an Arcade+ feature"));
+    var p = UI.el("p", null, signedIn
+      ? "Campus AI is part of Arcade+. Ask a staff member to enable Arcade+ on your account to unlock it."
+      : "Campus AI is part of Arcade+. Sign in, then ask a staff member to enable Arcade+ on your account.");
+    box.appendChild(p);
+    var row = UI.el("div", "ai-gate-acts");
+    var learn = UI.el("a", "btn btn-cta", "About Arcade+");
+    learn.href = "campus-plus.html";
+    row.appendChild(learn);
+    if (!signedIn) {
+      var login = UI.el("a", "btn", "Sign in");
+      login.href = "login.html?next=ai.html";
+      row.appendChild(login);
+    }
+    box.appendChild(row);
+    shell.appendChild(box);
+  }
+
+  function start() {
     sendBtn.appendChild(UI.icon("send"));
 
     bubble("ai", GREETING);

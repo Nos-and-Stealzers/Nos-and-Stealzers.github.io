@@ -191,6 +191,10 @@
        every `=== "admin"` in the client. */
     rank: function () { return RANK[user && user.role] || 0; },
     isStaff: function () { return Session.rank() >= RANK.mod; },
+    /* Campus+ (a.k.a. Arcade+) membership. Staff always count as members so
+       moderators can use and test member-only features. Kept here so pages
+       don't each re-derive "isPlus OR staff". */
+    isPlus: function () { return !!(user && user.isPlus) || Session.rank() >= RANK.mod; },
     isAdmin: function () { return Session.rank() >= RANK.admin; },
     isOwner: function () { return Session.rank() >= RANK.owner; },
     outranks: function (role) { return Session.rank() > (RANK[role] || 0); },

@@ -210,6 +210,16 @@
 
       load();
       retime();
+
+      /* Instant updates: the server pokes the user's personal channel whenever
+         something that creates a notification happens. Refresh the feed at once
+         instead of waiting up to 30s. Polling stays as the fallback. */
+      if (window.Realtime && window.Session && window.Session.user) {
+        window.Realtime.subscribe("realtime:user:" + window.Session.user.id, {
+          notify: function () { if (!document.hidden) load(); window.Session.refreshBadges(); },
+          ring: function () { window.Session.refreshBadges(); }
+        });
+      }
     });
   }
 

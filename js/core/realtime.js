@@ -223,17 +223,35 @@
      Session broadcasts state via DOM CustomEvents, not an on() method. */
   function boot() {
     if (!window.Session) return;
+    /* Subscribe to my personal channel app-wide so the notification bell/badges
+       update instantly on any page, and expose a helper others can poke. */
+    function subscribeSelf(user) {
+      if (!user || !rt.available()) return;
+      rt.connect();
+      rt.subscribe("realtime:user:" + user.id, {
+        notify: function () { if (window.Session.refreshBadges) window.Session.refreshBadges(); },
+        ring: function () { if (window.Session.refreshBadges) window.Session.refreshBadges(); }
+      });
+    }
     window.Session.ready.then(function (s) {
-      if (s && s.backend && s.user && rt.available()) rt.connect();
+      if (s && s.backend && s.user && rt.available()) { rt.connect(); subscribeSelf(s.user); }
     });
     document.addEventListener("session:change", function (e) {
       var d = e && e.detail;
-      if (d && d.user) rt.connect();
+      if (d && d.user) { rt.connect(); subscribeSelf(d.user); }
       else rt.disconnect();
     });
   }
 
+  /* Convenience: poke a user's personal channel to nudge their notification
+     badge/feed. Best-effort; the server's own poll is the fallback. */
+  function pokeUser(userId, event) {
+    if (userId == null) return;
+    rt.broadcast("realtime:user:" + userId, event || "notify", {});
+  }
+
   window.Realtime = rt;
+  rt.pokeUser = pokeUser;
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();

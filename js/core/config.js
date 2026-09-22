@@ -19,6 +19,7 @@
        start working. Swap any of them for Vercel/Netlify/your own host and
        only this table changes. */
     gameHosts: {
+      "self":       "https://www.arcadecampushub.online",
       "games-huge": "https://arcadecampushub.github.io/games-huge",
       "swfgalaxy":  "https://nos-and-stealzers.github.io/swfgalaxy",
       "flashgames": "https://arcadecampushub.github.io/flashgames",

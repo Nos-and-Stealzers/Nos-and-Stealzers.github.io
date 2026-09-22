@@ -3012,3 +3012,8 @@ kbd {
   border-top-color: var(--accent); animation: av-spin .7s linear infinite;
 }
 @keyframes av-spin { to { transform: rotate(360deg); } }
+
+/* Settings: profile-picture row */
+.pfp-row { display: flex; align-items: center; gap: 1rem; }
+.pfp-row .avatar-lg { width: 72px; height: 72px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--line); }
+.pfp-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; }

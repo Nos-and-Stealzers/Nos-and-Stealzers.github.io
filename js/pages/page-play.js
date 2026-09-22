@@ -145,7 +145,7 @@
     if (didRestore || !canBackup()) { embed(); return; }
     didRestore = true;
 
-    var origin = (window.SITE.gameHosts || {})[game.host];
+    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
     if (!origin) { embed(); return; }
 
     showLoading(true);
@@ -345,10 +345,22 @@
            window.Store.statFor(game.id).seconds >= MIN_SESSION;
   }
 
+  /* The host key to sync under. Self-hosted games (served from the arcade's
+     own origin, so no `host` field and a games/ or root-relative source) sync
+     under the "self" host, whose bridge is the arcade root. This is what makes
+     cloud saves work for the 150+ originals, not just the external hosts. */
+  function effectiveHost() {
+    if (!game) return null;
+    if (game.host) return game.host;
+    var src = String(game.source || game.direct || "");
+    if (/^https?:/i.test(src)) return null;      // external but hostless: can't map
+    return "self";
+  }
+
   function canBackup() {
     return window.Store.settings().autoBackup &&
            window.GameSaves && window.Session && window.Session.user &&
-           game && game.host && !game.unavailable;
+           game && effectiveHost() && !game.unavailable;
   }
 
   function markSaved(text, tone) {
@@ -367,8 +379,8 @@
   var baseline = null;
 
   function takeBaseline() {
-    if (!window.GameSaves || !game || !game.host) return;
-    var origin = (window.SITE.gameHosts || {})[game.host];
+    if (!window.GameSaves || !game || !effectiveHost()) return;
+    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
     if (!origin) return;
 
     window.GameSaves.readAll(window.GameSaves.hostKey(origin))
@@ -395,7 +407,7 @@
     if (Date.now() - lastBackup < 10000) return Promise.resolve();
     lastBackup = Date.now();
 
-    var origin = (window.SITE.gameHosts || {})[game.host];
+    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
     if (!origin) return Promise.resolve();
 
     return window.GameSaves.readAll(window.GameSaves.hostKey(origin))

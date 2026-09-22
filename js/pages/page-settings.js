@@ -231,6 +231,68 @@
     bioCount.textContent = bio.value.length;
     bio.addEventListener("input", function () { bioCount.textContent = bio.value.length; });
 
+    /* ---- profile picture ---- */
+    var pfpPreview = document.getElementById("pfp-preview");
+    var pfpUpload = document.getElementById("pfp-upload");
+    var pfpRemove = document.getElementById("pfp-remove");
+    var pfpHint = document.getElementById("pfp-hint");
+
+    function drawPfp(u) {
+      if (!pfpPreview) return;
+      pfpPreview.innerHTML = "";
+      if (window.SocialUI) {
+        var a = window.SocialUI.avatar(u, "lg");
+        // move its inner content into our preview span (keep our sizing class)
+        while (a.firstChild) pfpPreview.appendChild(a.firstChild);
+      }
+      if (pfpRemove) pfpRemove.hidden = !u.avatarUrl;
+    }
+    drawPfp(user);
+
+    if (pfpUpload && window.API && window.API.uploadAvatar) {
+      /* Hide the whole picture control if the server doesn't support it yet. */
+      if (window.API.avatarsEnabled) {
+        window.API.avatarsEnabled().then(function (ok) {
+          if (!ok && pfpHint) {
+            pfpUpload.disabled = true;
+            pfpHint.textContent = "Profile pictures aren't enabled on this server yet.";
+          }
+        });
+      }
+      pfpUpload.addEventListener("click", function () {
+        if (!window.Capture) { UI.toast("Image picker unavailable."); return; }
+        window.Capture.fromFile().then(function (shot) {
+          if (!shot || !shot.dataUrl) return;
+          pfpUpload.disabled = true;
+          var parts = shot.dataUrl.split(",");
+          var mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+          var bin = atob(parts[1]);
+          var arr = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          var blob = new Blob([arr], { type: mime });
+          return API.uploadAvatar(blob, mime).then(function (res) {
+            window.Session.setUser(res.user);
+            drawPfp(res.user);
+            UI.toast("Profile picture updated");
+          });
+        }).catch(function (err) {
+          if (err && /cancel|no file/i.test(err.message || "")) return;
+          UI.toast(err.message || "Couldn't upload that.");
+        }).then(function () { pfpUpload.disabled = false; });
+      });
+    }
+    if (pfpRemove) {
+      pfpRemove.addEventListener("click", function () {
+        pfpRemove.disabled = true;
+        API.removeAvatar().then(function (res) {
+          window.Session.setUser(res.user);
+          drawPfp(res.user);
+          UI.toast("Picture removed");
+        }).catch(function (err) { UI.toast(err.message); })
+          .then(function () { pfpRemove.disabled = false; });
+      });
+    }
+
     document.getElementById("profile-form").addEventListener("submit", function (event) {
       event.preventDefault();
       API.updateProfile({ displayName: display.value.trim(), bio: bio.value.trim() })

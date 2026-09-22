@@ -283,6 +283,17 @@
         <div class="block-head"><h2>Profile</h2><span class="fill"></span></div>
         <form class="panel form" id="profile-form">
           <div class="field">
+            <label>Profile picture</label>
+            <div class="pfp-row">
+              <span class="avatar avatar-lg" id="pfp-preview"></span>
+              <div class="pfp-actions">
+                <button class="btn btn-sm btn-cta" type="button" id="pfp-upload">Upload picture</button>
+                <button class="btn btn-sm btn-flat" type="button" id="pfp-remove" hidden>Remove</button>
+                <p class="hint" id="pfp-hint" style="margin:0.4rem 0 0">JPG, PNG, GIF or WebP. Squared and shrunk automatically.</p>
+              </div>
+            </div>
+          </div>
+          <div class="field">
             <label for="display">Display name</label>
             <input type="text" id="display" maxlength="32">
             <p class="hint">Shown instead of your username. Your @handle never changes.</p>

@@ -250,18 +250,9 @@
     drawPfp(user);
 
     if (pfpUpload && window.API && window.API.uploadAvatar) {
-      /* Hide the whole picture control if the server doesn't support it yet. */
-      if (window.API.avatarsEnabled) {
-        window.API.avatarsEnabled().then(function (ok) {
-          if (!ok && pfpHint) {
-            pfpUpload.disabled = true;
-            pfpHint.textContent = "Profile pictures aren't enabled on this server yet.";
-          }
-        });
-      }
       pfpUpload.addEventListener("click", function () {
         if (!window.Capture) { UI.toast("Image picker unavailable."); return; }
-        window.Capture.fromFile().then(function (shot) {
+        (window.Capture.avatarFromFile || window.Capture.fromFile)().then(function (shot) {
           if (!shot || !shot.dataUrl) return;
           pfpUpload.disabled = true;
           var parts = shot.dataUrl.split(",");
@@ -270,7 +261,7 @@
           var arr = new Uint8Array(bin.length);
           for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
           var blob = new Blob([arr], { type: mime });
-          return API.uploadAvatar(blob, mime).then(function (res) {
+          return API.uploadAvatar(blob, mime, shot.dataUrl).then(function (res) {
             window.Session.setUser(res.user);
             drawPfp(res.user);
             UI.toast("Profile picture updated");

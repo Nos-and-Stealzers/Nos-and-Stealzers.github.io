@@ -287,6 +287,45 @@
      which is how sending a message could throw on `.username` of undefined. */
   var selfProfile = null;
 
+  /* Write to the account's GoTrue user_metadata (no DB schema needed). Used as
+     the avatar fallback when the profiles.avatar_url migration hasn't run. */
+  function setAuthMeta(data) {
+    if (!session) return Promise.reject(fail("Signed out.", 401));
+    return window.fetch(URL_BASE + "/auth/v1/user", {
+      method: "PUT",
+      headers: {
+        apikey: ANON, Authorization: authHeader(), "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ data: data })
+    }).then(function (r) {
+      if (!r.ok) throw fail("Couldn't save that.", r.status);
+      return r.json();
+    }).then(function (u) {
+      /* Keep the local session's metadata fresh so a reload reflects it. */
+      var meta = (u && (u.user_metadata || (u.user && u.user.user_metadata))) || {};
+      if (session && session.user) session.user.user_metadata =
+        Object.assign({}, session.user.user_metadata, meta);
+      keepSession(session);
+      return u;
+    });
+  }
+
+  function uploadAvatarMeta(dataUrl) {
+    if (!dataUrl) return Promise.reject(fail("No image to upload.", 400));
+    /* Metadata has a size ceiling; the capture pipeline already downscales, but
+       guard so a huge paste can't wedge the account. ~100KB of base64 is fine. */
+    if (dataUrl.length > 160000) {
+      return Promise.reject(fail("That image is too large — try a smaller one.", 413));
+    }
+    return setAuthMeta({ avatar_url: dataUrl }).then(function () {
+      if (selfProfile) selfProfile.avatar_url = dataUrl;
+      return me(true).then(function (row) {
+        if (row) row.avatar_url = dataUrl;   // reflect immediately
+        return { user: shapeSelf(row || selfProfile), url: dataUrl };
+      });
+    });
+  }
+
   function me(force) {
     if (!session) return Promise.resolve(null);
     if (selfProfile && !force) return Promise.resolve(selfProfile);
@@ -297,7 +336,16 @@
     })
       .then(one)
       .then(function (row) {
-        if (row && session && session.user) row.email = session.user.email || "";
+        if (row && session && session.user) {
+          row.email = session.user.email || "";
+          /* Avatar fallback: if the column is absent (migration not run) but the
+             account has one in its metadata, surface it so the user's own pfp
+             shows everywhere they're signed in. */
+          if (!row.avatar_url) {
+            var meta = session.user.user_metadata || {};
+            if (meta.avatar_url) row.avatar_url = meta.avatar_url;
+          }
+        }
         selfProfile = row;
         return row;
       });
@@ -555,43 +603,55 @@
       });
     },
 
-    /* Upload a profile picture to the public "avatars" bucket under the user's
-       own folder (avatars/<uid>/pfp-<ts>.jpg), then save its public URL on the
-       profile. `blob` is a Blob/File already downscaled + encoded by the client.
-       Requires supabase/avatar-support.sql to have been run (bucket + policies +
-       profiles.avatar_url); returns a clear error otherwise so the UI can say so. */
-    uploadAvatar: function (blob, mime) {
+    /* Upload a profile picture. Two paths, tried in order:
+         1. If the avatar migration has been run (bucket policy + profiles.
+            avatar_url), upload the blob to the public "avatars" bucket and save
+            its URL on the profile — visible to everyone.
+         2. Otherwise fall back to storing the (small, downscaled) image as a
+            data-URL in the account's auth metadata. This needs NO database
+            changes and works immediately; it shows your own picture everywhere
+            you're signed in. Other people see it once the migration is run.
+       `dataUrl` is the encoded image string; `blob`/`mime` are optional (used by
+       the storage path). Either is accepted. */
+    uploadAvatar: function (blob, mime, dataUrl) {
       if (!session) return Promise.reject(fail("Signed out.", 401));
       return avatarReady().then(function (ready) {
-        if (!ready) throw fail("Profile pictures aren't enabled on this server yet.", 501);
-        var ext = (mime && mime.indexOf("png") >= 0) ? "png"
-                : (mime && mime.indexOf("webp") >= 0) ? "webp"
-                : (mime && mime.indexOf("gif") >= 0) ? "gif" : "jpg";
-        var path = session.user.id + "/pfp-" + Date.now() + "." + ext;
-        var url = URL_BASE + "/storage/v1/object/avatars/" + path;
-        return window.fetch(url, {
-          method: "POST",
-          headers: {
-            apikey: ANON,
-            Authorization: authHeader(),
-            "Content-Type": mime || "image/jpeg",
-            "x-upsert": "true"
-          },
-          body: blob
-        }).then(function (r) {
-          if (!r.ok) return r.text().then(function (t) {
-            throw fail("Upload failed. Make sure profile pictures are enabled on the server.", r.status);
-          });
-          var publicUrl = URL_BASE + "/storage/v1/object/public/avatars/" + path;
-          return API.updateProfile({ avatarUrl: publicUrl }).then(function (res) {
-            return { user: res.user, url: publicUrl };
-          });
-        });
+        if (ready && blob) {
+          var ext = (mime && mime.indexOf("png") >= 0) ? "png"
+                  : (mime && mime.indexOf("webp") >= 0) ? "webp"
+                  : (mime && mime.indexOf("gif") >= 0) ? "gif" : "jpg";
+          var path = session.user.id + "/pfp-" + Date.now() + "." + ext;
+          return window.fetch(URL_BASE + "/storage/v1/object/avatars/" + path, {
+            method: "POST",
+            headers: {
+              apikey: ANON, Authorization: authHeader(),
+              "Content-Type": mime || "image/jpeg", "x-upsert": "true"
+            },
+            body: blob
+          }).then(function (r) {
+            if (!r.ok) return uploadAvatarMeta(dataUrl);   // fall back on any storage error
+            var publicUrl = URL_BASE + "/storage/v1/object/public/avatars/" + path;
+            return API.updateProfile({ avatarUrl: publicUrl }).then(function (res) {
+              return { user: res.user, url: publicUrl };
+            });
+          }).catch(function () { return uploadAvatarMeta(dataUrl); });
+        }
+        return uploadAvatarMeta(dataUrl);
       });
     },
 
     removeAvatar: function () {
-      return API.updateProfile({ avatarUrl: "" });
+      /* Clear both the column (if present) and the metadata fallback. */
+      var jobs = [setAuthMeta({ avatar_url: null })];
+      return avatarReady().then(function (ready) {
+        if (ready) jobs.push(rest("/profiles?id=eq." + session.user.id, {
+          method: "PATCH", body: { avatar_url: null }
+        }).catch(function () {}));
+        return Promise.all(jobs);
+      }).then(function () {
+        if (selfProfile) selfProfile.avatar_url = "";
+        return me(true).then(function (row) { return { user: shapeSelf(row) }; });
+      });
     },
 
     avatarsEnabled: function () { return avatarReady(); },

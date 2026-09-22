@@ -166,11 +166,11 @@
             UI.toast("Image picker unavailable here.");
             return;
           }
-          window.Capture.fromFile().then(function (shot) {
+          (window.Capture.avatarFromFile || window.Capture.fromFile)().then(function (shot) {
             if (!shot || !shot.dataUrl) return;
             avEl.classList.add("avatar-busy");
             var blob = dataUrlToBlob(shot.dataUrl);
-            return API.uploadAvatar(blob, blob.type).then(function (res) {
+            return API.uploadAvatar(blob, blob.type, shot.dataUrl).then(function (res) {
               if (window.Session && res.user) window.Session.setUser(res.user);
               UI.toast("Profile picture updated");
               return load();

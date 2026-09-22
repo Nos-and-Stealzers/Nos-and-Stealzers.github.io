@@ -216,11 +216,60 @@
     });
   }
 
+  /* A small SQUARE avatar: center-cropped and capped so it fits comfortably in
+     account metadata (the no-DDL avatar store). Separate from the chat encoder,
+     which targets much larger images. */
+  function encodeAvatar(source, width, height, edge) {
+    edge = edge || 256;
+    var side = Math.min(width, height);
+    var sx = Math.round((width - side) / 2);
+    var sy = Math.round((height - side) / 2);
+    var canvas = document.createElement("canvas");
+    canvas.width = edge; canvas.height = edge;
+    canvas.getContext("2d").drawImage(source, sx, sy, side, side, 0, 0, edge, edge);
+    var quality = 0.82;
+    var url = canvas.toDataURL("image/jpeg", quality);
+    /* Keep it under ~110KB of base64 so it fits the metadata ceiling. */
+    while (url.length > 110000 && quality > 0.3) {
+      quality -= 0.1;
+      url = canvas.toDataURL("image/jpeg", quality);
+    }
+    /* Still too big at min quality? shrink the square. */
+    if (url.length > 110000 && edge > 128) return encodeAvatar(source, width, height, 160);
+    return { dataUrl: url, width: edge, height: edge };
+  }
+
+  function avatarFromFile() {
+    return new Promise(function (resolve, reject) {
+      var input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.addEventListener("change", function () {
+        var file = input.files && input.files[0];
+        if (!file) return reject(new Error("No file chosen."));
+        if (!/^image\//.test(file.type)) return reject(new Error("That isn't an image."));
+        var img = new Image();
+        var url = URL.createObjectURL(file);
+        img.onload = function () {
+          try {
+            var shot = encodeAvatar(img, img.naturalWidth, img.naturalHeight);
+            URL.revokeObjectURL(url);
+            resolve(Object.assign(shot, { kind: "avatar" }));
+          } catch (err) { URL.revokeObjectURL(url); reject(err); }
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("That image could not be read.")); };
+        img.src = url;
+      });
+      input.click();
+    });
+  }
+
   window.Capture = {
     supported: supported,
     screenshot: screenshot,
     camera: camera,
     cameraDialog: cameraDialog,
-    fromFile: fromFile
+    fromFile: fromFile,
+    avatarFromFile: avatarFromFile
   };
 })();

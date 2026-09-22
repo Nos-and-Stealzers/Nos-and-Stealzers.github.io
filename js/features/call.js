@@ -37,6 +37,12 @@
   };
 
   var root, bar, tiles, statusEl, timerEl, ringEl;
+  /* Realtime pokes and the fallback interval can fire together. `take_signals`
+     consumes rows, so overlapping calls from one tab used to hammer Postgres
+     with concurrent DELETEs and trigger 40P01 deadlocks. Keep exactly one poll
+     in flight; remember one follow-up instead of launching another request. */
+  var pumpBusy = false;
+  var pumpQueued = false;
 
   function can() {
     return !!(navigator.mediaDevices && window.RTCPeerConnection);
@@ -405,20 +411,20 @@
          permanently black. Reusing the existing sender is a plain replaceTrack,
          no renegotiation, and the frames flow. */
       var sender = null;
+      var chosen = null;
       var txs = pc.getTransceivers ? pc.getTransceivers() : [];
-      for (var i = 0; i < txs.length; i++) {
-        var tx = txs[i];
+      /* Prefer the video m-line that is already negotiated. An answerer may
+         briefly have more than one video transceiver on older cached clients;
+         choosing the first one can select a dead currentDirection=null sender. */
+      var ordered = txs.slice().sort(function (a, b) {
+        return Number(!!b.currentDirection) - Number(!!a.currentDirection);
+      });
+      for (var i = 0; i < ordered.length; i++) {
+        var tx = ordered[i];
         var kind = (tx.sender && tx.sender.track && tx.sender.track.kind) ||
                    (tx.receiver && tx.receiver.track && tx.receiver.track.kind) ||
                    (tx.mid && /video/i.test(String(tx.mid)) ? "video" : "");
-        if (kind === "video") { sender = tx.sender; 
-          /* Make sure this m-line actually sends now. */
-          try {
-            if (track && tx.direction === "recvonly") tx.direction = "sendrecv";
-            if (track && tx.direction === "inactive") tx.direction = "sendrecv";
-          } catch (e) {}
-          break;
-        }
+        if (kind === "video") { sender = tx.sender; chosen = tx; break; }
       }
       if (!sender) {
         sender = pc.getSenders().filter(function (s) {
@@ -426,8 +432,20 @@
         })[0];
       }
 
-      if (sender) sender.replaceTrack(track);
-      else if (track) pc.addTrack(track, state.local || new window.MediaStream([track]));
+      if (sender) {
+        sender.replaceTrack(track);
+        /* If the original answer was recv-only (normal for an audio-only
+           answerer), replacing the track alone cannot send it. Promote that
+           negotiated m-line and make one explicit renegotiation offer. */
+        if (track && chosen && chosen.currentDirection &&
+            chosen.currentDirection.indexOf("send") === -1) {
+          try { chosen.direction = "sendrecv"; } catch (e) {}
+          offerTo(id);
+        }
+      } else if (track) {
+        pc.addTrack(track, state.local || new window.MediaStream([track]));
+        offerTo(id);
+      }
     });
   }
 
@@ -476,24 +494,37 @@
     var hasVideoSender = pc.getSenders().some(function (s2) {
       return s2.track && s2.track.kind === "video";
     });
-    if (!hasVideoSender) {
+    /* Only the deterministic OFFERER creates the empty video m-line. If the
+       answerer creates one too, Chrome does not pair it with the remote offer:
+       it leaves one unnegotiated send transceiver plus a second recv-only one.
+       Camera replaceTrack() then targets the dead transceiver and the other
+       person sees no video. The answerer receives the offerer's m-line during
+       setRemoteDescription and can promote it when their camera starts. */
+    if (!hasVideoSender && shouldOffer(userId)) {
       try { pc.addTransceiver("video", { direction: "sendrecv" }); } catch (e) {}
     }
 
-    /* Safety net: if anything still forces a renegotiation, only the side that
-       owns the offer for this pair acts, so the two ends can't offer at once. */
-    pc.addEventListener("negotiationneeded", function () {
-      if (!shouldOffer(userId)) return;
-      if (pc.signalingState !== "stable") return;
-      offerTo(userId);
-    });
+    /* Offers are started deterministically by pump() after both peers are joined.
+       Do NOT also offer from `negotiationneeded`: adding the initial tracks and
+       video transceiver fires that event during connect(), racing pump's own
+       offerTo(). The loser closed the shared peer connection, so the next poll
+       created another one and calls looped through offers forever. Camera and
+       screen changes use replaceTrack(), so they do not require renegotiation. */
 
     pc.addEventListener("icecandidate", function (e) {
       if (e.candidate) send(userId, "ice", e.candidate.toJSON());
     });
 
     pc.addEventListener("track", function (e) {
-      var stream = e.streams[0];
+      /* addTransceiver("video") can fire `track` with an EMPTY `streams` array.
+         Reading e.streams[0] unconditionally made `stream.addEventListener`
+         throw and stopped signalling on both sides. Build a stream around the
+         track when the sender did not associate one. */
+      var stream = e.streams && e.streams[0];
+      if (!stream) {
+        stream = entry.stream || new window.MediaStream();
+        if (e.track && stream.getTracks().indexOf(e.track) === -1) stream.addTrack(e.track);
+      }
       entry.stream = stream;
       /* Route audio to the dedicated <audio> sink and video to the <video>
          tile. Both get an explicit play() because autoplay of unmuted remote
@@ -660,6 +691,12 @@
 
   function pump() {
     if (!state.call) return;
+    clock();
+    if (pumpBusy) {
+      pumpQueued = true;
+      return;
+    }
+    pumpBusy = true;
 
     window.API.pollSignals(state.call.id).then(function (res) {
       if (!state.call) return;
@@ -698,9 +735,15 @@
       }, Promise.resolve());
     }).catch(function (err) {
       if (err && (err.status === 403 || err.status === 404)) teardown("Call ended");
+    }).then(function () {
+      pumpBusy = false;
+      if (pumpQueued && state.call) {
+        pumpQueued = false;
+        window.setTimeout(pump, 0);
+      } else {
+        pumpQueued = false;
+      }
     });
-
-    clock();
   }
 
   function runLoop() {
@@ -795,6 +838,8 @@
   function teardown(message) {
     window.clearInterval(state.timer);
     state.timer = null;
+    pumpBusy = false;
+    pumpQueued = false;
     stopRinging();
     unsubscribeCall();
 

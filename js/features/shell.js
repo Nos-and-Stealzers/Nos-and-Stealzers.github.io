@@ -233,8 +233,9 @@
       if (user) {
         var who = el("a", "whoami");
         who.href = "profile.html";
-        var pic = el("span", "avatar");
-        pic.appendChild(window.Art.avatar(user.username));
+        var pic = window.SocialUI && window.SocialUI.avatar
+          ? window.SocialUI.avatar(user)
+          : (function () { var s = el("span", "avatar"); s.appendChild(window.Art.avatar(user.username)); return s; })();
         who.appendChild(pic);
         var names = el("span", "names");
         names.appendChild(el("span", "n1", user.displayName || user.username));

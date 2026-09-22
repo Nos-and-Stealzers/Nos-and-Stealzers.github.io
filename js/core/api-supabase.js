@@ -222,6 +222,7 @@
       online: !!seen && Date.now() - seen < ONLINE_MS,
       lastSeen: seen,
       isPlus: !!row.is_plus,
+      avatarUrl: row.avatar_url || "",
       banned: !!row.banned,
       banReason: row.ban_reason || "",
       createdAt: row.created_at ? Date.parse(row.created_at) : 0
@@ -261,8 +262,23 @@
     };
   }
 
-  var PROFILE_COLS = "id,username,display_name,bio,role,state,accepts_dms,show_activity," +
+  /* Base profile columns that always exist. avatar_url is added at runtime only
+     if the column is present (see AVATAR_READY probe), so the site never breaks
+     if the avatar migration (supabase/avatar-support.sql) hasn't been run yet. */
+  var PROFILE_COLS_BASE = "id,username,display_name,bio,role,state,accepts_dms,show_activity," +
                      "friend_code,created_at,last_seen,is_plus,banned,ban_reason,email_verified";
+  var AVATAR_READY = null;   // null=unknown, true/false once probed
+  function profileCols() {
+    return AVATAR_READY ? PROFILE_COLS_BASE + ",avatar_url" : PROFILE_COLS_BASE;
+  }
+  /* One cheap probe: does profiles.avatar_url exist? Cached for the session. */
+  function avatarReady() {
+    if (AVATAR_READY !== null) return Promise.resolve(AVATAR_READY);
+    return rest("/profiles?select=avatar_url&limit=1")
+      .then(function () { AVATAR_READY = true; return true; })
+      .catch(function () { AVATAR_READY = false; return false; });
+  }
+  var PROFILE_COLS = PROFILE_COLS_BASE;   // legacy alias; call sites migrated to profileCols()
 
   /* The signed-in account's own profile row.
      `session.user.user_metadata` is NOT a substitute: it is whatever was set
@@ -274,11 +290,13 @@
   function me(force) {
     if (!session) return Promise.resolve(null);
     if (selfProfile && !force) return Promise.resolve(selfProfile);
-    return rest("/profiles?select=" + PROFILE_COLS + "&id=eq." + session.user.id)
+    /* Probe avatar support once, then select with the right column set so an
+       un-migrated database (no avatar_url column) never 400s the whole load. */
+    return avatarReady().then(function () {
+      return rest("/profiles?select=" + profileCols() + "&id=eq." + session.user.id);
+    })
       .then(one)
       .then(function (row) {
-        /* The email lives on the auth session, not the profiles row — attach
-           it so callers (verify-email, settings) can show it. */
         if (row && session && session.user) row.email = session.user.email || "";
         selfProfile = row;
         return row;
@@ -527,6 +545,7 @@
       if (patch.bio !== undefined) row.bio = String(patch.bio).slice(0, 300);
       if (patch.acceptsDms !== undefined) row.accepts_dms = !!patch.acceptsDms;
       if (patch.showActivity !== undefined) row.show_activity = !!patch.showActivity;
+      if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl || null;
 
       return rest("/profiles?id=eq." + session.user.id, {
         method: "PATCH", body: row, headers: { Prefer: "return=representation" }
@@ -535,6 +554,47 @@
         return { user: shapeSelf(selfProfile) };
       });
     },
+
+    /* Upload a profile picture to the public "avatars" bucket under the user's
+       own folder (avatars/<uid>/pfp-<ts>.jpg), then save its public URL on the
+       profile. `blob` is a Blob/File already downscaled + encoded by the client.
+       Requires supabase/avatar-support.sql to have been run (bucket + policies +
+       profiles.avatar_url); returns a clear error otherwise so the UI can say so. */
+    uploadAvatar: function (blob, mime) {
+      if (!session) return Promise.reject(fail("Signed out.", 401));
+      return avatarReady().then(function (ready) {
+        if (!ready) throw fail("Profile pictures aren't enabled on this server yet.", 501);
+        var ext = (mime && mime.indexOf("png") >= 0) ? "png"
+                : (mime && mime.indexOf("webp") >= 0) ? "webp"
+                : (mime && mime.indexOf("gif") >= 0) ? "gif" : "jpg";
+        var path = session.user.id + "/pfp-" + Date.now() + "." + ext;
+        var url = URL_BASE + "/storage/v1/object/avatars/" + path;
+        return window.fetch(url, {
+          method: "POST",
+          headers: {
+            apikey: ANON,
+            Authorization: authHeader(),
+            "Content-Type": mime || "image/jpeg",
+            "x-upsert": "true"
+          },
+          body: blob
+        }).then(function (r) {
+          if (!r.ok) return r.text().then(function (t) {
+            throw fail("Upload failed. Make sure profile pictures are enabled on the server.", r.status);
+          });
+          var publicUrl = URL_BASE + "/storage/v1/object/public/avatars/" + path;
+          return API.updateProfile({ avatarUrl: publicUrl }).then(function (res) {
+            return { user: res.user, url: publicUrl };
+          });
+        });
+      });
+    },
+
+    removeAvatar: function () {
+      return API.updateProfile({ avatarUrl: "" });
+    },
+
+    avatarsEnabled: function () { return avatarReady(); },
 
     deleteAccount: function (confirm) {
       return me().then(function (row) {
@@ -551,8 +611,9 @@
     },
 
     user: function (username) {
+      return avatarReady().then(function () {
       return Promise.all([
-        rest("/profiles?select=" + PROFILE_COLS + "&username=eq." + encodeURIComponent(username)),
+        rest("/profiles?select=" + profileCols() + "&username=eq." + encodeURIComponent(username)),
         edges(true)
       ]).then(function (out) {
         var row = one(out[0]);
@@ -581,13 +642,14 @@
           return { user: user };
         }).catch(function () { return { user: user }; });
       });
+      });
     },
 
     searchUsers: function (q) {
       if (!q || q.length < 2) return Promise.resolve({ users: [] });
       var safe = String(q).toLowerCase().replace(/[%,()*]/g, "");
       return Promise.all([
-        rest("/profiles?select=" + PROFILE_COLS + "&username=ilike." +
+        rest("/profiles?select=" + profileCols() + "&username=ilike." +
              encodeURIComponent(safe + "%") + "&state=eq.active&limit=20"),
         edges(true)
       ]).then(function (out) {
@@ -613,7 +675,7 @@
         });
         if (!ids.length) return { friends: [], incoming: [], outgoing: [], blocked: [] };
 
-        return rest("/profiles?select=" + PROFILE_COLS + "&id=in.(" + ids.join(",") + ")")
+        return rest("/profiles?select=" + profileCols() + "&id=in.(" + ids.join(",") + ")")
           .then(function (people) {
             var byId = {};
             (people || []).forEach(function (p) { byId[p.id] = p; });
@@ -779,7 +841,7 @@
 
       return Promise.all(incremental ? [null, null, newMessages, null] : [
         rest("/threads?select=*&id=eq." + id).then(one),
-        rest("/thread_members?select=user_id,profiles!inner(" + PROFILE_COLS + ")&thread_id=eq." + id),
+        rest("/thread_members?select=user_id,profiles!inner(" + profileCols() + ")&thread_id=eq." + id),
         newMessages,
         /* Whether posting here is actually allowed. It used to be hardcoded
            true, so a conversation with someone who has since blocked you, or

@@ -25,7 +25,23 @@
 
         var who = document.getElementById("who");
         who.innerHTML = "";
-        who.appendChild(S.avatar(user, "lg"));
+        var av = S.avatar(user, "lg");
+        who.appendChild(av);
+        /* Own profile: click the avatar to upload/change a picture. */
+        if (mine) {
+          av.classList.add("avatar-editable");
+          av.title = "Change your picture";
+          av.setAttribute("role", "button");
+          av.setAttribute("tabindex", "0");
+          var cam = UI.el("span", "avatar-edit-badge");
+          cam.appendChild(UI.icon("camera"));
+          av.appendChild(cam);
+          var pick = function () { chooseAvatar(user, av); };
+          av.addEventListener("click", pick);
+          av.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); }
+          });
+        }
         var block = UI.el("div");
         var h1 = UI.el("h1");
         h1.textContent = user.displayName || user.username;
@@ -140,6 +156,40 @@
 
         function after(message) {
           return function () { UI.toast(message); return load(); };
+        }
+
+        /* Pick, downscale and upload a profile picture. Uses the shared capture
+           pipeline (already downscales/encodes to a reasonable JPEG) then
+           uploads the blob. Clear messaging if the server isn't set up yet. */
+        function chooseAvatar(currentUser, avEl) {
+          if (!window.Capture || !window.Capture.fromFile) {
+            UI.toast("Image picker unavailable here.");
+            return;
+          }
+          window.Capture.fromFile().then(function (shot) {
+            if (!shot || !shot.dataUrl) return;
+            avEl.classList.add("avatar-busy");
+            var blob = dataUrlToBlob(shot.dataUrl);
+            return API.uploadAvatar(blob, blob.type).then(function (res) {
+              if (window.Session && res.user) window.Session.setUser(res.user);
+              UI.toast("Profile picture updated");
+              return load();
+            });
+          }).catch(function (err) {
+            if (err && /cancel|no file/i.test(err.message || "")) return;
+            UI.toast(err.message || "Couldn't update your picture.");
+          }).then(function () {
+            avEl.classList.remove("avatar-busy");
+          });
+        }
+
+        function dataUrlToBlob(dataUrl) {
+          var parts = dataUrl.split(",");
+          var mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+          var bin = atob(parts[1]);
+          var arr = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          return new Blob([arr], { type: mime });
         }
 
         /* The dock when it is there, the messages page when it isn't — the

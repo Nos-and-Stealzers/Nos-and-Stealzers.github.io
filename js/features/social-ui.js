@@ -8,8 +8,22 @@
 
   function avatar(user, size) {
     var wrap = el("span", "avatar" + (size ? " avatar-" + size : ""));
-    wrap.appendChild(window.Art.avatar(user.username));
-    if (user.online) wrap.appendChild(el("i", "dot"));
+    if (user && user.avatarUrl) {
+      var img = document.createElement("img");
+      img.className = "avatar-img";
+      img.src = user.avatarUrl;
+      img.alt = "";
+      img.loading = "lazy";
+      /* Fall back to the identicon if the image 404s (e.g. deleted file). */
+      img.addEventListener("error", function () {
+        img.remove();
+        wrap.insertBefore(window.Art.avatar(user.username), wrap.firstChild);
+      });
+      wrap.appendChild(img);
+    } else {
+      wrap.appendChild(window.Art.avatar(user.username));
+    }
+    if (user && user.online) wrap.appendChild(el("i", "dot"));
     return wrap;
   }
 

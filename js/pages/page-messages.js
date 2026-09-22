@@ -273,6 +273,26 @@
         });
       }
 
+      /* ---------------------------------------------------- realtime */
+
+      /* Instant delivery: subscribe to the open thread's channel. When the
+         other side posts, they poke this channel and we pull the new messages
+         at once instead of on the next 5s poll. Polling stays as fallback. */
+      var threadSub = null;
+      var subbedThread = null;
+      function subscribeThread(id) {
+        if (!window.Realtime) return;
+        if (subbedThread === id) return;
+        if (threadSub) { threadSub(); threadSub = null; }
+        subbedThread = id;
+        threadSub = window.Realtime.subscribe("realtime:thread:" + id, {
+          msg: function () { tick(); loadList(); }
+        });
+      }
+      function pokeThread(id) {
+        if (window.Realtime) window.Realtime.broadcast("realtime:thread:" + id, "msg", {});
+      }
+
       function open(id) {
         if (activeId != null) drafts[activeId] = { text: bodyBox.value, image: pending };
         activeId = id;
@@ -327,6 +347,7 @@
           loadList();
           window.Session.refreshBadges();
           poll = window.setInterval(tick, 5000);
+          subscribeThread(res.threadId);
         }).catch(function (err) {
           if (seq !== openSeq) return;
           UI.toast(err.message);
@@ -418,6 +439,7 @@
         sendBtn.disabled = true;
 
         API.send(id, text, image).then(function (res) {
+          pokeThread(id);
           var saved = drafts[id];
           if (saved && saved.text === original) saved.text = "";
           if (saved && saved.image === image) saved.image = null;

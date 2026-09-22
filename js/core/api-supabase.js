@@ -35,7 +35,14 @@
 
   function iceStatic() {
     var list = [
-      { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
+      { urls: [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun3.l.google.com:19302",
+        "stun:stun4.l.google.com:19302",
+        "stun:stun.cloudflare.com:3478"
+      ] }
     ];
     var turn = SITE.turn || {};
     if (turn.enabled !== false && Array.isArray(turn.servers)) {
@@ -51,6 +58,13 @@
     }
     if (typeof window.fetch !== "function") return Promise.resolve(iceStatic());
     var base = String((SITE.apiBase || "")).replace(/\/+$/, "");
+    /* On static hosting (GitHub Pages) there is no /api/turn function, so the
+       fetch just 404s and delays every call start by a round-trip. Skip it
+       entirely when no apiBase is configured and use the static ICE list. */
+    if (!base) {
+      _iceCache = iceStatic(); _iceCacheAt = Date.now();
+      return Promise.resolve(_iceCache);
+    }
     return window.fetch(base + "/api/turn", { credentials: "omit" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
@@ -1520,6 +1534,19 @@
       }).then(function () { edgesCache = null; return { state: "pending-out" }; });
     });
   }
+
+  /* Realtime (websocket) transport config, consumed by js/core/realtime.js.
+     Exposes the live access token so the socket authenticates as this user for
+     RLS-scoped changes; falls back to the anon key when signed out. Broadcast
+     channels (used for call signalling + message pokes) work with either. */
+  API.realtime = {
+    url: URL_BASE.replace(/^http/, "ws") + "/realtime/v1/websocket",
+    anonKey: ANON,
+    token: function () {
+      return (session && session.access_token) ? session.access_token : ANON;
+    },
+    ready: function () { return !!URL_BASE && !!ANON; }
+  };
 
   window.API = API;
 })();

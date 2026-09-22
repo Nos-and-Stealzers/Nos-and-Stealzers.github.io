@@ -13,6 +13,7 @@
     { href: "categories.html", icon: "◫", label: "Categories", count: function () { return window.Catalog.categories.length; } },
     { href: "library.html", icon: "★", label: "Pinned", count: function () { return window.Store.favorites().length; } },
     { href: "campus-plus.html", icon: "▶", label: "Campus+" },
+    { href: "ai.html", icon: "✧", label: "Campus AI", tag: "Beta" },
     { href: "stats.html", icon: "◔", label: "Activity" }
   ];
 
@@ -157,6 +158,9 @@
     a.appendChild(el("span", null, item.label));
     if (item.count) {
       a.appendChild(el("span", "n", item.count()));
+    }
+    if (item.tag) {
+      a.appendChild(el("span", "nav-tag", item.tag));
     }
     if (item.badge) {
       var b = el("span", "badge");

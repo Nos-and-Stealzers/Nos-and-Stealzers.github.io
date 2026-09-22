@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Notifications — Arcade Campus Hub</title>
-  <meta name="description" content="Friend requests, messages and account activity in one place.">
+  <title>Campus AI (Beta) — Arcade Campus Hub</title>
+  <meta name="description" content="Ask the arcade's built-in assistant for game recommendations and help finding your way around. Beta.">
   <meta name="theme-color" content="#0c0d10">
   <meta name="robots" content="noindex,follow">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
@@ -14,33 +14,41 @@
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
 </head>
-<body>
+<body class="ai-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <div data-shell="chrome"></div>
 
   <main class="main" id="main">
 
     <header class="page-head">
-      <span class="label">Social</span>
-      <h1>Notifications</h1>
-      <div class="readout">
-        <span>unread <b id="r-unread">0</b></span>
-        <span>showing <b id="r-shown">0</b></span>
-      </div>
+      <span class="label">Assistant</span>
+      <h1>Campus AI <span class="beta-pill">Beta</span></h1>
+      <p class="social-intro">
+        A built-in helper for finding games and getting around the arcade.
+        This is an early preview — it runs entirely in your browser right now,
+        with a smarter model coming later.
+      </p>
     </header>
 
-    <div class="toolbar" style="position:static">
-      <div class="pills" style="margin:0;flex:1">
-        <button class="pill on" type="button" data-filter="all" aria-pressed="true">All</button>
-        <button class="pill" type="button" data-filter="unread" aria-pressed="false">Unread</button>
-        <button class="pill" type="button" data-filter="social" aria-pressed="false">Friends &amp; chat</button>
-        <button class="pill" type="button" data-filter="account" aria-pressed="false">Account</button>
-      </div>
-      <button class="btn btn-sm" type="button" id="mark-all">Mark all read</button>
-      <button class="btn btn-sm btn-flat" type="button" id="clear-all">Clear</button>
+    <div class="ai-note">
+      <strong>Preview feature.</strong> Campus AI currently answers from the
+      live game catalog and a built-in guide — no data leaves your device and
+      nothing you type here is sent anywhere. A full conversational model is
+      planned; this is the test build so you can try the experience today.
     </div>
 
-    <div class="feed" id="feed"></div>
+    <section class="ai-shell">
+      <div class="ai-log" id="ai-log" role="log" aria-live="polite" aria-label="Conversation"></div>
+
+      <div class="ai-suggests" id="ai-suggests" aria-label="Suggestions"></div>
+
+      <form class="ai-compose" id="ai-form">
+        <label for="ai-input" class="sr-only">Ask Campus AI</label>
+        <textarea id="ai-input" rows="1" maxlength="500"
+          placeholder="Ask for a game, or how something works…" autocomplete="off"></textarea>
+        <button class="ai-send" type="submit" id="ai-send" title="Send" aria-label="Send"></button>
+      </form>
+    </section>
 
     <div data-shell="foot"></div>
   </main>
@@ -56,7 +64,6 @@
   <script src="js/core/api-supabase.js"></script>
   <script src="js/core/session.js"></script>
   <script src="js/core/realtime.js"></script>
-  <script src="js/features/social-ui.js"></script>
   <script src="js/features/capture.js"></script>
   <script src="js/features/chat-dock.js"></script>
   <script src="js/features/call.js"></script>
@@ -64,6 +71,6 @@
   <script src="js/features/shell.js"></script>
   <script src="js/features/motion-fx.js"></script>
   <script src="js/features/context-menu.js"></script>
-  <script src="js/pages/page-notifications.js"></script>
+  <script src="js/pages/page-ai.js"></script>
 </body>
 </html>

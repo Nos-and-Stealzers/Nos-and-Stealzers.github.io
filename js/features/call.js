@@ -474,7 +474,36 @@
 
   function send(to, kind, payload) {
     if (!state.call) return Promise.resolve();
+    /* Poke the recipient over realtime so they pull this signal immediately
+       instead of waiting for their next 1.5s poll — this is what makes ICE
+       negotiation (and therefore connecting) fast. The HTTP write below is
+       still the source of truth; the poke only triggers an early fetch. */
+    pokePeer(to);
     return window.API.sendSignal(state.call.id, to, kind, payload).catch(function () {});
+  }
+
+  /* Realtime helpers. Each call has a channel; each user has a personal
+     channel for ring notifications. All best-effort — polling is the fallback. */
+  function callTopic(id) { return "realtime:call:" + id; }
+  function userTopic(id) { return "realtime:user:" + id; }
+
+  function pokePeer(to) {
+    if (!window.Realtime || !state.call) return;
+    window.Realtime.broadcast(callTopic(state.call.id), "sig", { to: to });
+  }
+
+  var callSub = null;
+  function subscribeCall(id) {
+    if (!window.Realtime || callSub) return;
+    callSub = window.Realtime.subscribe(callTopic(id), {
+      /* A peer says a signal is waiting for me → pump now, don't wait 1.5s. */
+      sig: function (data) {
+        if (!data || String(data.to) === String(state.self) || data.to == null) pump();
+      }
+    });
+  }
+  function unsubscribeCall() {
+    if (callSub) { callSub(); callSub = null; }
   }
 
   function handle(sig) {
@@ -599,6 +628,7 @@
     state.ice = ice;
     state.startedAt = 0;
     markActiveCall(call.id);   // sticky across in-site navigation
+    subscribeCall(call.id);    // instant signalling over realtime
 
     stopRinging();
     state.ringing = null;
@@ -612,6 +642,13 @@
          when there is no camera, and marking the button on beforehand claimed
          a camera that isn't running. */
       mark("cam", !state.camOff);
+      /* Ring every invited peer instantly over their personal channel, so the
+         incoming-call card pops right away instead of on their next 6s poll. */
+      if (window.Realtime && call && call.peers) {
+        call.peers.forEach(function (p) {
+          if (p.id !== state.self) window.Realtime.broadcast(userTopic(p.id), "ring", { call: call.id });
+        });
+      }
       runLoop();
     }).catch(function (err) {
       window.UI.toast(err.message || "Could not start the call.");
@@ -671,6 +708,7 @@
     window.clearInterval(state.timer);
     state.timer = null;
     stopRinging();
+    unsubscribeCall();
 
     Object.keys(state.peers).forEach(function (k) {
       if (state.peers[k].pc) state.peers[k].pc.close();
@@ -839,6 +877,16 @@
 
       state.ringTimer = window.setInterval(watch, RING_POLL);
       watch();
+
+      /* Instant ring: listen on my personal channel. When someone starts a
+         call aimed at me they broadcast here, so watch() runs at once instead
+         of up to RING_POLL (6s) later. Polling stays as the fallback. */
+      if (window.Realtime) {
+        window.Realtime.subscribe(userTopic(state.self), {
+          ring: function () { watch(); },
+          hangup: function () { watch(); }
+        });
+      }
 
       /* Leaving mid-call should free the other side quickly — BUT only when
          you're actually leaving the site, not when you click a link to another

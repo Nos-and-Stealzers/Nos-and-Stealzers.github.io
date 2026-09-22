@@ -1,0 +1,239 @@
+/* Realtime transport — dependency-free Supabase Realtime (Phoenix) client.
+ *
+ * WHY: calling and messaging were HTTP-polling only (6s to even ring, 1.5s per
+ * signalling round-trip, 5s per message refresh). That made call setup slow and
+ * often *fail*, because ICE candidates dribbled across at one-per-1.5s. This
+ * opens a single websocket to Supabase Realtime and lets features subscribe to
+ * broadcast channels for INSTANT pokes. It is purely additive: every feature
+ * keeps its polling as a fallback, so if the socket can't connect (blocked
+ * network, signed out, older browser) nothing breaks — it just falls back to
+ * the old speed.
+ *
+ * Protocol (verified against qopjzxrjkkljpumyirtb):
+ *   join:      {topic, event:"phx_join", payload:{config:{broadcast:{self,ack}}}, ref}
+ *   heartbeat: {topic:"phoenix", event:"heartbeat", payload:{}, ref}
+ *   broadcast: {topic, event:"broadcast", payload:{type:"broadcast",event,payload}, ref}
+ *
+ * No supabase-js: the official client is ~120KB from a CDN that the restrictive
+ * networks this site targets often block. This is ~200 lines of fetch/WebSocket.
+ */
+(function () {
+  "use strict";
+
+  var HEARTBEAT_MS = 25000;   // Supabase drops idle sockets after ~60s
+  var RECONNECT_MIN = 1000;
+  var RECONNECT_MAX = 15000;
+
+  function RT() {
+    this.ws = null;
+    this.connected = false;
+    this.ref = 0;
+    this.channels = {};        // topic -> { handlers:{event:[fn]}, joined, joinRef }
+    this.heartbeatTimer = null;
+    this.reconnectTimer = null;
+    this.reconnectDelay = RECONNECT_MIN;
+    this.pending = [];         // frames queued while the socket is opening
+    this.enabled = false;
+    this.wantOpen = false;
+  }
+
+  RT.prototype._nextRef = function () { return String(++this.ref); };
+
+  RT.prototype.available = function () {
+    return !!(window.WebSocket && window.API && window.API.realtime &&
+              window.API.realtime.ready && window.API.realtime.ready());
+  };
+
+  RT.prototype.connect = function () {
+    if (!this.available()) return;
+    this.wantOpen = true;
+    if (this.ws && (this.ws.readyState === 0 || this.ws.readyState === 1)) return;
+
+    var cfg = window.API.realtime;
+    var token = cfg.token ? cfg.token() : cfg.anonKey;
+    var url = cfg.url + "?apikey=" + encodeURIComponent(cfg.anonKey) +
+              "&vsn=1.0.0";
+
+    var self = this;
+    try {
+      this.ws = new WebSocket(url);
+    } catch (e) { this._scheduleReconnect(); return; }
+
+    this.ws.addEventListener("open", function () {
+      self.connected = true;
+      self.reconnectDelay = RECONNECT_MIN;
+      /* Authenticate the socket as this user so RLS-scoped features work; for
+         broadcast-only channels the apikey in the URL already suffices. */
+      self._send({ topic: "phoenix", event: "access_token",
+                   payload: { access_token: token }, ref: self._nextRef() });
+      /* (Re)join every channel a feature asked for. */
+      Object.keys(self.channels).forEach(function (topic) {
+        self._joinChannel(topic);
+      });
+      /* Flush anything queued while opening. */
+      var q = self.pending; self.pending = [];
+      q.forEach(function (f) { self._send(f); });
+      self._startHeartbeat();
+    });
+
+    this.ws.addEventListener("message", function (ev) {
+      var msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      self._onFrame(msg);
+    });
+
+    this.ws.addEventListener("close", function () {
+      self.connected = false;
+      self._stopHeartbeat();
+      Object.keys(self.channels).forEach(function (t) { self.channels[t].joined = false; });
+      if (self.wantOpen) self._scheduleReconnect();
+    });
+
+    this.ws.addEventListener("error", function () {
+      try { self.ws.close(); } catch (e) {}
+    });
+  };
+
+  RT.prototype.disconnect = function () {
+    this.wantOpen = false;
+    this._stopHeartbeat();
+    window.clearTimeout(this.reconnectTimer);
+    if (this.ws) { try { this.ws.close(); } catch (e) {} }
+    this.ws = null;
+    this.connected = false;
+  };
+
+  RT.prototype._scheduleReconnect = function () {
+    var self = this;
+    window.clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = window.setTimeout(function () {
+      self.reconnectDelay = Math.min(self.reconnectDelay * 2, RECONNECT_MAX);
+      self.connect();
+    }, this.reconnectDelay);
+  };
+
+  RT.prototype._send = function (frame) {
+    if (this.ws && this.ws.readyState === 1) {
+      try { this.ws.send(JSON.stringify(frame)); return true; }
+      catch (e) { return false; }
+    }
+    this.pending.push(frame);
+    return false;
+  };
+
+  RT.prototype._startHeartbeat = function () {
+    var self = this;
+    this._stopHeartbeat();
+    this.heartbeatTimer = window.setInterval(function () {
+      self._send({ topic: "phoenix", event: "heartbeat", payload: {}, ref: self._nextRef() });
+    }, HEARTBEAT_MS);
+  };
+  RT.prototype._stopHeartbeat = function () {
+    window.clearInterval(this.heartbeatTimer);
+    this.heartbeatTimer = null;
+  };
+
+  RT.prototype._joinChannel = function (topic) {
+    var ch = this.channels[topic];
+    if (!ch) return;
+    var ref = this._nextRef();
+    ch.joinRef = ref;
+    this._send({
+      topic: topic, event: "phx_join",
+      payload: { config: { broadcast: { self: false, ack: false }, presence: { key: "" } } },
+      ref: ref
+    });
+  };
+
+  RT.prototype._onFrame = function (msg) {
+    var ch = this.channels[msg.topic];
+    if (msg.event === "phx_reply") {
+      if (ch && msg.ref === ch.joinRef && msg.payload && msg.payload.status === "ok") {
+        ch.joined = true;
+      }
+      return;
+    }
+    if (msg.event === "broadcast" && ch && msg.payload) {
+      var evName = msg.payload.event;
+      var data = msg.payload.payload;
+      var list = ch.handlers[evName] || [];
+      list.forEach(function (fn) { try { fn(data); } catch (e) {} });
+      return;
+    }
+    /* postgres_changes / presence frames could be handled here later. */
+  };
+
+  /* --- public API --- */
+
+  /* Subscribe to a broadcast channel. Returns an unsubscribe function.
+     `events` is { eventName: handlerFn }. Multiple subscribers on one topic
+     share a single channel join. */
+  RT.prototype.subscribe = function (topic, events) {
+    if (!this.available()) return function () {};
+    this.connect();
+
+    var ch = this.channels[topic];
+    if (!ch) {
+      ch = this.channels[topic] = { handlers: {}, joined: false, joinRef: null };
+      this._joinChannel(topic);
+    }
+    var added = [];
+    Object.keys(events || {}).forEach(function (evName) {
+      (ch.handlers[evName] = ch.handlers[evName] || []).push(events[evName]);
+      added.push([evName, events[evName]]);
+    });
+
+    var self = this;
+    return function () {
+      var c = self.channels[topic];
+      if (!c) return;
+      added.forEach(function (pair) {
+        var arr = c.handlers[pair[0]] || [];
+        var i = arr.indexOf(pair[1]);
+        if (i >= 0) arr.splice(i, 1);
+      });
+      /* Leave the channel entirely once nobody listens. */
+      var anyLeft = Object.keys(c.handlers).some(function (k) { return c.handlers[k].length; });
+      if (!anyLeft) {
+        self._send({ topic: topic, event: "phx_leave", payload: {}, ref: self._nextRef() });
+        delete self.channels[topic];
+      }
+    };
+  };
+
+  /* Fire a broadcast to everyone else on a channel. Best-effort; a dropped
+     socket just means the peer falls back to its poll. */
+  RT.prototype.broadcast = function (topic, event, payload) {
+    if (!this.available()) return false;
+    this.connect();
+    if (!this.channels[topic]) {
+      this.channels[topic] = { handlers: {}, joined: false, joinRef: null };
+      this._joinChannel(topic);
+    }
+    return this._send({
+      topic: topic, event: "broadcast",
+      payload: { type: "broadcast", event: event, payload: payload || {} },
+      ref: this._nextRef()
+    });
+  };
+
+  var rt = new RT();
+
+  /* Connect once a signed-in session exists; drop the socket on sign-out.
+     Session broadcasts state via DOM CustomEvents, not an on() method. */
+  function boot() {
+    if (!window.Session) return;
+    window.Session.ready.then(function (s) {
+      if (s && s.backend && s.user && rt.available()) rt.connect();
+    });
+    document.addEventListener("session:change", function (e) {
+      var d = e && e.detail;
+      if (d && d.user) rt.connect();
+      else rt.disconnect();
+    });
+  }
+
+  window.Realtime = rt;
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();

@@ -289,7 +289,24 @@
     showCallButtons(true);
     remember({ thread: t.id, open: true });
     retime();
+    subscribeThread(t.id);
     return tick(true);
+  }
+
+  /* Instant delivery over realtime (falls back to the poll timer). */
+  var dockThreadSub = null;
+  var dockSubbedThread = null;
+  function subscribeThread(id) {
+    if (!window.Realtime) return;
+    if (dockSubbedThread === id) return;
+    if (dockThreadSub) { dockThreadSub(); dockThreadSub = null; }
+    dockSubbedThread = id;
+    dockThreadSub = window.Realtime.subscribe("realtime:thread:" + id, {
+      msg: function () { if (current && current.id === id) tick(); loadList(); }
+    });
+  }
+  function pokeThread(id) {
+    if (window.Realtime) window.Realtime.broadcast("realtime:thread:" + id, "msg", {});
   }
 
   function tick(first) {
@@ -382,6 +399,7 @@
     showPending();
 
     window.API.send(current.id, text, image).then(function (res) {
+      pokeThread(current.id);
       addBubble(res.message);
       logEl.scrollTop = logEl.scrollHeight;
       loadList();

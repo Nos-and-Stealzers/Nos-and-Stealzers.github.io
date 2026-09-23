@@ -228,10 +228,29 @@
           });
 
           window.Session.refreshBadges();
+          var st = document.getElementById("social-status");
+          var rt = document.getElementById("social-retry");
+          if (st) st.hidden = true;          // loaded — clear the "Loading…" notice
+          if (rt) rt.hidden = true;
         });
       }
 
-      load().catch(function (err) { UI.toast(err.message); });
+      var _fbStatus = document.getElementById("social-status");
+      var _fbRetry = document.getElementById("social-retry");
+      if (_fbRetry) _fbRetry.addEventListener("click", function () {
+        if (_fbStatus) { _fbStatus.hidden = false; _fbStatus.textContent = "Loading your people…"; }
+        _fbRetry.hidden = true;
+        load().catch(function (err) {
+          if (_fbStatus) { _fbStatus.hidden = false; _fbStatus.textContent = err.message || "Couldn't load."; }
+          _fbRetry.hidden = false;
+        });
+      });
+
+      load().catch(function (err) {
+        if (_fbStatus) { _fbStatus.hidden = false; _fbStatus.textContent = err.message || "Couldn't load your friends."; }
+        if (_fbRetry) _fbRetry.hidden = false;
+        UI.toast(err.message);
+      });
       window.setInterval(load, 30000);
     });
   }

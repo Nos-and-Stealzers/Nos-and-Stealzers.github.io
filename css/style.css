@@ -1572,12 +1572,32 @@ kbd {
 .dm-log {
   flex: 1; overflow-y: auto;
   padding: 1.1rem 1rem;
-  display: flex; flex-direction: column; gap: 0.7rem;
-  max-height: 58vh; min-height: 18rem;
-  background:
-    linear-gradient(var(--paper), var(--paper));
+  display: flex; flex-direction: column; gap: 0.5rem;
+  /* Anchor messages to the BOTTOM so a short conversation sits above the
+     composer like Discord/iMessage, instead of floating at the top of a big
+     empty panel. justify-content:flex-end + the first row's margin-top:auto
+     pushes content down while still scrolling naturally when it overflows. */
+  justify-content: flex-end;
+  max-height: 62vh; min-height: 22rem;
+  background: var(--paper);
 }
+.dm-log .bubble-row:first-child { margin-top: auto; }
 .bubble-row { display: flex; flex-direction: column; align-items: flex-start; max-width: 72%; }
+
+/* Friend-list quick-jump tabs — were rendering as run-together text with no
+   spacing ("Your friendsIncomingSent requestsBlocked"). */
+.social-sections {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.4rem 0 1.4rem;
+}
+.social-sections a {
+  padding: 0.35rem 0.85rem; border-radius: 999px;
+  border: 1px solid var(--line-2); background: var(--surface);
+  color: var(--ink-2); font-size: 0.82rem; font-weight: 600;
+  text-decoration: none; transition: background .12s, color .12s, border-color .12s;
+}
+.social-sections a:hover {
+  background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
 .bubble-row.mine { align-self: flex-end; align-items: flex-end; }
 .bubble {
   padding: 0.55rem 0.8rem;
@@ -2604,11 +2624,25 @@ kbd {
 
 /* COMPACT by default: the video tiles and secondary controls are hidden, so a
    voice call is a slim two-button pill. Expanding reveals the rest. */
-.calltiles { gap: 3px; padding: 3px; border-radius: 0;
+.calltiles { gap: 4px; padding: 4px; border-radius: 0; background: transparent;
   display: none; }
 .callbar.is-expanded .calltiles { display: grid; }
-.calltile { border-radius: 8px; aspect-ratio: 4/3; }
-.calltile-name { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; }
+/* Audio-only participants get an inviting tile (soft gradient + big avatar +
+   name), not a flat black rectangle. Video replaces it when a stream arrives. */
+.calltile { border-radius: 12px; aspect-ratio: 4/3;
+  background: radial-gradient(120% 120% at 50% 30%,
+    color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2)); }
+.calltile-face { display: grid; place-items: center; gap: 0.35rem; }
+.calltile-face .avatar { width: 3.4rem; height: 3.4rem; border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
+.calltile:not(.has-video)::before {
+  /* a subtle "speaking" halo ring behind the avatar */
+  content: ""; position: absolute; width: 4.4rem; height: 4.4rem; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 0.6;
+}
+.calltile-name { font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.5rem;
+  background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
 
 .callbar-deck { gap: 0.4rem; padding: 0.55rem 0.6rem; }
 .callbtn {

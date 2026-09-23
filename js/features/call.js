@@ -1051,27 +1051,45 @@
 
   /* ---------------------------------------------------------------- boot */
 
+  var mounted = false;
+  function setup(user) {
+    if (mounted) { state.self = user.id; return; }
+    if (!can()) return;
+    mounted = true;
+    build();
+    state.self = user.id;
+
+    state.ringTimer = window.setInterval(watch, RING_POLL);
+    watch();
+
+    /* Instant ring: listen on my personal channel. When someone starts a
+       call aimed at me they broadcast here, so watch() runs at once instead
+       of up to RING_POLL (6s) later. Polling stays as the fallback. */
+    if (window.Realtime) {
+      window.Realtime.subscribe(userTopic(state.self), {
+        ring: function () { watch(); },
+        hangup: function () { watch(); }
+      });
+    }
+    installNavGuards();
+  }
+
   function mount() {
     if (!window.Session || !window.API || !window.UI) return;
 
     window.Session.ready.then(function (s) {
-      if (!s.backend || !s.user || !can()) return;
-      build();
-      state.self = s.user.id;
+      if (s && s.backend && s.user) setup(s.user);
+    });
+    /* If the session arrives AFTER ready resolved (e.g. the user signed in on
+       this very page), pick it up so calling works without a reload. Session
+       announces changes via a DOM event. */
+    document.addEventListener("session:change", function (e) {
+      var d = e && e.detail;
+      if (d && d.user) setup(d.user);
+    });
+  }
 
-      state.ringTimer = window.setInterval(watch, RING_POLL);
-      watch();
-
-      /* Instant ring: listen on my personal channel. When someone starts a
-         call aimed at me they broadcast here, so watch() runs at once instead
-         of up to RING_POLL (6s) later. Polling stays as the fallback. */
-      if (window.Realtime) {
-        window.Realtime.subscribe(userTopic(state.self), {
-          ring: function () { watch(); },
-          hangup: function () { watch(); }
-        });
-      }
-
+  function installNavGuards() {
       /* Keeping a call alive across the site.
          A WebRTC connection belongs to the page that opened it, so any real
          navigation ends it and the NEXT page rejoins from sessionStorage. The
@@ -1138,7 +1156,6 @@
         }
         teardown("");
       });
-    });
   }
 
   window.Calls = {
@@ -1146,7 +1163,20 @@
     answer: answer,
     hangUp: hangUp,
     supported: can,
-    active: function () { return !!state.call; }
+    active: function () { return !!state.call; },
+    _debugPeers: function () {
+      var out = {};
+      Object.keys(state.peers).forEach(function (id) {
+        var e = state.peers[id];
+        out[id] = {
+          conn: e.pc ? e.pc.connectionState : "no-pc",
+          ice: e.pc ? e.pc.iceConnectionState : "-",
+          audio: e.stream ? e.stream.getAudioTracks().length : 0,
+          video: e.stream ? e.stream.getVideoTracks().length : 0
+        };
+      });
+      return out;
+    }
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);

@@ -83,10 +83,30 @@
         });
       }
 
+      var statusEl = document.getElementById("thread-status");
+      var retryEl = document.getElementById("thread-retry");
+      if (retryEl) retryEl.addEventListener("click", function () { loadList(); });
+
       function loadList() {
+        if (statusEl) { statusEl.hidden = false; statusEl.textContent = "Loading conversations…"; }
+        if (retryEl) retryEl.hidden = true;
         return API.threads()
-          .then(function (res) { drawList(res.threads); return res.threads; })
-          .catch(function () { return []; });
+          .then(function (res) {
+            if (statusEl) statusEl.hidden = true;   // loaded — hide the notice
+            if (retryEl) retryEl.hidden = true;
+            drawList(res.threads);
+            return res.threads;
+          })
+          .catch(function (err) {
+            /* Show the real failure and a working Retry instead of a permanent
+               "Loading…" that looks like the whole feature is dead. */
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent = (err && err.message) || "Couldn't load conversations.";
+            }
+            if (retryEl) retryEl.hidden = false;
+            return [];
+          });
       }
 
       /* --------------------------------------------------------- header */
@@ -292,6 +312,17 @@
       function pokeThread(id) {
         if (window.Realtime) window.Realtime.broadcast("realtime:thread:" + id, "msg", {});
       }
+      /* Also nudge each OTHER member's personal channel so their notification
+         bell / unread badge lights up instantly, even when they don't have this
+         thread open. Without this, the message arrived live in an open chat but
+         the badge only updated on the 30s poll. */
+      function pokeMembers() {
+        if (!window.Realtime || !current || !current.members) return;
+        var meId = window.Session && window.Session.user && window.Session.user.id;
+        current.members.forEach(function (m) {
+          if (m && m.id && m.id !== meId) window.Realtime.pokeUser(m.id, "notify");
+        });
+      }
 
       function open(id) {
         if (activeId != null) drafts[activeId] = { text: bodyBox.value, image: pending };
@@ -440,6 +471,7 @@
 
         API.send(id, text, image).then(function (res) {
           pokeThread(id);
+          pokeMembers();
           var saved = drafts[id];
           if (saved && saved.text === original) saved.text = "";
           if (saved && saved.image === image) saved.image = null;

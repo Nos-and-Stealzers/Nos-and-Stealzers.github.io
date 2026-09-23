@@ -308,10 +308,20 @@
   function pokeThread(id) {
     if (window.Realtime) window.Realtime.broadcast("realtime:thread:" + id, "msg", {});
   }
+  function pokeMembers() {
+    if (!window.Realtime || !current || !current.members) return;
+    var meId = window.Session && window.Session.user && window.Session.user.id;
+    current.members.forEach(function (m) {
+      if (m && m.id && m.id !== meId) window.Realtime.pokeUser(m.id, "notify");
+    });
+  }
 
   function tick(first) {
     if (!current) return Promise.resolve();
     return window.API.thread(current.id, lastId).then(function (res) {
+      /* Cache the member list so a send can nudge each recipient's personal
+         channel (notification badge), not just the thread channel. */
+      if (res.members && current) current.members = res.members;
       if (!res.messages.length && !first) return;
       var atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 60;
       res.messages.forEach(addBubble);
@@ -400,6 +410,7 @@
 
     window.API.send(current.id, text, image).then(function (res) {
       pokeThread(current.id);
+      pokeMembers();
       addBubble(res.message);
       logEl.scrollTop = logEl.scrollHeight;
       loadList();

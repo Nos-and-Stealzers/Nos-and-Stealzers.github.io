@@ -880,6 +880,7 @@
                 displayName: m.displayName || m.username,
                 role: m.role,
                 state: m.state,
+                avatarUrl: m.avatarUrl || "",
                 lastSeen: Number(m.lastSeen) || 0,
                 online: !!m.lastSeen && Date.now() - Number(m.lastSeen) < ONLINE_MS
               };
@@ -1327,7 +1328,7 @@
        ICE servers come from /api/turn (Cloudflare TURN) with STUN fallback. */
     iceServers: function () {
       return iceFetch().then(function (list) {
-        return { iceServers: list, maxPeers: 4 };
+        return { iceServers: list, maxPeers: 25 };
       });
     },
 

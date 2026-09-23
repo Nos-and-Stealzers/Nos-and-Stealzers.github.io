@@ -192,7 +192,7 @@
     }
 
     var face = el("div", "calltile-face");
-    face.appendChild(window.Art.avatar(label || String(userId)));
+    face.appendChild(faceAvatar(userId, label));
     tile.appendChild(face);
 
     var name = el("span", "calltile-name", label || "…");
@@ -310,6 +310,42 @@
       if (peers[i].id === id) return peers[i].displayName || peers[i].username;
     }
     return "Someone";
+  }
+
+  /* The roster row for a user id, so tiles and ring cards can show the real
+     profile picture (avatarUrl) instead of only an identicon. */
+  function peerOf(id) {
+    var peers = (state.call && state.call.peers) || [];
+    for (var i = 0; i < peers.length; i++) {
+      if (peers[i].id === id) return peers[i];
+    }
+    return null;
+  }
+
+  /* Prefer SocialUI.avatar (renders the uploaded picture, falling back to an
+     identicon) when we have a roster row; otherwise fall back to a bare
+     identicon from whatever label we have. */
+  function avatarFor(id, label) {
+    var peer = peerOf(id);
+    if (peer && window.SocialUI && window.SocialUI.avatar) {
+      return window.SocialUI.avatar({
+        username: peer.username, avatarUrl: peer.avatarUrl, online: true
+      });
+    }
+    return window.Art.avatar(label || (peer && peer.username) || String(id));
+  }
+
+  /* Tile avatar, including "You": self isn't in the call roster, so pull the
+     signed-in user's own picture from the session. */
+  function faceAvatar(id, label) {
+    if (id === state.self) {
+      var me = window.Session && window.Session.user;
+      if (me && window.SocialUI && window.SocialUI.avatar) {
+        return window.SocialUI.avatar({ username: me.username, avatarUrl: me.avatarUrl, online: true });
+      }
+      return window.Art.avatar((me && me.username) || label || "You");
+    }
+    return avatarFor(id, label);
   }
 
   /* --------------------------------------------------------- own media */
@@ -932,7 +968,9 @@
     var label = caller ? (caller.displayName || caller.username) : "Someone";
 
     var top = el("div", "ring-who");
-    top.appendChild(window.Art.avatar(caller ? caller.username : "?"));
+    top.appendChild(caller && window.SocialUI && window.SocialUI.avatar
+      ? window.SocialUI.avatar({ username: caller.username, avatarUrl: caller.avatarUrl, online: true })
+      : window.Art.avatar(caller ? caller.username : "?"));
     var text = el("div", "ring-text");
     text.appendChild(el("strong", null, label));
     text.appendChild(el("span", "ring-kind",

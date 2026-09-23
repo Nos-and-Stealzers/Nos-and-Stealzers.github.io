@@ -168,7 +168,7 @@
     { keys: ["call", "voice", "video", "ring", "phone"], reply:
       "To call a friend, open their profile or a conversation and hit the green " +
       "Call or Video button. Calls are peer-to-peer (nothing is recorded), " +
-      "friends-only for 1:1, and hold up to four people. Calling a group rings " +
+      "friends-only for 1:1, and hold your whole group (up to 25 people). Calling a group rings " +
       "everyone in it. The call panel is a small pill in the corner — tap the " +
       "arrow to expand it for video, camera and screen-share. It even stays " +
       "connected while you move around the site or launch a game." },

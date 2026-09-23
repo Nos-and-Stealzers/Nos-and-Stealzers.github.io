@@ -249,8 +249,13 @@
         pic.classList.add("is-group");
         pic.textContent = "◍";
       } else if (t.with) {
-        pic.appendChild(window.Art.avatar(t.with.username));
-        if (t.with.online) pic.appendChild(el("i", "dot"));
+        if (window.SocialUI && window.SocialUI.avatar) {
+          var a = window.SocialUI.avatar({ username: t.with.username, avatarUrl: t.with.avatarUrl, online: t.with.online });
+          while (a.firstChild) pic.appendChild(a.firstChild);
+        } else {
+          pic.appendChild(window.Art.avatar(t.with.username));
+          if (t.with.online) pic.appendChild(el("i", "dot"));
+        }
       }
       row.appendChild(pic);
 

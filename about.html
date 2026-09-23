@@ -151,10 +151,10 @@
         <li>One-to-one calls are friends-only. Calling a <b>group</b> rings everyone in that
             conversation — being in the group is the permission there, so it works even between
             people who haven't added each other.</li>
-        <li>Calls hold <b>four people</b>. Everyone connects to everyone else, so each extra
-            person costs all the others another upload stream. Past four you'd need a relay
-            server that forwards video, and that is the part that costs real money — so the
-            limit is honest rather than arbitrary.</li>
+        <li>Group calls fit your whole conversation — up to <b>25 people</b>. Everyone connects
+            to everyone else, so each extra person costs all the others another upload stream;
+            large groups work best when most people are on audio or a good connection, since the
+            site has no relay/forwarding server.</li>
         <li>Screen sharing goes through the browser's own picker, exactly like screenshots. You
             choose the window or tab, every time, and the browser shows its own "stop sharing"
             control that always works.</li>
@@ -247,6 +247,7 @@
   <script src="js/core/session.js"></script>
   <script src="js/core/realtime.js"></script>
   <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
   <script src="js/features/chat-dock.js"></script>
   <script src="js/features/call.js"></script>
   <script src="js/features/game-saves.js"></script>

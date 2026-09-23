@@ -28,10 +28,13 @@ create table if not exists public.profiles (
   state         text   not null default 'active' check (state in ('active','suspended')),
   accepts_dms   boolean not null default true,
   show_activity boolean not null default true,
+  avatar_url    text,
   created_at    timestamptz not null default now(),
   last_seen     timestamptz not null default now(),
   constraint username_shape check (username ~ '^[A-Za-z][A-Za-z0-9_]{2,19}$')
 );
+-- Older databases created before avatars existed: add the column in place.
+alter table public.profiles add column if not exists avatar_url text;
 
 create table if not exists public.friendships (
   id         bigint generated always as identity primary key,
@@ -1873,7 +1876,8 @@ begin
           select coalesce(jsonb_agg(jsonb_build_object(
             'id', p.user_id, 'state', p.state,
             'username', pr.username,
-            'displayName', coalesce(nullif(pr.display_name,''), pr.username)
+            'displayName', coalesce(nullif(pr.display_name,''), pr.username),
+            'avatarUrl', coalesce(pr.avatar_url,'')
           )), '[]'::jsonb)
             from public.call_peers p
             join public.profiles pr on pr.id = p.user_id
@@ -1898,7 +1902,8 @@ begin
         select coalesce(jsonb_agg(jsonb_build_object(
           'id', p2.user_id, 'state', p2.state,
           'username', pr.username,
-          'displayName', coalesce(nullif(pr.display_name,''), pr.username)
+          'displayName', coalesce(nullif(pr.display_name,''), pr.username),
+          'avatarUrl', coalesce(pr.avatar_url,'')
         )), '[]'::jsonb)
           from public.call_peers p2
           join public.profiles pr on pr.id = p2.user_id
@@ -2378,6 +2383,7 @@ begin
               'id', p.id, 'username', p.username,
               'displayName', coalesce(nullif(p.display_name,''), p.username::text),
               'role', p.role, 'state', p.state,
+              'avatarUrl', coalesce(p.avatar_url,''),
               'lastSeen', (extract(epoch from p.last_seen) * 1000)::bigint
             ) order by p.username)
               from public.thread_members tm2

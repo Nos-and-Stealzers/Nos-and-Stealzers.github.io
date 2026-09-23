@@ -25,7 +25,7 @@ const notify = require("../notify");
 
 const router = express.Router();
 
-const MAX_PEERS = 4;
+const MAX_PEERS = 25;
 const RING_TIMEOUT = 45000;      // unanswered calls stop ringing
 const SIGNAL_TTL = 60000;        // undelivered signals are stale after this
 const KINDS = ["audio", "video", "screen"];

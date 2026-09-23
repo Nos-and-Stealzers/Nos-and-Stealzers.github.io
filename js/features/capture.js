@@ -264,12 +264,28 @@
     });
   }
 
+  function avatarFromCamera() {
+    return cameraDialog().then(function (shot) {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () {
+          try {
+            resolve(Object.assign(encodeAvatar(img, img.naturalWidth, img.naturalHeight), { kind: "camera" }));
+          } catch (err) { reject(err); }
+        };
+        img.onerror = function () { reject(new Error("That photo could not be read.")); };
+        img.src = shot.dataUrl;
+      });
+    });
+  }
+
   window.Capture = {
     supported: supported,
     screenshot: screenshot,
     camera: camera,
     cameraDialog: cameraDialog,
     fromFile: fromFile,
-    avatarFromFile: avatarFromFile
+    avatarFromFile: avatarFromFile,
+    avatarFromCamera: avatarFromCamera
   };
 })();

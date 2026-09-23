@@ -394,6 +394,21 @@
     });
   }
 
+  function listAvatarObjects(userId) {
+    return call("/storage/v1/object/list/avatars", {
+      method: "POST",
+      body: { prefix: String(userId), limit: 100, offset: 0, sortBy: { column: "name", order: "asc" } }
+    }).then(function (rows) {
+      return (Array.isArray(rows) ? rows : []).filter(function (row) { return row && row.name; })
+        .map(function (row) { return String(userId) + "/" + row.name; });
+    });
+  }
+
+  function deleteAvatarObjects(paths) {
+    if (!paths || !paths.length) return Promise.resolve();
+    return call("/storage/v1/object/avatars", { method: "DELETE", body: { prefixes: paths } });
+  }
+
   /* ------------------------------------------------------------------ API */
 
   var API = {
@@ -620,7 +635,7 @@
           var ext = (mime && mime.indexOf("png") >= 0) ? "png"
                   : (mime && mime.indexOf("webp") >= 0) ? "webp"
                   : (mime && mime.indexOf("gif") >= 0) ? "gif" : "jpg";
-          var path = session.user.id + "/pfp-" + Date.now() + "." + ext;
+          var path = session.user.id + "/profile." + ext;
           return window.fetch(URL_BASE + "/storage/v1/object/avatars/" + path, {
             method: "POST",
             headers: {
@@ -632,7 +647,15 @@
             if (!r.ok) return uploadAvatarMeta(dataUrl);   // fall back on any storage error
             var publicUrl = URL_BASE + "/storage/v1/object/public/avatars/" + path;
             return API.updateProfile({ avatarUrl: publicUrl }).then(function (res) {
-              return { user: res.user, url: publicUrl };
+              /* Keep one deterministic object per account. Old timestamped
+                 uploads otherwise accumulated forever and could reappear from
+                 stale profile caches. Cleanup is best-effort: a successful new
+                 picture must not be rolled back by a housekeeping failure. */
+              return listAvatarObjects(session.user.id).then(function (paths) {
+                return deleteAvatarObjects(paths.filter(function (item) { return item !== path; }));
+              }).catch(function () {}).then(function () {
+                return { user: res.user, url: publicUrl };
+              });
             });
           }).catch(function () { return uploadAvatarMeta(dataUrl); });
         }
@@ -644,9 +667,12 @@
       /* Clear both the column (if present) and the metadata fallback. */
       var jobs = [setAuthMeta({ avatar_url: null })];
       return avatarReady().then(function (ready) {
-        if (ready) jobs.push(rest("/profiles?id=eq." + session.user.id, {
-          method: "PATCH", body: { avatar_url: null }
-        }).catch(function () {}));
+        if (ready) {
+          jobs.push(rest("/profiles?id=eq." + session.user.id, {
+            method: "PATCH", body: { avatar_url: null }
+          }).catch(function () {}));
+          jobs.push(listAvatarObjects(session.user.id).then(deleteAvatarObjects).catch(function () {}));
+        }
         return Promise.all(jobs);
       }).then(function () {
         if (selfProfile) selfProfile.avatar_url = "";

@@ -8,6 +8,8 @@
   var since = 0;
   var tall = false;
   var loaded = false;
+  var callRootHome = null;
+  var callRootNext = null;
 
   function $(id) { return document.getElementById(id); }
   function stage() { return $("stage"); }
@@ -277,11 +279,70 @@
     window.UI.toast("Opened in a hidden tab");
   }
 
+  function fullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+  }
+
+  function exitFullscreen() {
+    var node = stage();
+    if (node.classList.contains("is-pseudo-fullscreen")) {
+      node.classList.remove("is-pseudo-fullscreen");
+      document.body.classList.remove("game-pseudo-fullscreen");
+      syncFullscreenUI();
+      return Promise.resolve();
+    }
+    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (!exit) return Promise.resolve();
+    var out = exit.call(document);
+    return out && out.catch ? out : Promise.resolve(out);
+  }
+
+  /* Fullscreen only renders descendants of the fullscreen element. Move the
+     live call surface into the game stage while it is fullscreen, otherwise a
+     call appears to vanish the moment someone starts playing. Restore it to
+     its exact previous position on exit. */
+  function syncFullscreenUI() {
+    var node = stage();
+    var active = fullscreenElement() === node || node.classList.contains("is-pseudo-fullscreen");
+    node.classList.toggle("is-fullscreen", active);
+    var button = $("a-full");
+    if (button) {
+      button.textContent = active ? "↙ Exit fullscreen" : "⛶ Fullscreen";
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+    var title = $("stage-fullscreen-title");
+    if (title) title.textContent = game ? game.title : "Playing";
+
+    var calls = document.querySelector(".callroot");
+    if (active && calls && calls.parentNode !== node) {
+      callRootHome = calls.parentNode;
+      callRootNext = calls.nextSibling;
+      node.appendChild(calls);
+    } else if (!active && calls && callRootHome && calls.parentNode === node) {
+      if (callRootNext && callRootNext.parentNode === callRootHome) callRootHome.insertBefore(calls, callRootNext);
+      else callRootHome.appendChild(calls);
+      callRootHome = null;
+      callRootNext = null;
+    }
+  }
+
   function fullscreen() {
     var node = stage();
+    if (fullscreenElement() === node || node.classList.contains("is-pseudo-fullscreen")) {
+      exitFullscreen().catch(function () { window.UI.toast("Fullscreen could not close"); });
+      return;
+    }
     var req = node.requestFullscreen || node.webkitRequestFullscreen || node.msRequestFullscreen;
-    if (!req) { window.UI.toast("Fullscreen unavailable here"); return; }
-    var out = req.call(node);
+    if (!req) {
+      /* iPhone/iPad browsers and some managed-school builds expose no element
+         Fullscreen API. A fixed immersive stage is a real usable fallback,
+         with the same exit button and Escape behavior. */
+      node.classList.add("is-pseudo-fullscreen");
+      document.body.classList.add("game-pseudo-fullscreen");
+      syncFullscreenUI();
+      return;
+    }
+    var out = req.call(node, { navigationUI: "hide" });
     if (out && out.catch) out.catch(function () { window.UI.toast("Fullscreen was blocked"); });
   }
 
@@ -495,6 +556,14 @@
         else { newTab(); return; }
       }
       fullscreen();
+    });
+    var exitFull = $("stage-exit-fullscreen");
+    if (exitFull) exitFull.addEventListener("click", fullscreen);
+    ["fullscreenchange", "webkitfullscreenchange", "MSFullscreenChange"].forEach(function (name) {
+      document.addEventListener(name, syncFullscreenUI);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && stage().classList.contains("is-pseudo-fullscreen")) exitFullscreen();
     });
 
     $("a-pin").addEventListener("click", function () {

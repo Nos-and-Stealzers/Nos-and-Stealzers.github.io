@@ -1728,7 +1728,6 @@ declare
   invitee uuid;
   invited uuid[];
   me uuid := auth.uid();
-  max_peers constant int := 4;
 begin
   if me is null then raise exception 'Sign in to do that.'; end if;
   if call_kind not in ('audio','video','screen') then call_kind := 'audio'; end if;
@@ -1755,9 +1754,6 @@ begin
 
   if invited is null or array_length(invited, 1) is null then
     raise exception 'There is nobody to call.';
-  end if;
-  if array_length(invited, 1) + 1 > max_peers then
-    raise exception 'Calls hold % people. Bigger groups need a relay server we do not run.', max_peers;
   end if;
 
   insert into public.calls (thread_id, started_by, kind)
@@ -2640,7 +2636,6 @@ declare
   invitee uuid;
   invited uuid[];
   me uuid := auth.uid();
-  max_peers constant int := 4;
 begin
   perform public.require_active();
   if call_kind not in ('audio','video','screen') then call_kind := 'audio'; end if;
@@ -2668,9 +2663,6 @@ begin
 
   if invited is null or array_length(invited, 1) is null then
     raise exception 'There is nobody to call.';
-  end if;
-  if array_length(invited, 1) + 1 > max_peers then
-    raise exception 'Calls hold % people. Bigger groups need a relay server we do not run.', max_peers;
   end if;
 
   -- One live call at a time. Without this, a stuck ringing row from a

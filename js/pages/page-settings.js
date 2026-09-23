@@ -234,6 +234,7 @@
     /* ---- profile picture ---- */
     var pfpPreview = document.getElementById("pfp-preview");
     var pfpUpload = document.getElementById("pfp-upload");
+    var pfpCamera = document.getElementById("pfp-camera");
     var pfpRemove = document.getElementById("pfp-remove");
     var pfpHint = document.getElementById("pfp-hint");
 
@@ -249,27 +250,40 @@
     }
     drawPfp(user);
 
+    function savePfp(shot, button) {
+      if (!shot || !shot.dataUrl) return Promise.resolve();
+      if (button) button.disabled = true;
+      var parts = shot.dataUrl.split(",");
+      var mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+      var bin = atob(parts[1]);
+      var arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var blob = new Blob([arr], { type: mime });
+      return API.uploadAvatar(blob, mime, shot.dataUrl).then(function (res) {
+        window.Session.setUser(res.user);
+        drawPfp(res.user);
+        UI.toast("Profile picture updated");
+      }).finally(function () { if (button) button.disabled = false; });
+    }
+
+    function avatarError(err) {
+      if (err && /cancel|no file/i.test(err.message || "")) return;
+      UI.toast((err && err.message) || "Couldn't upload that.");
+    }
+
     if (pfpUpload && window.API && window.API.uploadAvatar) {
       pfpUpload.addEventListener("click", function () {
         if (!window.Capture) { UI.toast("Image picker unavailable."); return; }
-        (window.Capture.avatarFromFile || window.Capture.fromFile)().then(function (shot) {
-          if (!shot || !shot.dataUrl) return;
-          pfpUpload.disabled = true;
-          var parts = shot.dataUrl.split(",");
-          var mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
-          var bin = atob(parts[1]);
-          var arr = new Uint8Array(bin.length);
-          for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-          var blob = new Blob([arr], { type: mime });
-          return API.uploadAvatar(blob, mime, shot.dataUrl).then(function (res) {
-            window.Session.setUser(res.user);
-            drawPfp(res.user);
-            UI.toast("Profile picture updated");
-          });
-        }).catch(function (err) {
-          if (err && /cancel|no file/i.test(err.message || "")) return;
-          UI.toast(err.message || "Couldn't upload that.");
-        }).then(function () { pfpUpload.disabled = false; });
+        (window.Capture.avatarFromFile || window.Capture.fromFile)()
+          .then(function (shot) { return savePfp(shot, pfpUpload); }).catch(avatarError);
+      });
+    }
+    if (pfpCamera) {
+      var cameraOK = !!(window.Capture && window.Capture.supported && window.Capture.supported().camera && window.Capture.avatarFromCamera);
+      pfpCamera.hidden = !cameraOK;
+      if (cameraOK) pfpCamera.addEventListener("click", function () {
+        window.Capture.avatarFromCamera()
+          .then(function (shot) { return savePfp(shot, pfpCamera); }).catch(avatarError);
       });
     }
     if (pfpRemove) {

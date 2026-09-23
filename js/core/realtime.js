@@ -62,15 +62,16 @@
     this.ws.addEventListener("open", function () {
       self.connected = true;
       self.reconnectDelay = RECONNECT_MIN;
-      /* Authenticate the socket as this user so RLS-scoped features work; for
-         broadcast-only channels the apikey in the URL already suffices. */
-      self._send({ topic: "phoenix", event: "access_token",
-                   payload: { access_token: token }, ref: self._nextRef() });
-      /* (Re)join every channel a feature asked for. */
+      /* (Re)join every channel a feature asked for — exactly once. Channel
+         intent is tracked in self.channels; _joinChannel is a no-op while the
+         socket is still opening, so the initial subscribe() does NOT also queue
+         a duplicate join frame (which the server answered with phx_close,dead
+         channel, and silently-broken instant ring). */
       Object.keys(self.channels).forEach(function (topic) {
+        self.channels[topic].joined = false;
         self._joinChannel(topic);
       });
-      /* Flush anything queued while opening. */
+      /* Flush any broadcasts queued while opening. */
       var q = self.pending; self.pending = [];
       q.forEach(function (f) { self._send(f); });
       self._startHeartbeat();
@@ -136,11 +137,25 @@
   RT.prototype._joinChannel = function (topic) {
     var ch = this.channels[topic];
     if (!ch) return;
+    /* Only join over a genuinely OPEN socket. While the socket is still
+       CONNECTING, the open handler will join every known channel exactly once —
+       queuing a join frame here too produced a second join and a phx_close. */
+    if (!this.connected || !this.ws || this.ws.readyState !== 1) return;
+
+    var cfg = window.API.realtime;
+    var token = (cfg && cfg.token && cfg.token()) || (cfg && cfg.anonKey);
     var ref = this._nextRef();
     ch.joinRef = ref;
+    ch.joined = false;
     this._send({
       topic: topic, event: "phx_join",
-      payload: { config: { broadcast: { self: false, ack: false }, presence: { key: "" } } },
+      /* access_token belongs INSIDE the join payload in the current Supabase
+         protocol; sending it as its own "phoenix" frame got "unmatched topic"
+         and left the socket anonymous. */
+      payload: {
+        access_token: token,
+        config: { broadcast: { self: false, ack: false }, presence: { key: "" } }
+      },
       ref: ref
     });
   };
@@ -148,9 +163,23 @@
   RT.prototype._onFrame = function (msg) {
     var ch = this.channels[msg.topic];
     if (msg.event === "phx_reply") {
-      if (ch && msg.ref === ch.joinRef && msg.payload && msg.payload.status === "ok") {
-        ch.joined = true;
+      if (ch && msg.ref === ch.joinRef) {
+        if (msg.payload && msg.payload.status === "ok") ch.joined = true;
+        else ch.joined = false;   // join refused; leave it un-joined
       }
+      return;
+    }
+    /* A channel the server closed or errored (token expiry, a duplicate join,
+       a transient server drop) must be re-joined, or its instant pokes stop
+       arriving for the rest of the session while polling quietly covers it. */
+    if ((msg.event === "phx_close" || msg.event === "phx_error") && ch) {
+      ch.joined = false;
+      var self = this;
+      window.setTimeout(function () {
+        if (self.channels[msg.topic] && !self.channels[msg.topic].joined) {
+          self._joinChannel(msg.topic);
+        }
+      }, 400);
       return;
     }
     if (msg.event === "broadcast" && ch && msg.payload) {

@@ -63,38 +63,47 @@
     ringEl.setAttribute("aria-label", "Incoming call");
     root.appendChild(ringEl);
 
-    /* --- the live call panel --- */
+    /* --- the live call panel ---
+       Compact by default: a slim pill showing who/status, mute and end. The
+       expand toggle reveals the video tiles and the secondary controls, so a
+       plain voice call takes almost no room. */
     bar = el("div", "callbar");
     bar.hidden = true;
 
     var head = el("div", "callbar-head");
+    var textWrap = el("div", "callbar-headtext");
     statusEl = el("span", "callbar-status", "Connecting…");
-    head.appendChild(statusEl);
+    textWrap.appendChild(statusEl);
     timerEl = el("span", "callbar-timer", "0:00");
-    head.appendChild(timerEl);
+    textWrap.appendChild(timerEl);
+    head.appendChild(textWrap);
 
-    var min = el("button", "callbar-btn", "–");
-    min.type = "button";
-    min.title = "Minimise";
-    min.setAttribute("aria-label", "Minimise call");
-    min.addEventListener("click", function () {
-      bar.classList.toggle("is-min");
-      min.textContent = bar.classList.contains("is-min") ? "+" : "–";
+    var toggle = el("button", "callbar-btn callbar-toggle");
+    toggle.type = "button";
+    toggle.title = "Expand call";
+    toggle.setAttribute("aria-label", "Expand call");
+    toggle.appendChild(window.UI.icon("expand", "callbar-toggle-ico"));
+    toggle.addEventListener("click", function () {
+      var open = bar.classList.toggle("is-expanded");
+      toggle.title = open ? "Collapse" : "Expand call";
+      toggle.setAttribute("aria-label", toggle.title);
     });
-    head.appendChild(min);
+    head.appendChild(toggle);
     bar.appendChild(head);
 
     tiles = el("div", "calltiles");
     bar.appendChild(tiles);
 
+    /* Two button tiers. Primary (mute, end) always shows — even collapsed.
+       Secondary (camera, screen, fullscreen) only appears once expanded. */
     var deck = el("div", "callbar-deck");
     [
-      ["mute",   "mic",    "Mute",   toggleMute],
-      ["cam",    "camera", "Camera", toggleCam],
-      ["screen", "screen", "Share",  toggleScreen],
-      ["full",   "expand", "Expand", function () { root.classList.toggle("is-big"); }]
+      ["mute",   "mic",    "Mute",   toggleMute,   "primary"],
+      ["cam",    "camera", "Camera", toggleCam,    "secondary"],
+      ["screen", "screen", "Share",  toggleScreen, "secondary"],
+      ["full",   "expand", "Full",   function () { root.classList.toggle("is-big"); }, "secondary"]
     ].forEach(function (spec) {
-      var b = el("button", "callbtn");
+      var b = el("button", "callbtn callbtn-" + spec[4]);
       b.type = "button";
       b.dataset.act = spec[0];
       b.dataset.icon = spec[1];
@@ -106,7 +115,7 @@
       deck.appendChild(b);
     });
 
-    var end = el("button", "callbtn is-end");
+    var end = el("button", "callbtn callbtn-primary is-end");
     end.type = "button";
     end.title = "Leave the call";
     end.setAttribute("aria-label", "Leave the call");
@@ -118,6 +127,17 @@
     bar.appendChild(deck);
     root.appendChild(bar);
     document.body.appendChild(root);
+  }
+
+  /* Open the tile view automatically the first time real video shows up, so a
+     video call isn't hidden behind the compact pill — but leave a voice call
+     collapsed. Only auto-expands once; the user's manual toggle wins after. */
+  function autoExpandForVideo() {
+    if (!bar || bar._autoExpanded) return;
+    bar._autoExpanded = true;
+    bar.classList.add("is-expanded");
+    var toggle = bar.querySelector(".callbar-toggle");
+    if (toggle) { toggle.title = "Collapse"; toggle.setAttribute("aria-label", "Collapse"); }
   }
 
   function status(text) {
@@ -228,6 +248,10 @@
       return t.readyState === "live" && !t.muted;
     });
     tile.classList.toggle("has-video", !!live);
+    /* Real video is worth showing — pop the tile view open the first time it
+       appears on a call that started collapsed (a voice call turning to video,
+       or a screen share). */
+    if (live && tile.dataset.peer !== String(state.self)) autoExpandForVideo();
 
     tracks.forEach(function (t) {
       if (t._watched) return;
@@ -593,12 +617,20 @@
 
   function send(to, kind, payload) {
     if (!state.call) return Promise.resolve();
-    /* Poke the recipient over realtime so they pull this signal immediately
-       instead of waiting for their next 1.5s poll — this is what makes ICE
-       negotiation (and therefore connecting) fast. The HTTP write below is
-       still the source of truth; the poke only triggers an early fetch. */
-    pokePeer(to);
-    return window.API.sendSignal(state.call.id, to, kind, payload).catch(function () {});
+    /* Write the signal FIRST, then poke. The poke tells the recipient to fetch
+       immediately; if it fired before the row committed, that early fetch found
+       nothing and negotiation stalled until the 1.5s fallback poll. */
+    return window.API.sendSignal(state.call.id, to, kind, payload).then(function () {
+      pokePeer(to);
+    }, function (err) {
+      /* Don't silently swallow: a failed offer/answer/ICE write leaves both
+         sides stuck on "Connecting…". Surface it once and keep the fallback
+         poll going — a transient failure may still recover on the next tick. */
+      if (!state._signalWarned && err && (err.status === 401 || err.status === 403 || err.status === 404)) {
+        state._signalWarned = true;
+        status("Trouble reaching the call server…");
+      }
+    });
   }
 
   /* Realtime helpers. Each call has a channel; each user has a personal
@@ -655,7 +687,14 @@
     }
 
     if (sig.kind === "bye") {
-      dropPeer(sig.from);
+      /* A "bye" can mean two very different things:
+           - the peer left the call for good, or
+           - the peer navigated to another page and is re-establishing.
+         We can't tell from the signal alone, so tear the stale pc down WITHOUT
+         hanging up. pump()'s roster check is the source of truth: if the peer is
+         really gone it flips to "left" and dropPeer() ends the call; if they're
+         still "joined" (a rejoin), pump() simply re-offers to their fresh pc. */
+      dropPeer(sig.from, true);
     }
     return Promise.resolve();
   }
@@ -668,12 +707,17 @@
     }));
   }
 
-  function dropPeer(userId) {
+  function dropPeer(userId, keepAlive) {
     var entry = state.peers[userId];
     if (!entry) return;
     if (entry.pc) entry.pc.close();
     if (entry.el) entry.el.remove();
     delete state.peers[userId];
+
+    /* keepAlive: a "bye" that might be a rejoin (peer navigated). Don't run the
+       "everyone left" hangup — pump() re-offers if the peer is still in the
+       roster, or ends the call if they've genuinely gone. */
+    if (keepAlive) return;
 
     /* Someone still ringing is not "everyone left" — hanging up on them the
        moment the one person who answered drops would kill a group call that
@@ -774,10 +818,17 @@
          a camera that isn't running. */
       mark("cam", !state.camOff);
       /* Ring every invited peer instantly over their personal channel, so the
-         incoming-call card pops right away instead of on their next 6s poll. */
-      if (window.Realtime && call && call.peers) {
+         incoming-call card pops right away instead of on their next 6s poll.
+         Also send a "bye" to every ALREADY-JOINED peer: if this begin() is a
+         rejoin after navigating, the other side is still holding a peer
+         connection to our dead previous page. bye makes them drop it at once so
+         their next pump re-offers to our fresh connection — otherwise both
+         sides sit on a stale pc and the reconnect stalls at "Connecting…". */
+      if (call && call.peers) {
         call.peers.forEach(function (p) {
-          if (p.id !== state.self) window.Realtime.broadcast(userTopic(p.id), "ring", { call: call.id });
+          if (p.id === state.self) return;
+          if (window.Realtime) window.Realtime.broadcast(userTopic(p.id), "ring", { call: call.id });
+          if (p.state === "joined") send(p.id, "bye", {});
         });
       }
       runLoop();
@@ -1021,13 +1072,17 @@
         });
       }
 
-      /* Leaving mid-call should free the other side quickly — BUT only when
-         you're actually leaving the site, not when you click a link to another
-         page within it. pagehide fires for both. We watch for same-origin
-         navigation (a link click or a form submit that stays on this site) and
-         treat that as "keep the call, rejoin on the next page" rather than
-         "hang up". A real tab/window close, or navigating away to another site,
-         falls through to the leave path. */
+      /* Keeping a call alive across the site.
+         A WebRTC connection belongs to the page that opened it, so any real
+         navigation ends it and the NEXT page rejoins from sessionStorage. The
+         job here is to tell three very different events apart:
+           - a same-site link/redirect  → keep the seat, rejoin next page
+           - the tab being frozen (bfcache) or just backgrounded → do NOTHING,
+             the same page and its live connection are still there
+           - a genuine tab/window close or navigation OFF the site → leave, so
+             the other person isn't stuck talking to a dead tile.
+         The previous version leaked "leave" on tab-switch because it never
+         checked event.persisted (a bfcache freeze fires pagehide too). */
       var internalNav = false;
       document.addEventListener("click", function (e) {
         var a = e.target && e.target.closest && e.target.closest("a[href]");
@@ -1040,11 +1095,30 @@
           if (dest.origin === location.origin) internalNav = true;
         } catch (err) { /* ignore */ }
       }, true);
+      /* A form that posts back to this origin (search, login) is also internal. */
+      document.addEventListener("submit", function (e) {
+        var f = e.target;
+        if (!f || !f.action) { internalNav = true; return; }
+        try {
+          if (new URL(f.action, location.href).origin === location.origin) internalNav = true;
+        } catch (err) { internalNav = true; }
+      }, true);
+      /* history.back()/forward() and location changes we didn't catch as a click. */
+      window.addEventListener("beforeunload", function () {
+        try {
+          if (document.activeElement && document.activeElement.closest &&
+              document.activeElement.closest("a[href],button,form")) internalNav = true;
+        } catch (e) {}
+      });
       window.addEventListener("pageshow", function () { internalNav = false; });
 
-      window.addEventListener("pagehide", function () {
-        /* Internal navigation: keep our seat in the call. The next page's
-           watch() sees we're still a joined peer and rejoins automatically. */
+      window.addEventListener("pagehide", function (e) {
+        /* bfcache freeze / tab backgrounding: the page (and its live peer
+           connection) is being kept, not destroyed. Never leave the call. */
+        if (e && e.persisted) return;
+
+        /* Internal navigation: keep our seat; the next page's watch() sees we
+           are still a joined peer and rejoins automatically. */
         if (internalNav && state.call) return;
 
         if (state.ringing) {

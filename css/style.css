@@ -2568,7 +2568,7 @@ kbd {
 
 /* ---- Live call panel ---- */
 .callbar {
-  width: min(340px, calc(100vw - 1.5rem));
+  width: min(300px, calc(100vw - 1.5rem));
   border: 1px solid var(--line-2);
   border-radius: 16px;
   box-shadow: 0 18px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
@@ -2578,13 +2578,16 @@ kbd {
 @keyframes callbar-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 
 .callbar-head {
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.7rem;
   background: linear-gradient(135deg,
     color-mix(in srgb, var(--accent) 22%, var(--surface-2)),
     var(--surface-2));
   border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 0.5rem;
 }
-.callbar-status { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em; }
+.callbar-headtext { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.5rem; }
+.callbar-status { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .callbar-status::before {
   content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 0.45rem;
   border-radius: 50%; background: var(--good); vertical-align: middle;
@@ -2592,22 +2595,32 @@ kbd {
   animation: call-live 1.8s ease-out infinite;
 }
 @keyframes call-live { 70%,100% { box-shadow: 0 0 0 6px transparent; } }
-.callbar-timer { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); }
-.callbar-btn { font-size: 1.15rem; border-radius: 8px; padding: 0.15rem 0.45rem; transition: background .12s, color .12s; }
+.callbar-timer { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); flex: none; }
+.callbar-btn { font-size: 1.05rem; border-radius: 8px; padding: 0.15rem 0.4rem;
+  transition: background .12s, color .12s; flex: none; }
 .callbar-btn:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.callbar-toggle-ico { transition: transform .18s ease; display: inline-flex; }
+.callbar.is-expanded .callbar-toggle-ico { transform: rotate(180deg); }
 
-.calltiles { gap: 3px; padding: 3px; border-radius: 0; }
+/* COMPACT by default: the video tiles and secondary controls are hidden, so a
+   voice call is a slim two-button pill. Expanding reveals the rest. */
+.calltiles { gap: 3px; padding: 3px; border-radius: 0;
+  display: none; }
+.callbar.is-expanded .calltiles { display: grid; }
 .calltile { border-radius: 8px; aspect-ratio: 4/3; }
 .calltile-name { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; }
 
-/* Larger, clearer control deck: icon on top, label under, pill shapes. */
-.callbar-deck { gap: 0.4rem; padding: 0.7rem 0.6rem; }
+.callbar-deck { gap: 0.4rem; padding: 0.55rem 0.6rem; }
 .callbtn {
   display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
   padding: 0.5rem 0.3rem; border-radius: 12px;
   border: 1px solid var(--line-2); background: var(--surface);
   transition: transform .1s, background .12s, border-color .12s, color .12s;
 }
+/* Placed AFTER .callbtn so equal-specificity source order hides secondaries
+   until the panel is expanded (a plain voice call shows only Mute + End). */
+.callbar-deck .callbtn-secondary { display: none; }
+.callbar.is-expanded .callbar-deck .callbtn-secondary { display: flex; }
 .callbtn:hover { transform: translateY(-1px); border-color: var(--accent); }
 .callbtn:active { transform: translateY(0) scale(.96); }
 .callbtn-ico { font-size: 1.15rem; line-height: 1; }

@@ -25,10 +25,12 @@
   var SUGGESTS = [
     "Recommend a game",
     "Best fighting games",
+    "Something like Mario",
+    "A quick puzzle game",
     "How do calls work?",
     "How do I add a friend?",
-    "Something like Mario",
-    "A quick puzzle game"
+    "What is Arcade+?",
+    "How many games are there?"
   ];
 
   function init() {
@@ -167,8 +169,9 @@
       "To call a friend, open their profile or a conversation and hit the green " +
       "Call or Video button. Calls are peer-to-peer (nothing is recorded), " +
       "friends-only for 1:1, and hold up to four people. Calling a group rings " +
-      "everyone in it. If a tile says it can't connect, that network is blocking " +
-      "the direct link." },
+      "everyone in it. The call panel is a small pill in the corner — tap the " +
+      "arrow to expand it for video, camera and screen-share. It even stays " +
+      "connected while you move around the site or launch a game." },
     { keys: ["friend", "add someone", "friend code", "requests"], reply:
       "Head to Friends and add someone by @username or by their six-character " +
       "friend code (like ABC-123). Requests go one way until accepted, and you " +
@@ -176,7 +179,8 @@
     { keys: ["message", "chat", "dm", "text", "group"], reply:
       "Open Messages, or use the chat dock in the bottom-right on any page — it " +
       "even stays up while a game is running. Groups hold 25 people and are " +
-      "friends-only. Messages now deliver instantly over a live connection." },
+      "friends-only. Messages deliver instantly over a live connection, with " +
+      "polling as a backup so nothing is ever lost." },
     { keys: ["save", "progress", "cloud", "sync", "backup"], reply:
       "Your game progress saves automatically. Signed in, it syncs to your " +
       "account and follows you to other devices; signed out it stays in this " +
@@ -186,7 +190,16 @@
       "and messages, and adopts whatever you've already played here. A real " +
       "email is required (for confirmation and password recovery) and is never " +
       "shown to other users." },
-    { keys: ["block", "history", "hidden", "cloak", "school", "filter"], reply:
+    { keys: ["verify", "verification", "confirm email", "code", "email code"], reply:
+      "After signing up you'll get a 6-digit code by email. Enter it on the " +
+      "Verify Email page (or Settings → Verify email) to unlock chat, friends " +
+      "and calls. Playing games needs no verification. Codes expire in 15 " +
+      "minutes — hit Resend if yours lapses." },
+    { keys: ["password", "forgot", "reset", "locked out", "can't log in"], reply:
+      "Forgot your password? Use the \u201cReset it\u201d link on the sign-in page. " +
+      "We'll email a recovery link; open it and set a new password. To change a " +
+      "known password, go to Settings → Security." },
+    { keys: ["block", "history", "hidden", "cloak", "school", "filter", "incognito"], reply:
       "The Hidden-tab launcher opens a game in an about:blank tab to keep it out " +
       "of your history. You can also toggle it in Settings. Flags on each game " +
       "describe how reliably it loads on restricted networks — they're about " +
@@ -194,19 +207,78 @@
     { keys: ["pin", "favorite", "favourite", "library", "bookmark"], reply:
       "Press F on a game, or the star on its tile, to pin it. Pinned games live " +
       "on the Pinned page and sync with your account when you're signed in." },
-    { keys: ["theme", "skin", "dark", "light", "motion", "settings"], reply:
+    { keys: ["theme", "skin", "dark", "light", "motion", "settings", "appearance"], reply:
       "Settings lets you change the skin, text size, turn motion on/off, switch " +
-      "grid/list view, and more. Press ? anywhere to jump there." },
-    { keys: ["who are you", "what are you", "what can you do", "help"], reply:
+      "grid/list view, set a profile picture, and more. Press ? anywhere to " +
+      "jump there." },
+    { keys: ["profile picture", "avatar", "pfp", "photo", "picture"], reply:
+      "Set a profile picture from your own Profile page or Settings → Profile " +
+      "picture. Pick any image; it's squared and shown next to your name in " +
+      "chat, friends and calls." },
+    { keys: ["arcade+", "campus+", "plus", "membership", "premium", "subscribe"], reply:
+      "Arcade+ unlocks the video player, custom playlists, and me — Campus AI. " +
+      "It's granted by staff; check the Arcade+ page for what's included." },
+    { keys: ["report", "block user", "abuse", "harass", "moderator", "mod"], reply:
+      "See something wrong? Use Report inside a conversation or on a profile, " +
+      "and Block to cut someone off entirely. Reports go straight to the " +
+      "moderators. Blocking is mutual and silent." },
+    { keys: ["mobile", "phone", "tablet", "ipad", "android", "install", "app", "pwa"], reply:
+      "The whole site is mobile-friendly and installable — use your browser's " +
+      "\u201cAdd to Home Screen\u201d to run it like an app, offline shell included." },
+    { keys: ["controls", "keyboard", "shortcut", "hotkey", "keys"], reply:
+      "Handy shortcuts: F pins the focused game, ? opens Settings, and Enter " +
+      "sends a chat message (Shift+Enter for a new line). Most games use arrow " +
+      "keys or WASD — check the game's own start screen." },
+    { keys: ["who are you", "what are you", "what can you do", "help", "commands"], reply:
       "I'm Campus AI (beta) — a built-in helper. I recommend real games from " +
-      "our catalog and explain how the arcade works. Ask for a genre, something " +
-      "like a game you like, or how a feature works." }
+      "our catalog, help you find something by genre or vibe, and explain how " +
+      "the arcade works: accounts, friends, chat, calls, saves, Arcade+ and " +
+      "more. Ask for a genre, something like a game you like, \u201csurprise " +
+      "me\u201d, or how any feature works." }
   ];
+
+  /* Extra small-talk the guide doesn't cover, so the bot feels less robotic. */
+  function smallTalk(q) {
+    if (/\b(thank|thanks|thx|ty|appreciate)\b/.test(q))
+      return "Anytime! Want another recommendation?";
+    if (/\b(bye|goodbye|see ya|cya|later)\b/.test(q))
+      return "See you — have fun playing!";
+    if (/\bhow are you|how's it going|how are ya\b/.test(q))
+      return "Running great, thanks! I'm best at finding you a game — what are you in the mood for?";
+    if (/\b(joke|funny|make me laugh)\b/.test(q))
+      return "Why did the gamer bring a ladder to the arcade? To reach the next level. \uD83C\uDFAE Want a game to actually play?";
+    if (/\b(love you|you're cool|you're awesome|good bot|nice)\b/.test(q))
+      return "You're alright yourself. Want me to line up something to play?";
+    if (/\bare you (a )?(real|human|ai|bot|robot)\b/.test(q) || /\bare you real\b/.test(q))
+      return "I'm a built-in helper — not a giant language model, just a fast local brain that knows this arcade's catalog and features inside out.";
+    return null;
+  }
 
   function brain(raw) {
     var q = raw.toLowerCase();
 
-    /* 1. Feature/help questions win when they clearly match the guide. */
+    /* 0. Small-talk / social — quick, before anything game-y. */
+    var chat = smallTalk(q);
+    if (chat) return { text: chat, games: [] };
+
+    /* 2. Catalog facts — "how many games", "what categories". */
+    if (/\b(how many|number of|count).*(games?|titles?)\b/.test(q) ||
+        /\bhow big.*(catalog|library)\b/.test(q)) {
+      var n = catalog().length;
+      return { text: "There are " + n.toLocaleString() + " games in the catalog right now — " +
+                     "browse them all on the Games page, or tell me a genre and I'll narrow it down.", games: sample(3) };
+    }
+    if (/\b(categor|genre|types? of game|what kind)\b/.test(q) && /\b(what|which|list|show|have)\b/.test(q)) {
+      var defs = (window.SITE && window.SITE.categories) || {};
+      var labels = Object.keys(defs).map(function (id) { return defs[id].label || id; });
+      if (labels.length) {
+        return { text: "Categories here include: " + labels.slice(0, 12).join(", ") +
+                       (labels.length > 12 ? ", and more." : ".") +
+                       " Ask for any one and I'll pull some up.", games: [] };
+      }
+    }
+
+    /* 3. Feature/help questions win when they clearly match the guide. */
     for (var i = 0; i < GUIDE.length; i++) {
       if (GUIDE[i].keys.some(function (k) { return q.indexOf(k) !== -1; })) {
         /* But "fighting games" etc. should still recommend — only take the

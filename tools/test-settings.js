@@ -38,7 +38,7 @@ function withSaved(savedBlob) {
   sandbox.CustomEvent = class {};
   vm.createContext(sandbox);
 
-  for (const f of ["js/config.js", "js/store.js"]) {
+  for (const f of ["js/core/config.js", "js/core/store.js"]) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), sandbox, { filename: f });
   }
   return sandbox;
@@ -216,7 +216,7 @@ console.log("\nno drift between the boot script and config");
 {
   /* theme-boot runs in <head>, before config.js exists, so it has to carry
      its own copy of the valid skins. That duplication can rot. */
-  const boot = fs.readFileSync(path.join(ROOT, "js", "theme-boot.js"), "utf8");
+  const boot = fs.readFileSync(path.join(ROOT, "js", "core", "theme-boot.js"), "utf8");
   const declared = (boot.match(/var VALID = \{([\s\S]*?)\}/) || [])[1] || "";
   const bootSkins = (declared.match(/[a-z]+(?=\s*:)/g) || []).sort();
   const configSkins = base.SITE.skins.map((s) => s.id).sort();

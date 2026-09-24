@@ -341,11 +341,39 @@
     return ask(origin, { action: "remove", keys: keys });
   }
 
+  /* Back up exactly one host, atomically: refuse a bridge reply that admits
+     it only captured part of the snapshot (idb/cookie enumeration failed
+     mid-read), and refuse to upload if the signed-in account changed while
+     the read was in flight — otherwise a save intended for one account can
+     land under a different one that logged in during the round-trip. */
+  function backupHost(hostOrOrigin) {
+    if (!window.Session || !window.Session.user) {
+      return Promise.reject(new Error("Sign in to sync game progress."));
+    }
+    var origin = originFor(hostOrOrigin);
+    if (!origin) return Promise.reject(new Error("Unknown game host."));
+    var startUser = window.Session.user.id;
+    return ask(origin, { action: "read" }).then(function (res) {
+      if (res.partial) {
+        throw new Error("Save snapshot was incomplete; not uploading.");
+      }
+      if (!window.Session || !window.Session.user ||
+          window.Session.user.id !== startUser) {
+        throw new Error("Account changed during backup; not uploading.");
+      }
+      var payload = {
+        local: res.data || {}, idb: res.idb || {}, cookies: res.cookies || {}
+      };
+      return window.API.putGameSave(keyFor(origin), payload);
+    });
+  }
+
   window.GameSaves = {
     hosts: hostsFromConfig,
     hostKey: keyFor,
     configKey: configKeyFor,
     backup: backup,
+    backupHost: backupHost,
     restore: restore,
     probe: probe,
     readAll: readAll,

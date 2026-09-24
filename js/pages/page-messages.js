@@ -25,6 +25,8 @@
       var bodyBox = document.getElementById("body");
       var sendBtn = document.getElementById("send");
       var locked = document.getElementById("locked");
+      var searchBox = document.getElementById("thread-search");
+      var allThreads = [];
 
       /* ---------------------------------------------------- thread list */
 
@@ -43,11 +45,19 @@
         top.appendChild(fr);
         listHost.appendChild(top);
 
-        if (!threads.length) {
+        if (!allThreads.length) {
           var v = UI.el("div", "void");
           v.appendChild(UI.el("strong", null, "No conversations"));
           v.appendChild(UI.el("p", null, "Add a friend, then start one."));
           listHost.appendChild(v);
+          return;
+        }
+
+        if (!threads.length) {
+          var nv = UI.el("div", "void");
+          nv.appendChild(UI.el("strong", null, "No matches"));
+          nv.appendChild(UI.el("p", null, "No conversations match your search."));
+          listHost.appendChild(nv);
           return;
         }
 
@@ -89,6 +99,20 @@
       var retryEl = document.getElementById("thread-retry");
       if (retryEl) retryEl.addEventListener("click", function () { loadList(); });
 
+      function filteredThreads() {
+        var q = (searchBox && searchBox.value || "").trim().toLowerCase();
+        if (!q) return allThreads;
+        return allThreads.filter(function (t) {
+          return (t.title || "").toLowerCase().indexOf(q) !== -1;
+        });
+      }
+
+      if (searchBox) {
+        searchBox.addEventListener("input", function () {
+          drawList(filteredThreads());
+        });
+      }
+
       function loadList() {
         if (statusEl) { statusEl.hidden = false; statusEl.textContent = "Loading conversations…"; }
         if (retryEl) retryEl.hidden = true;
@@ -96,7 +120,8 @@
           .then(function (res) {
             if (statusEl) statusEl.hidden = true;   // loaded — hide the notice
             if (retryEl) retryEl.hidden = true;
-            drawList(res.threads);
+            allThreads = res.threads;
+            drawList(filteredThreads());
             return res.threads;
           })
           .catch(function (err) {

@@ -179,7 +179,7 @@
           document.getElementById("r-in").textContent = data.incoming.length;
           document.getElementById("r-out").textContent = data.outgoing.length;
 
-          document.getElementById("b-incoming").hidden = data.incoming.length === 0;
+          document.getElementById("b-incoming").hidden = false;
           S.renderPeople(document.getElementById("incoming"), data.incoming, function (u) {
             return S.person(u, {
               actions: [
@@ -188,15 +188,15 @@
                 { label: "Block", onClick: function () { return handlers.block(u); } }
               ]
             });
-          });
+          }, { title: "No incoming requests", body: "Requests from other people will show up here." });
 
-          document.getElementById("b-outgoing").hidden = data.outgoing.length === 0;
+          document.getElementById("b-outgoing").hidden = false;
           S.renderPeople(document.getElementById("outgoing"), data.outgoing, function (u) {
             return S.person(u, {
               note: "awaiting reply",
               actions: [{ label: "Cancel", onClick: function () { return handlers.cancel(u); } }]
             });
-          });
+          }, { title: "No sent requests", body: "Requests you send will show up here." });
 
           var canCall = window.Calls && window.Calls.supported();
 
@@ -219,13 +219,13 @@
             body: "Search for someone above and send a request."
           });
 
-          document.getElementById("b-blocked").hidden = data.blocked.length === 0;
+          document.getElementById("b-blocked").hidden = false;
           S.renderPeople(document.getElementById("blocked"), data.blocked, function (u) {
             return S.person(u, {
               presence: false,
               actions: [{ label: "Unblock", onClick: function () { return handlers.unblock(u); } }]
             });
-          });
+          }, { title: "Nobody blocked", body: "People you block will show up here." });
 
           window.Session.refreshBadges();
           var st = document.getElementById("social-status");

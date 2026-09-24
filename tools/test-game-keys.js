@@ -32,7 +32,7 @@ function sandbox() {
     removeItem: (k) => { delete stored[k]; }
   };
   vm.createContext(box);
-  vm.runInContext(fs.readFileSync(path.join(ROOT, "js", "game-keys.js"), "utf8"),
+  vm.runInContext(fs.readFileSync(path.join(ROOT, "js", "features", "game-keys.js"), "utf8"),
                   box, { filename: "game-keys.js" });
   box._stored = stored;
   return box;

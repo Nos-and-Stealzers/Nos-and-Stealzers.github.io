@@ -26,7 +26,7 @@ function ok(label, cond, extra) {
 const box = { console };
 box.window = box;
 vm.createContext(box);
-vm.runInContext(fs.readFileSync(path.join(ROOT, "js", "save-formats.js"), "utf8"),
+vm.runInContext(fs.readFileSync(path.join(ROOT, "js", "features", "save-formats.js"), "utf8"),
                 box, { filename: "save-formats.js" });
 const SF = box.SaveFormats;
 

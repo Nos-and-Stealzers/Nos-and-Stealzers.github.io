@@ -9,7 +9,7 @@ function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve
 async function boot(page, overrides={}){
  const dom=new JSDOM(fs.readFileSync(path.join(root,page+'.html'),'utf8'),{url:'https://hub.test/'+page+'.html',runScripts:'outside-only',pretendToBeVisual:true});
  const w=dom.window;const timers=[];w.setInterval=fn=>{timers.push(fn);return timers.length};w.clearInterval=()=>{};
- w.UI={el:(tag,cls,text)=>{const e=w.document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e},toast:()=>{},formatWhen:()=>'',params:()=>new URLSearchParams(),setParams:()=>{},debounce:fn=>fn,attachImage:()=>{}};
+ w.UI={el:(tag,cls,text)=>{const e=w.document.createElement(tag);if(cls)e.className=cls;if(text)e.textContent=text;return e},icon:(name,cls)=>{const e=w.document.createElement('span');e.className='svg-ico'+(cls?' '+cls:'');e.dataset.icon=name;return e;},toast:()=>{},formatWhen:()=>'',params:()=>new URLSearchParams(),setParams:()=>{},debounce:fn=>fn,attachImage:()=>{}};
  w.Art={avatar:()=>w.document.createElement('span')};w.Session={ready:Promise.resolve({backend:true,user:{id:1}}),user:{id:1},refreshBadges:()=>{}};
  w.API={lookupCode:async()=>{throw new Error('No account uses that code')},friends:async()=>({friends:[],incoming:[],outgoing:[],blocked:[]}),threads:async()=>({threads:[{id:1,title:'Alpha'},{id:2,title:'Beta'}]}),thread:async id=>({threadId:id,title:String(id),canSend:true,messages:[]}),...overrides};
  w.eval(fs.readFileSync(path.join(root,'js/features/social-ui.js'),'utf8'));
@@ -43,6 +43,6 @@ test('friend categories have explicit empty states and load failures offer retry
  const broken=await boot('friends',{friends:async()=>{throw new Error('Offline')}});assert.match(broken.d.getElementById('social-status').textContent,/Offline/);assert.equal(broken.d.getElementById('social-retry').hidden,false);broken.close();
 });
 test('messages provide search and a mobile return to conversations',async()=>{
- const c=await boot('messages');const filter=c.d.getElementById('thread-search');assert.ok(filter);filter.value='Beta';filter.dispatchEvent(new c.w.Event('input'));assert.equal(c.d.querySelectorAll('.dm-item').length,1);await choose(c,0);assert.equal(c.d.getElementById('dm').classList.contains('has-thread'),true);c.d.getElementById('dm-back').click();assert.equal(c.d.getElementById('dm').classList.contains('has-thread'),false);c.close();
+ const c=await boot('messages');const filter=c.d.getElementById('thread-search');assert.ok(filter);filter.value='Beta';filter.dispatchEvent(new c.w.Event('input'));assert.equal(c.d.querySelectorAll('.dm-item').length,1);await choose(c,0);assert.equal(c.d.getElementById('dm').classList.contains('dm-viewing'),true);c.d.getElementById('dm-back').click();assert.equal(c.d.getElementById('dm').classList.contains('dm-viewing'),false);c.close();
 });
 module.exports={boot,flush,deferred,choose};

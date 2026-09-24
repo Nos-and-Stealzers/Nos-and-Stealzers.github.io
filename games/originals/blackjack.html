@@ -47,7 +47,7 @@
 (function(){
   "use strict";
   var SUITS=["\u2660","\u2665","\u2666","\u2663"],RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-  var deck,player,dealer,over,hidden,chips,bet=10;
+  var deck,player=[],dealer=[],over=true,hidden=true,chips,bet=10;
   chips=parseInt(localStorage.getItem("oblackjack.chips")||"100",10);
   if(!(chips>0))chips=100;
   var elP=document.getElementById("player"),elD=document.getElementById("dealer");

@@ -72,6 +72,9 @@ create table if not exists public.messages (
   deleted    boolean not null default false
 );
 create index if not exists messages_thread_idx on public.messages (thread_id, id);
+-- Supports the flood-guard's per-sender recent-message count in
+-- send_message() below without a sequential scan as the table grows.
+create index if not exists messages_sender_recent_idx on public.messages (sender, created_at);
 
 create table if not exists public.notifications (
   id         bigint generated always as identity primary key,
@@ -2222,9 +2225,28 @@ declare
   denied text;
   member record;
   sender_name text;
+  recent_count int;
 begin
   denied := public.post_block_reason(t);
   if denied is not null then raise exception '%', denied; end if;
+
+  -- Flood guard: nothing anywhere previously stopped a script (or a bug in
+  -- one) from calling this RPC in a tight loop and flooding a thread —
+  -- there was no per-user send-rate check at all, unlike every other
+  -- abuse vector in this file (duplicate friend requests, block bypass,
+  -- oversized images) which already had a real guard. Counts this
+  -- sender's own messages across ALL threads in the last 10 seconds
+  -- (not just this thread) so it can't be dodged by spreading the flood
+  -- across multiple conversations; 12 messages / 10s is generous for a
+  -- real fast typist splitting thoughts into several messages, but stops
+  -- a runaway loop well before it does real damage to a thread or the
+  -- notification fan-out below.
+  select count(*) into recent_count
+    from public.messages
+   where sender = auth.uid() and created_at > now() - interval '10 seconds';
+  if recent_count >= 12 then
+    raise exception 'You are sending messages too fast — wait a moment and try again.';
+  end if;
 
   clean := btrim(coalesce(body, ''));
   if clean = '' and image is null then raise exception 'Say something or attach an image.'; end if;

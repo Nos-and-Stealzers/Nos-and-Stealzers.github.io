@@ -46,7 +46,7 @@
     var pill = el("button", "dock-pill");
     pill.type = "button";
     pill.setAttribute("aria-label", "Open chat");
-    pill.appendChild(el("span", "dock-pill-icon", "✉"));
+    pill.appendChild(window.UI.icon("chat", "dock-pill-icon"));
     pill.appendChild(el("span", "dock-pill-text", "Chat"));
     badge = el("span", "badge");
     badge.dataset.badge = "messages";
@@ -60,10 +60,11 @@
     panel.hidden = true;
 
     var head = el("div", "dock-head");
-    var back = el("button", "dock-back", "‹");
+    var back = el("button", "dock-back");
     back.type = "button";
     back.hidden = true;
     back.setAttribute("aria-label", "Back to conversations");
+    back.appendChild(window.UI.icon("back"));
     back.addEventListener("click", function () { showList(); });
     head.appendChild(back);
 
@@ -90,15 +91,17 @@
         callBtns.push(b);
       });
 
-    var expand = el("a", "dock-btn", "⤢");
+    var expand = el("a", "dock-btn", "");
     expand.title = "Open full messages page";
     expand.setAttribute("aria-label", "Open full messages page");
+    expand.appendChild(window.UI.icon("popout"));
     expand.href = "messages.html";
     head.appendChild(expand);
 
-    var shut = el("button", "dock-btn", "✕");
+    var shut = el("button", "dock-btn", "");
     shut.type = "button";
     shut.setAttribute("aria-label", "Close chat");
+    shut.appendChild(window.UI.icon("close"));
     shut.addEventListener("click", function () { setOpen(false); });
     head.appendChild(shut);
     panel.appendChild(head);
@@ -222,7 +225,7 @@
     listPane.innerHTML = "";
 
     var actions = el("div", "dock-actions");
-    var newGroup = el("button", "btn btn-sm", "＋ New group");
+    var newGroup = el("button", "btn btn-sm", "+ New group");
     newGroup.type = "button";
     newGroup.addEventListener("click", function () { window.location.href = "messages.html?new=group"; });
     var friends = el("a", "btn btn-sm btn-flat", "Friends");
@@ -247,7 +250,7 @@
       var pic = el("span", "dock-avatar");
       if (t.isGroup) {
         pic.classList.add("is-group");
-        pic.textContent = "◍";
+        pic.appendChild(window.UI.icon("group"));
       } else if (t.with) {
         if (window.SocialUI && window.SocialUI.avatar) {
           var a = window.SocialUI.avatar({ username: t.with.username, avatarUrl: t.with.avatarUrl, online: t.with.online });
@@ -394,9 +397,10 @@
     img.alt = "Attachment preview";
     wrap.appendChild(img);
 
-    var drop = el("button", "dock-pending-x", "✕");
+    var drop = el("button", "dock-pending-x", "");
     drop.type = "button";
     drop.setAttribute("aria-label", "Remove attachment");
+    drop.appendChild(window.UI.icon("close"));
     drop.addEventListener("click", function () { pending = null; showPending(); });
     wrap.appendChild(drop);
 

@@ -2168,6 +2168,7 @@ kbd {
   background: var(--paper); color: var(--ink);
   border: 1px solid var(--line-2); border-radius: 50%;
   cursor: pointer; font-size: 0.7rem; line-height: 1; padding: 0;
+  display: flex; align-items: center; justify-content: center;
 }
 
 /* Lightbox for tapping a chat image. */

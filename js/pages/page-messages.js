@@ -32,8 +32,10 @@
         listHost.innerHTML = "";
 
         var top = UI.el("div", "dock-actions");
-        var mk = UI.el("button", "btn btn-sm btn-cta", "＋ New group");
+        var mk = UI.el("button", "btn btn-sm btn-cta", "");
         mk.type = "button";
+        mk.appendChild(UI.icon("plus"));
+        mk.appendChild(UI.el("span", null, "New group"));
         mk.addEventListener("click", newGroup);
         top.appendChild(mk);
         var fr = UI.el("a", "btn btn-sm btn-flat", "Friends");
@@ -56,7 +58,7 @@
 
           if (t.isGroup) {
             var g = UI.el("span", "group-glyph");
-            g.textContent = "◍";
+            g.appendChild(UI.icon("group"));
             b.appendChild(g);
           } else if (t.with) {
             b.appendChild(S.avatar(t.with));
@@ -122,7 +124,7 @@
         if (data.isGroup) {
           var block = UI.el("div", "group-head");
           var glyph = UI.el("span", "group-glyph");
-          glyph.textContent = "◍";
+          glyph.appendChild(UI.icon("group"));
           block.appendChild(glyph);
           var names = UI.el("span", "names");
           var n1 = UI.el("span", "n1");
@@ -210,10 +212,11 @@
             who.textContent = m.displayName || m.username;
             chip.appendChild(who);
             if (data.owner) {
-              var x = UI.el("button", null, "✕");
+              var x = UI.el("button", null, "");
               x.type = "button";
               x.title = "Remove from group";
               x.setAttribute("aria-label", "Remove " + m.username);
+              x.appendChild(UI.icon("close"));
               x.addEventListener("click", function () {
                 if (!window.confirm("Remove " + m.username + " from the group?")) return;
                 API.removeFromGroup(data.id, m.id)
@@ -431,9 +434,10 @@
         img.src = pending.dataUrl;
         img.alt = "Attachment preview";
         wrap.appendChild(img);
-        var x = UI.el("button", "dock-pending-x", "✕");
+        var x = UI.el("button", "dock-pending-x", "");
         x.type = "button";
         x.setAttribute("aria-label", "Remove attachment");
+        x.appendChild(UI.icon("close"));
         x.addEventListener("click", function () { pending = null; drawPending(); });
         wrap.appendChild(x);
         compose.parentNode.insertBefore(wrap, compose);
@@ -530,8 +534,10 @@
 
           var h = UI.el("div", "sheet-head");
           h.appendChild(UI.el("span", "label", title));
-          var close = UI.el("button", "btn btn-sq", "✕");
+          var close = UI.el("button", "btn btn-sq", "");
           close.type = "button";
+          close.setAttribute("aria-label", "Close");
+          close.appendChild(UI.icon("close"));
           close.addEventListener("click", function () { sheet.remove(); });
           h.appendChild(close);
           card.appendChild(h);
@@ -577,9 +583,10 @@
               var who = UI.el("span");
               who.textContent = name;
               chip.appendChild(who);
-              var x = UI.el("button", null, "✕");
+              var x = UI.el("button", null, "");
               x.type = "button";
               x.setAttribute("aria-label", "Remove " + name);
+              x.appendChild(UI.icon("close"));
               x.addEventListener("click", function () {
                 chosen = chosen.filter(function (n) { return n !== name; });
                 redrawPicked();

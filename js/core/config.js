@@ -71,8 +71,10 @@
         "wHLn-q1OpO0HP87yiDGnNmHfnI0J_AUDEXT09HpKUNg"
     },
 
-    /* Used when backend === "node". Empty means same origin. */
-    apiBase: "",
+    /* Used when backend === "node". Empty means same origin.
+       Also doubles as the base for /api/turn (see below) — a deployed
+       Cloudflare Worker that mints TURN credentials server-side. */
+    apiBase: "https://arcade-turn.stealzers-com.workers.dev",
 
     /* ---------------------------------------------------------------
        TURN relay for voice/video calls.

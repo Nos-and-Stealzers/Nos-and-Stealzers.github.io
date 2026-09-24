@@ -25,7 +25,13 @@
     micOff:     '<path d="M9 5a3 3 0 0 1 6 0v4m0 3a3 3 0 0 1-4.6 2.5M6 11a6 6 0 0 0 9 5.2M12 17v4M4 4l16 16"/>',
     screen:     '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4"/>',
     expand:     '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5m11-5v5h-5"/>',
-    hangup:     '<path d="M2.5 12.5c5-4.5 14-4.5 19 0l-2.3 2.6a1.4 1.4 0 0 1-1.7.2l-2.4-1.4a1.4 1.4 0 0 1-.7-1.2v-1.5c-2.4-.8-5-.8-7.4 0v1.5a1.4 1.4 0 0 1-.7 1.2L4 15.3a1.4 1.4 0 0 1-1.7-.2z"/>'
+    hangup:     '<path d="M2.5 12.5c5-4.5 14-4.5 19 0l-2.3 2.6a1.4 1.4 0 0 1-1.7.2l-2.4-1.4a1.4 1.4 0 0 1-.7-1.2v-1.5c-2.4-.8-5-.8-7.4 0v1.5a1.4 1.4 0 0 1-.7 1.2L4 15.3a1.4 1.4 0 0 1-1.7-.2z"/>',
+    chat:       '<path d="M4 5h16v11H8l-4 4z"/>',
+    back:       '<path d="m14 5-7 7 7 7"/>',
+    close:      '<path d="m5 5 14 14M19 5 5 19"/>',
+    popout:     '<path d="M9 15 20 4M14 4h6v6M6 5H4v15h15v-2"/>',
+    group:      '<circle cx="9" cy="9" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M3.5 19c.6-3.4 3-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14.8 14.3c2 .2 3.6 1.7 4.1 4.4"/>',
+    plus:       '<path d="M12 5v14M5 12h14"/>'
   };
   function icon(name, cls) {
     var span = document.createElement("span");

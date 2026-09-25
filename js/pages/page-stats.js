@@ -46,6 +46,7 @@
       .sort(function (a, b) { return b.seconds - a.seconds; });
 
     var catHost = document.getElementById("m-cats");
+    catHost.innerHTML = "";
     if (!rows.length) {
       catHost.appendChild(UI.el("p", "dim", "Play something and this fills in."));
       document.getElementById("s-top").textContent = "—";
@@ -66,6 +67,7 @@
 
     /* ---- top ten ---- */
     var topHost = document.getElementById("m-top");
+    topHost.innerHTML = "";
     var top = ids.sort(function (a, b) {
       return (stats[b].seconds || 0) - (stats[a].seconds || 0);
     }).slice(0, 10);
@@ -99,4 +101,5 @@
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
+  document.addEventListener("session:synced", init);
 })();

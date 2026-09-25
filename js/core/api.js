@@ -189,6 +189,10 @@
     getGameSave: function (host) {
       return request("GET", "/game-saves/" + encodeURIComponent(host));
     },
+    gameSaveStamp: function (host) {
+      return request("GET", "/game-saves/" + encodeURIComponent(host))
+        .then(function (res) { return (res && res.updatedAt) || 0; });
+    },
     listGameSaves: function () { return request("GET", "/game-saves"); },
     dropGameSave: function (host) {
       return request("DELETE", "/game-saves/" + encodeURIComponent(host));

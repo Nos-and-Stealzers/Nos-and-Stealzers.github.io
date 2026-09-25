@@ -234,6 +234,7 @@
       acceptsDms: !!row.accepts_dms,
       showActivity: !!row.show_activity,
       emailVerified: !!row.email_verified,
+      termsVersion: row.terms_version || "",
       email: row.email || "",
       friendCode: row.friend_code || ""
     });
@@ -266,7 +267,7 @@
      if the column is present (see AVATAR_READY probe), so the site never breaks
      if the avatar migration (supabase/avatar-support.sql) hasn't been run yet. */
   var PROFILE_COLS_BASE = "id,username,display_name,bio,role,state,accepts_dms,show_activity," +
-                     "friend_code,created_at,last_seen,is_plus,banned,ban_reason,email_verified";
+                     "friend_code,created_at,last_seen,is_plus,banned,ban_reason,email_verified,terms_version";
   var AVATAR_READY = null;   // null=unknown, true/false once probed
   function profileCols() {
     return AVATAR_READY ? PROFILE_COLS_BASE + ",avatar_url" : PROFILE_COLS_BASE;
@@ -1466,6 +1467,15 @@
             ? { payload: row.payload || {}, keys: row.keys, updatedAt: ms(row.updated_at) }
             : { payload: {}, keys: 0, updatedAt: 0 };
         });
+    },
+
+    /* Just the row's timestamp — cheap enough to check before every upload. */
+    gameSaveStamp: function (host) {
+      if (!session) return Promise.reject(fail("Signed out.", 401));
+      return rest("/game_saves?select=updated_at&user_id=eq." + session.user.id +
+                  "&host=eq." + encodeURIComponent(host))
+        .then(one)
+        .then(function (row) { return row ? ms(row.updated_at) : 0; });
     },
 
     listGameSaves: function () {

@@ -131,6 +131,8 @@
     }
 
     draw();
+    /* The account's copy arrives after first paint on a new device. */
+    document.addEventListener("session:synced", draw);
 
     /* Pinned toolbar wiring. */
     var sortSel = document.getElementById("pin-sort");

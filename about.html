@@ -26,7 +26,7 @@
       <div class="readout">
         <span>titles <b id="n-games">—</b></span>
         <span>categories <b id="n-cats">—</b></span>
-        <span>backend <b>none</b></span>
+        <span>backend <b>Supabase</b></span>
         <span>trackers <b>none</b></span>
       </div>
     </header>
@@ -40,9 +40,9 @@
         works straight off a filesystem — and every page reads from that one list.
       </p>
       <p>
-        Accounts, friends and messages are served by a small Node + SQLite backend in
-        <code>server/</code>. It is entirely optional: without it the site is still a complete,
-        deployable static arcade.
+        Accounts, friends, messages and cloud saves run on Supabase (hosted Postgres + Auth),
+        talked to straight from the browser. Signed out, everything still works and stays in
+        this browser.
       </p>
       <p>
         Cover art is real where a game ships its own icon, and generated from the title's id

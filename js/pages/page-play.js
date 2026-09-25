@@ -47,7 +47,7 @@
         flush();
         /* Tabbing away is the most common way a session ends, so treat it as
            a save point rather than waiting for the interval. */
-        if (playedLongEnough()) backupProgress("hidden");
+        if (frame) backupProgress("hidden");
       } else if (frame) {
         since = Date.now();
       }
@@ -55,7 +55,7 @@
 
     window.addEventListener("beforeunload", function () {
       flush();
-      if (playedLongEnough()) backupProgress("unload");
+      if (frame) backupProgress("unload");
     });
     window.setInterval(flush, 30000);
 
@@ -144,13 +144,26 @@
      through to embedding regardless. */
   var didRestore = false;
   function restoreThenEmbed() {
-    if (didRestore || !canBackup()) { embed(); return; }
+    if (didRestore) { embed(); return; }
     didRestore = true;
 
-    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
-    if (!origin) { embed(); return; }
-
+    /* The signed-in account is only known once Session has asked the
+       server, which is after this runs on a fresh page load. Checking
+       straight away meant the restore never happened at all. */
     showLoading(true);
+    var waited = false;
+    var wait = window.setTimeout(function () { waited = true; embed(); }, 3000);
+    window.Session.ready.then(function () {
+      if (waited) return;
+      window.clearTimeout(wait);
+      pullThenEmbed();
+    });
+  }
+
+  function pullThenEmbed() {
+    var origin = hostOrigin();
+    if (!canBackup() || !origin) { embed(); return; }
+
     markSaved("checking your save…", "");
 
     var settled = false;
@@ -161,19 +174,27 @@
       if (restored) markSaved("cloud save loaded", "ok");
     }
 
-    /* Never let a stuck bridge hold the game hostage. */
-    var guard = window.setTimeout(function () { go(false); }, 6000);
+    /* Never let a stuck bridge hold the game hostage. If the save lands
+       after the game already started, restart the game once so it reads it. */
+    var guard = window.setTimeout(function () { go(false); }, 8000);
 
     window.GameSaves.restoreHost(origin, false).then(function (mine) {
       window.clearTimeout(guard);
-      go(!!(mine && mine.written));
-    }).catch(function () {
+      var wrote = !!(mine && mine.written);
+      if (settled && wrote && frame) {
+        markSaved("cloud save loaded — restarting game", "ok");
+        embed(true);
+        return;
+      }
+      go(wrote);
+    }).catch(function (err) {
       window.clearTimeout(guard);
       go(false);
+      markSaved("couldn't load cloud save — " + ((err && err.message) || "offline"), "warn");
     });
   }
 
-  function embed() {
+  function embed(restart) {
     var url = game.sourceUrl || game.directUrl;
     if (!url) { prompt("This entry has no playable URL on file."); return; }
     if (frame) frame.remove();
@@ -199,9 +220,11 @@
     if (window.playAnnounce) window.playAnnounce(game.id);
 
     curtain().hidden = true;
-    window.Store.recordPlay(game.id);
-    window.Store.pushRecent(game.id);
-    since = Date.now();
+    if (!restart) {
+      window.Store.recordPlay(game.id);
+      window.Store.pushRecent(game.id);
+      since = Date.now();
+    }
     counters();
     $("a-play").textContent = "↻ Reload";
 
@@ -386,39 +409,35 @@
 
   /* ------------------------------------------------------- progress backup */
 
-  /* The game writes its own progress into its origin's localStorage as you
-     play. Backing that up only when someone remembers to press a button in
-     Settings is how saves get lost, so it happens here instead: once the
-     session has been long enough to be worth keeping, and again on the way
-     out. Silent — it is not something to interrupt play over. */
-  var MIN_SESSION = 15;          // seconds before a backup is worth doing
+  /* The game writes its own progress into its origin's storage as you play.
+     That gets checked every 20 seconds while the game is open and again on
+     tab-hide / leaving; GameSaves.syncUp only uploads when something actually
+     changed, so frequent checks are cheap. */
   var backupTimer = null;
   var lastBackup = 0;
-
-  /* A two-second glance at a game has no progress worth storing, and backing
-     up then would only overwrite a good save with an empty one. */
-  function playedLongEnough() {
-    if (!since) return false;
-    return (Date.now() - since) / 1000 >= MIN_SESSION ||
-           window.Store.statFor(game.id).seconds >= MIN_SESSION;
-  }
+  var backingUp = null;
 
   /* The host key to sync under. Self-hosted games (served from the arcade's
      own origin, so no `host` field and a games/ or root-relative source) sync
-     under the "self" host, whose bridge is the arcade root. This is what makes
-     cloud saves work for the 150+ originals, not just the external hosts. */
+     under the "self" host, whose bridge is the arcade root. */
   function effectiveHost() {
     if (!game) return null;
-    if (game.host) return game.host;
+    if (game.host && game.host !== "external") return game.host;
+    if (game.host) return null;
     var src = String(game.source || game.direct || "");
     if (/^https?:/i.test(src)) return null;      // external but hostless: can't map
     return "self";
   }
 
+  function hostOrigin() {
+    var h = effectiveHost();
+    return h ? (window.SITE.gameHosts || {})[h] || null : null;
+  }
+
   function canBackup() {
     return window.Store.settings().autoBackup &&
            window.GameSaves && window.Session && window.Session.user &&
-           game && effectiveHost() && !game.unavailable;
+           game && hostOrigin() && !game.unavailable;
   }
 
   function markSaved(text, tone) {
@@ -431,23 +450,16 @@
 
   /* What the host's storage looked like when this game opened. Anything that
      moves between here and a backup is this game's doing, which is the only
-     reliable way to tell one game's keys from the 144 others sharing the
-     origin. Names and values, because a save that changes in place is just as
-     much a signal as a new key. */
+     reliable way to tell one game's keys from the others sharing the origin. */
   var baseline = null;
 
   function takeBaseline() {
-    if (!window.GameSaves || !game || !effectiveHost()) return;
-    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
-    if (!origin) return;
-
-    window.GameSaves.readAll(window.GameSaves.hostKey(origin))
+    if (!window.GameSaves || !hostOrigin()) return;
+    window.GameSaves.readAll(hostOrigin())
       .then(function (res) { baseline = flatten(res); })
       .catch(function () { /* no bridge on that host; attribution just waits */ });
   }
 
-  /* One flat name → value map across all three stores, so a diff does not
-     have to care which one a game happens to use. */
   function flatten(res) {
     var out = {};
     Object.keys(res.data || {}).forEach(function (k) { out[k] = res.data[k]; });
@@ -462,58 +474,48 @@
 
   function backupProgress(reason) {
     if (!canBackup()) return Promise.resolve();
-    if (Date.now() - lastBackup < 10000) return Promise.resolve();
+    if (backingUp) return backingUp;
+    if (reason === "interval" && Date.now() - lastBackup < 15000) return Promise.resolve();
     lastBackup = Date.now();
 
-    var origin = (window.SITE.gameHosts || {})[effectiveHost()];
-    if (!origin) return Promise.resolve();
-
-    return window.GameSaves.readAll(window.GameSaves.hostKey(origin))
+    var origin = hostOrigin();
+    backingUp = window.GameSaves.readAll(origin)
       .then(function (res) {
-        /* Attribute whatever moved while this game was open. */
         if (window.GameKeys && baseline) {
           var now = flatten(res);
           window.GameKeys.learnFromSnapshots(game, res.host, baseline, now);
           baseline = now;
         }
-
-        /* Send all three stores. This used to push res.data alone, which is
-           localStorage only — so every game that saves to IndexedDB or a
-           cookie, which is most of the ones that save at all, was backed up
-           as an empty record. */
-        var payload = {
-          local: res.data || {},
-          idb: res.idb || {},
-          cookies: res.cookies || {}
-        };
-        var count = Object.keys(payload.local).length +
-                    Object.keys(payload.idb).length +
-                    Object.keys(payload.cookies).length;
-        if (!count) return null;
-
-        return window.API.putGameSave(res.host, payload).then(function () {
-          markSaved("progress saved", "ok");
-          return count;
-        });
+        return window.GameSaves.syncUp(origin, res);
       })
-      .catch(function () {
-        /* Offline, bridge not deployed, or storage blocked — say so quietly
+      .then(function (out) {
+        if (out && out.uploaded) markSaved("progress saved " + clock(), "ok");
+        else if (out && out.unchanged && !saveShown) markSaved("progress up to date", "ok");
+        if (out && (out.uploaded || out.unchanged)) saveShown = true;
+      })
+      .catch(function (err) {
+        /* Offline, bridge not deployed, storage blocked or too big — say so
            rather than pretending it worked. */
-        markSaved("progress not synced", "warn");
-      });
+        markSaved("progress not synced" + (err && err.message ? " — " + err.message : ""), "warn");
+      })
+      .then(function () { backingUp = null; });
+    return backingUp;
+  }
+
+  var saveShown = false;
+  function clock() {
+    var d = new Date();
+    return d.getHours() + ":" + ("0" + d.getMinutes()).slice(-2);
   }
 
   function watchProgress() {
     if (!canBackup()) return;
-    markSaved("progress saves automatically", "");
+    if (!saveShown) markSaved("progress saves automatically", "");
     takeBaseline();
     window.clearInterval(backupTimer);
-    /* Save every 45s while the game is in front, plus on tab-hide and on the
-       way out (below). Frequent enough that a crash or an accidental close
-       loses very little, cheap enough not to matter. */
     backupTimer = window.setInterval(function () {
-      if (!document.hidden && frame) backupProgress("interval");
-    }, 45000);
+      if (frame) backupProgress("interval");
+    }, 20000);
   }
 
   /* --------------------------------------------------------------- actions */

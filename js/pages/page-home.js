@@ -115,6 +115,18 @@
     UI.render(document.getElementById("g-inpage"), stable.slice(0, 12), { desc: false });
   }
 
+  function refreshMine() {
+    var UI = window.UI, Catalog = window.Catalog;
+    document.getElementById("r-time").textContent = UI.formatDuration(window.Store.totalSeconds());
+    var recents = Catalog.recentGames(10);
+    document.getElementById("b-resume").hidden = !recents.length;
+    if (recents.length) UI.render(document.getElementById("s-resume"), recents, { desc: false });
+    var pinned = Catalog.favoriteGames(10);
+    document.getElementById("b-pinned").hidden = !pinned.length;
+    if (pinned.length) UI.render(document.getElementById("s-pinned"), pinned, { desc: false });
+  }
+
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
+  document.addEventListener("session:synced", refreshMine);
 })();

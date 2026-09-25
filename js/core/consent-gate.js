@@ -178,6 +178,15 @@
     if (EXEMPT.indexOf(currentPage()) !== -1) return;
     if (alreadyAccepted()) return;
     build();
+    /* Already agreed on this account from another domain or device. */
+    document.addEventListener("session:change", function (e) {
+      var u = e.detail && e.detail.user;
+      if (!u || u.termsVersion !== POLICY_VERSION || alreadyAccepted()) return;
+      try {
+        window.localStorage.setItem(LS_KEY, JSON.stringify({ version: POLICY_VERSION, at: new Date().toISOString() }));
+      } catch (err) {}
+      close(document.getElementById("consent-gate"));
+    });
   }
 
   if (document.readyState === "loading") {

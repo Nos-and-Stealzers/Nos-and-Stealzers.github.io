@@ -315,7 +315,7 @@
   window.addEventListener("online", pushSave);
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) { persistLocal(); pushSave(); if (prefsTimer) pushPrefs(); }
-    else if (user) pullPrefs();
+    else if (user) { pullPrefs(); pushSave(); }   // pick up what other devices did meanwhile
   });
 
   boot();

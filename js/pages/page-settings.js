@@ -510,11 +510,11 @@
 
     function say(text) { state.textContent = text; }
 
-    function draw() {
+    function draw(keepMessage) {
       window.API.listGameSaves().then(function (res) {
         list.innerHTML = "";
         if (!res.hosts.length) {
-          say("Nothing backed up yet.");
+          if (!keepMessage) say("Nothing backed up yet.");
           return;
         }
         res.hosts.forEach(function (h, i) {
@@ -526,21 +526,24 @@
           name.textContent = h.host;
           row.appendChild(name);
 
-          row.appendChild(UI.el("span", "plays",
-            h.keys + " keys · " + Math.max(1, Math.round(h.bytes / 1024)) + " KB"));
+          row.appendChild(UI.el("span", "plays", "saved " + UI.formatWhen(h.updatedAt)));
 
           var drop = UI.el("button", "btn btn-sm btn-flat", "Forget");
           drop.type = "button";
           drop.addEventListener("click", function () {
             if (!window.confirm("Delete the backed-up progress for " + h.host + "?")) return;
             window.API.dropGameSave(h.host)
-              .then(function () { UI.toast("Removed"); draw(); })
+              .then(function () {
+                if (window.GameSaves.forget) window.GameSaves.forget(h.host);
+                UI.toast("Removed");
+                draw();
+              })
               .catch(function (err) { UI.toast(err.message); });
           });
           row.appendChild(drop);
           list.appendChild(row);
         });
-        say("Last backed up " + UI.formatWhen(
+        if (!keepMessage) say("Last backed up " + UI.formatWhen(
           Math.max.apply(null, res.hosts.map(function (h) { return h.updatedAt; }))) + ".");
       }).catch(function () { say("Could not read your backups."); });
     }
@@ -550,7 +553,10 @@
       var bad = results.filter(function (r) { return r.error; });
       var parts = [];
       ok.forEach(function (r) {
-        if (r.keys !== undefined) parts.push(r.host + ": " + r.keys + " keys");
+        if (r.uploaded) parts.push(r.host + ": saved");
+        else if (r.unchanged) parts.push(r.host + ": up to date");
+        else if (r.current) parts.push(r.host + ": already current");
+        else if (r.empty || r.skipped) return;
         else if (r.written !== undefined) parts.push(r.host + ": " + r.written + " restored" +
           (r.kept ? ", " + r.kept + " kept" : ""));
       });
@@ -562,7 +568,7 @@
       say(label + "…");
       return fn().then(function (results) {
         report(results);
-        draw();
+        draw(true);
       }).catch(function (err) { say(err.message); });
     }
 

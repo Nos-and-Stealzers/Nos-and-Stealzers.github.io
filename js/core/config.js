@@ -19,17 +19,19 @@
        start working. Swap any of them for Vercel/Netlify/your own host and
        only this table changes. */
     gameHosts: {
-      "self":       "https://www.arcadecampushub.online",
+      /* Whichever domain the hub is being served from. Pinning this to the
+         main domain broke the mirrors: its X-Frame-Options blocks framing. */
+      "self":       /^https?:$/.test(location.protocol) ? location.origin : "https://www.arcadecampushub.online",
       "games-huge": "https://arcadecampushub.github.io/games-huge",
-      "swfgalaxy":  "https://nos-and-stealzers.github.io/swfgalaxy",
       "flashgames": "https://arcadecampushub.github.io/flashgames",
       "hd_fnaf":    "https://arcadecampushub.github.io/hd_fnaf",
       "eaglercraft": "https://arcadecampushub.github.io/eaglercraft",
       "retrobowl":  "https://arcadecampushub.github.io/RetroBow",
       "waterboy-firegirl": "https://arcadecampushub.github.io/Waterboy-Firegirl",
       "extgames": "https://arcadecampushub.github.io/extgames",
-      "nebula-cdn": "https://rawcdn.githack.com/Nos-and-Stealzers/NEBULA-CDN/main/games",
-      "polytrack":  "https://nos-and-stealzers.github.io/polytrack"
+      /* rawcdn caches a branch URL forever; pinned to a commit so updates land. */
+      "nebula-cdn": "https://rawcdn.githack.com/Nos-and-Stealzers/NEBULA-CDN/cefd7e6ad702e870086059462da69d8f44c6fbcf/games",
+      "polytrack":  "https://arcadecampushub.github.io/polytrack"
     },
 
     /* Fallback for any entry without a `host`, and for legacy catalogs whose

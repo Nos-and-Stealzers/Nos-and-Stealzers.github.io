@@ -49,7 +49,7 @@
       var saved = slots[owner];
       try { saved = JSON.parse(window.localStorage.getItem("ach:save-slot:" + owner)) || saved; }
       catch (e) {}
-      window.Store.importAll(saved || { version: 2, favorites: [], recents: [], stats: {}, ratings: {} }, { silent: true });
+      window.Store.importAll(saved || { version: 2, favorites: [], recents: [], stats: {}, ratings: {}, pins: {} }, { silent: true });
       try { window.localStorage.setItem(OWNER, owner); } catch (e) {}
     }
     user = next || null;
@@ -100,6 +100,85 @@
     pushTimer = window.setTimeout(pushSave, 2500);
   }
 
+  /* ------------------------------------------------------ display prefs */
+
+  /* Skin, text size, motion etc. live in this origin's localStorage, so a
+     mirror domain or another device never saw them. They go up to the
+     account too; newest edit wins. */
+  var PREFS_AT = "ach:prefs-at";
+  var prefsTimer = null;
+
+  /* Settings chosen before this sync existed have no timestamp; give them a
+     token one so they beat an untouched default elsewhere, but lose to any
+     real edit made since. */
+  function prefsAt() {
+    var at = 0;
+    try { at = Number(window.localStorage.getItem(PREFS_AT)) || 0; } catch (e) {}
+    if (!at && Object.keys(window.Store.rawSettings()).some(function (k) { return k !== "_pruned"; })) at = 2;
+    return at;
+  }
+  function setPrefsAt(at) {
+    try { window.localStorage.setItem(PREFS_AT, String(at)); } catch (e) {}
+  }
+
+  function packPins(pins) {
+    var out = {};
+    Object.keys(pins).forEach(function (id) { out[id] = pins[id].on ? pins[id].at : -pins[id].at; });
+    return out;
+  }
+  function unpackPins(packed) {
+    var out = {};
+    Object.keys(packed || {}).forEach(function (id) {
+      var n = Number(packed[id]);
+      if (n) out[id] = { on: n > 0, at: Math.abs(n) };
+    });
+    return out;
+  }
+
+  function applyPrefs() {
+    var s = window.Store.settings();
+    var root = document.documentElement;
+    root.setAttribute("data-skin", s.skin);
+    root.setAttribute("data-lite", s.lite ? "on" : "off");
+    root.setAttribute("data-motion", s.motion ? "on" : "off");
+    root.setAttribute("data-text", s.textSize);
+    emit("session:prefs", { settings: s });
+  }
+
+  function pushPrefs() {
+    window.clearTimeout(prefsTimer);
+    prefsTimer = null;
+    if (!user || !window.API.putPrefs || !ownsLocal()) return Promise.resolve();
+    var at = prefsAt() || 1;
+    return window.API.putPrefs({
+      at: at, settings: window.Store.rawSettings(), pins: packPins(window.Store.pins())
+    })
+      .catch(function () { /* next change retries */ });
+  }
+
+  function pullPrefs() {
+    if (!user || !window.API.getPrefs) return Promise.resolve();
+    var started = epoch;
+    return window.API.getPrefs().then(function (remote) {
+      if (started !== epoch || !ownsLocal()) return;
+      var local = prefsAt();
+      var remotePins = unpackPins(remote && remote.pins);
+      var mine = window.Store.pins();
+      var ahead = Object.keys(mine).some(function (id) {
+        return !remotePins[id] || remotePins[id].at < mine[id].at;
+      });
+      window.Store.mergePins(remotePins);
+      if (remote && remote.settings && (remote.at || 0) > local) {
+        window.Store.replaceSettings(remote.settings, true);
+        setPrefsAt(remote.at);
+        applyPrefs();
+        if (ahead) return pushPrefs();
+      } else if (ahead || local > ((remote && remote.at) || 0)) {
+        return pushPrefs();
+      }
+    }).catch(function () {});
+  }
+
   /* ------------------------------------------------------------- lifecycle */
 
   function refreshBadges() {
@@ -132,6 +211,7 @@
           readyResolve({ user: user, backend: true });
           if (user) {
             pushSave();
+            pullPrefs();
             refreshBadges();
             window.setInterval(refreshBadges, 45000);
           }
@@ -142,6 +222,7 @@
   function login(username, password) {
     return window.API.login(username, password).then(function (res) {
       setUser(res.user);
+      pullPrefs();
       return pushSave().then(function () {
         refreshBadges();
         return res.user;
@@ -153,6 +234,7 @@
     return window.API.signup(username, password, displayName, email, acceptedTerms).then(function (res) {
       if (res.needsConfirmation) return res;
       setUser(res.user);
+      pushPrefs();
       /* Everything played before signing up comes along. */
       return pushSave().then(function () {
         refreshBadges();
@@ -203,6 +285,7 @@
     logout: logout,
     setUser: setUser,
     pushSave: pushSave,
+    pullPrefs: pullPrefs,
     schedulePush: schedulePush,
     refreshBadges: refreshBadges,
     requireUser: requireUser
@@ -213,17 +296,26 @@
   /* Any local change while signed in eventually reaches the server. */
   document.addEventListener("store:change", function (event) {
     if (event.detail && event.detail.silent) return;
+    if (event.detail && (event.detail.key === "settings" || event.detail.key === "pins")) {
+      if (event.detail.key === "settings") setPrefsAt(Date.now());
+      if (user) {
+        window.clearTimeout(prefsTimer);
+        prefsTimer = window.setTimeout(pushPrefs, 1500);
+      }
+    }
     revision++;
     persistLocal();
     schedulePush();
   });
   window.addEventListener("beforeunload", function () {
     if (user && pushTimer) { window.clearTimeout(pushTimer); pushSave(); }
+    if (user && prefsTimer) pushPrefs();
   });
 
   window.addEventListener("online", pushSave);
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) { persistLocal(); pushSave(); }
+    if (document.hidden) { persistLocal(); pushSave(); if (prefsTimer) pushPrefs(); }
+    else if (user) pullPrefs();
   });
 
   boot();

@@ -44,6 +44,14 @@
 
   var MAX_RECENTS = 40;
 
+  function applyPins(list, pins) {
+    var out = list.filter(function (id) { return !(pins[id] && pins[id].on === false); });
+    Object.keys(pins).forEach(function (id) {
+      if (pins[id].on && out.indexOf(id) === -1) out.unshift(id);
+    });
+    return out;
+  }
+
   /* Enumerated settings and the values they accept. Anything not listed here
      is validated by type alone. Built from SITE where the list already exists,
      so adding a skin doesn't mean remembering to update this too. */
@@ -82,7 +90,9 @@
     });
 
     saved._pruned = PRUNE_VERSION;
-    if (changed || hasLS) write("settings", saved);
+    /* Housekeeping, not a user choice — silent so it doesn't count as a
+       fresh settings edit when syncing between domains. */
+    if (changed || hasLS) write("settings", saved, true);
     return saved;
   }
 
@@ -159,6 +169,13 @@
       return write("settings", saved);
     },
 
+    /* Only what was changed from the defaults, as stored. Used for syncing
+       display settings between domains/devices. */
+    rawSettings: function () { return read("settings", {}) || {}; },
+    replaceSettings: function (saved, silent) {
+      return write("settings", saved && typeof saved === "object" ? saved : {}, silent);
+    },
+
     /* ---------------- favorites ---------------- */
 
     favorites: function () { return read("favorites", []); },
@@ -169,8 +186,38 @@
       var list = Store.favorites();
       var at = list.indexOf(id);
       if (at === -1) list.unshift(id); else list.splice(at, 1);
+      Store.markPin(id, at === -1);
       write("favorites", list);
       return at === -1;
+    },
+
+    /* The server unions favorites across devices, so an unpin alone would
+       come straight back on the next sync. Each pin/unpin is remembered with
+       a time and the newest one wins wherever the list is merged. */
+    pins: function () { return read("pins", {}) || {}; },
+    markPin: function (id, on) {
+      var all = Store.pins();
+      all[id] = { on: !!on, at: Date.now() };
+      var ids = Object.keys(all);
+      /* Kept short: it rides in the auth token's metadata. */
+      if (ids.length > 120) {
+        ids.sort(function (a, b) { return all[a].at - all[b].at; })
+          .slice(0, ids.length - 120).forEach(function (k) { delete all[k]; });
+      }
+      write("pins", all);
+    },
+    mergePins: function (remote) {
+      var all = Store.pins(), changed = false;
+      Object.keys(remote || {}).forEach(function (id) {
+        var r = remote[id];
+        if (!r || typeof r.at !== "number") return;
+        if (!all[id] || all[id].at < r.at) { all[id] = { on: !!r.on, at: r.at }; changed = true; }
+      });
+      if (changed) {
+        write("pins", all, true);
+        write("favorites", applyPins(Store.favorites(), all), true);
+      }
+      return changed;
     },
 
     /* Persist a re-ordered pin list (drag-to-arrange on the Pinned page).
@@ -257,7 +304,8 @@
         favorites: Store.favorites(),
         recents: Store.recents(),
         stats: Store.stats(),
-        ratings: Store.ratings()
+        ratings: Store.ratings(),
+        pins: Store.pins()
       };
     },
 
@@ -267,14 +315,15 @@
       /* Server saves carry no skin/lite preference worth overriding the local
          one with, so settings only come from an explicit file import. */
       if (payload.settings && !silent) write("settings", payload.settings, silent);
-      if (Array.isArray(payload.favorites)) write("favorites", payload.favorites, silent);
+      if (payload.pins && typeof payload.pins === "object") write("pins", payload.pins, silent);
+      if (Array.isArray(payload.favorites)) write("favorites", applyPins(payload.favorites, Store.pins()), silent);
       if (Array.isArray(payload.recents)) write("recents", payload.recents, silent);
       if (payload.stats) write("stats", payload.stats, silent);
       if (payload.ratings) write("ratings", payload.ratings, silent);
     },
 
     resetAll: function () {
-      ["settings", "favorites", "recents", "stats", "ratings"].forEach(function (key) {
+      ["settings", "favorites", "recents", "stats", "ratings", "pins"].forEach(function (key) {
         if (hasLS) window.localStorage.removeItem(PREFIX + key);
         delete memory[key];
       });

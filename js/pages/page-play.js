@@ -162,13 +162,10 @@
     }
 
     /* Never let a stuck bridge hold the game hostage. */
-    var guard = window.setTimeout(function () { go(false); }, 4000);
+    var guard = window.setTimeout(function () { go(false); }, 6000);
 
-    window.GameSaves.restore(false).then(function (results) {
+    window.GameSaves.restoreHost(origin, false).then(function (mine) {
       window.clearTimeout(guard);
-      var mine = (results || []).filter(function (r) {
-        return r.host === window.GameSaves.hostKey(origin);
-      })[0];
       go(!!(mine && mine.written));
     }).catch(function () {
       window.clearTimeout(guard);

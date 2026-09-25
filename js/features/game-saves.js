@@ -74,10 +74,14 @@
      which matches the single storage bucket they actually share. The result
      still satisfies the server's host validator ([A-Za-z0-9._-]{1,64}). */
   function keyFor(origin) {
-    try {
-      return new URL(origin).host.slice(0, 64);
-    } catch (e) { return String(origin).slice(0, 64); }
+    var host;
+    try { host = new URL(origin).host; } catch (e) { host = String(origin); }
+    /* The hub's own origin changes with whichever mirror domain is open, but
+       it's the same games — keep them on one row so saves follow you across. */
+    if (host === location.host && SELF_KEY) return SELF_KEY;
+    return host.slice(0, 64);
   }
+  var SELF_KEY = window.SITE && window.SITE.domain ? "www." + window.SITE.domain : "";
 
   window.addEventListener("message", function (event) {
     var msg = event.data;
@@ -278,6 +282,37 @@
     }, Promise.resolve()).then(function () { return done; });
   }
 
+  /* Just one host — what the player page needs before a game loads. Going
+     through every host first meant the one being opened often wasn't reached
+     before the load timeout gave up. */
+  function restoreHost(hostOrOrigin, overwrite) {
+    if (!window.Session || !window.Session.user) {
+      return Promise.reject(new Error("Sign in to restore game progress."));
+    }
+    var origin = originFor(hostOrOrigin);
+    if (!origin) return Promise.reject(new Error("Unknown game host."));
+    var host = keyFor(origin);
+    return window.API.getGameSave(host).then(function (res) {
+      var stored = res.payload || {};
+      var local = stored.local || (stored.idb || stored.cookies ? {} : stored);
+      var idb = stored.idb || {};
+      var cookies = stored.cookies || {};
+      if (!Object.keys(local).length && !Object.keys(idb).length &&
+          !Object.keys(cookies).length) {
+        return { host: host, written: 0, empty: true };
+      }
+      return ask(origin, {
+        action: "write", data: local, idb: idb, cookies: cookies, overwrite: !!overwrite
+      }).then(function (out) {
+        return {
+          host: host,
+          written: (out.written || 0) + (out.idbWritten || 0) + (out.cookiesWritten || 0),
+          kept: out.kept
+        };
+      });
+    });
+  }
+
   /* Is the bridge actually deployed on each host? */
   function probe() {
     return Promise.all(hostsFromConfig().map(function (origin) {
@@ -375,6 +410,7 @@
     backup: backup,
     backupHost: backupHost,
     restore: restore,
+    restoreHost: restoreHost,
     probe: probe,
     readAll: readAll,
     writeKeys: writeKeys,

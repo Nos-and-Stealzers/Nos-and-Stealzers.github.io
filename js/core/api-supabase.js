@@ -1161,6 +1161,21 @@
       });
     },
 
+    /* Display settings ride on the auth user's metadata: sync_save only
+       keeps favorites/recents/stats/ratings, and this needs no schema. */
+    getPrefs: function () {
+      if (!session) return Promise.reject(fail("Signed out.", 401));
+      return call("/auth/v1/user").then(function (u) {
+        var meta = (u && u.user_metadata) || {};
+        return meta.ach_prefs || null;
+      });
+    },
+
+    putPrefs: function (prefs) {
+      return call("/auth/v1/user", { method: "PUT", body: { data: { ach_prefs: prefs } } })
+        .then(function () { return { ok: true }; });
+    },
+
     popular: function () {
       return rest("/game_stats?select=game_id,plays,seconds&order=seconds.desc&limit=40")
         .then(function (rows) {

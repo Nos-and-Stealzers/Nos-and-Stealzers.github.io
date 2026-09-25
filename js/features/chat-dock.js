@@ -149,7 +149,7 @@
 
     form.addEventListener("submit", function (e) { e.preventDefault(); submit(); });
     inputEl.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); }
     });
     inputEl.addEventListener("input", function () {
       inputEl.style.height = "auto";

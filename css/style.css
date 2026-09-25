@@ -1613,9 +1613,13 @@ kbd {
   display: flex; flex-direction: column; gap: 0.5rem;
   /* Anchor messages to the BOTTOM so a short conversation sits above the
      composer like Discord/iMessage, instead of floating at the top of a big
-     empty panel. justify-content:flex-end + the first row's margin-top:auto
-     pushes content down while still scrolling naturally when it overflows. */
-  justify-content: flex-end;
+     empty panel. The first row's margin-top:auto (below) pushes content down
+     on its own — that's the only bottom-anchor trick that's safe here.
+     justify-content:flex-end used to sit alongside it, but flex-end + auto
+     overflow is a known Chromium/WebKit bug: once messages overflow the
+     panel, the browser miscalculates the scrollable range and the earliest
+     messages become permanently unreachable, even though the scrollbar looks
+     normal. Dropping it fixes scrolling without losing the bottom-anchor. */
   max-height: 62vh; min-height: 22rem;
   background: var(--paper);
 }

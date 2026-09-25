@@ -39,7 +39,7 @@
     window.UI.render($("g-related"), window.Catalog.related(game, 12), { desc: false });
 
     if (game.unavailable) unavailable();
-    else if (game.embeddable && !game.preferDirect) restoreThenEmbed();
+    else if (game.embeddable && (!game.preferDirect || UI.params().get("auto") === "1")) restoreThenEmbed();
     else prompt();
 
     document.addEventListener("visibilitychange", function () {
@@ -181,7 +181,9 @@
     window.GameSaves.restoreHost(origin, false).then(function (mine) {
       window.clearTimeout(guard);
       var wrote = !!(mine && mine.written);
-      if (settled && wrote && frame) {
+      /* Only when nothing here had changed meanwhile — otherwise a restart
+         would throw away what the game is doing right now. */
+      if (settled && wrote && mine.overwrote && frame) {
         markSaved("cloud save loaded — restarting game", "ok");
         embed(true);
         return;
@@ -277,8 +279,12 @@
        For genuinely un-embeddable games we still fall back to the raw URL. */
     var wrapper = "play.html?id=" + encodeURIComponent(game.id) + "&auto=1";
     var target = game.embeddable ? wrapper : url;
-    var win = window.open(target, "_blank", "noopener");
+    /* With "noopener" window.open always returns null, which read as a
+       blocked pop-up every time. Cut the opener link by hand instead. */
+    var win = window.open(target, "_blank");
     if (!win) { window.UI.toast("Pop-up blocked — allow it and retry"); return; }
+    try { win.opener = null; } catch (e) {}
+    if (target === wrapper) return;      // the wrapper tab counts the play itself
     window.Store.recordPlay(game.id);
     window.Store.pushRecent(game.id);
     counters();
@@ -490,7 +496,9 @@
       })
       .then(function (out) {
         if (out && out.uploaded) markSaved("progress saved " + clock(), "ok");
-        else if (out && out.unchanged && !saveShown) markSaved("progress up to date", "ok");
+        else if (out && out.unchanged && !saveShown && !/loaded/.test(($("save-state") || {}).textContent || "")) {
+          markSaved("progress up to date", "ok");
+        }
         if (out && (out.uploaded || out.unchanged)) saveShown = true;
       })
       .catch(function (err) {

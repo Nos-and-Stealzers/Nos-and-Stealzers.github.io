@@ -198,12 +198,14 @@
 
   /* ------------------------------------------------------------- public */
 
-  /* Sync state per account + host on this device: the cloud row's timestamp
-     and a digest of this origin's storage as of the last agreed sync. With
-     those two, each side can tell whether the other has moved on:
-       - cloud stamp moved  -> another device uploaded since
-       - local digest moved -> a game here wrote since
-     which is what decides overwrite vs merge on both download and upload. */
+  /* Per account + host, this device remembers what the cloud row looked like
+     at the last sync: its timestamp, a digest of each entry, and a digest of
+     local storage at that moment. That's enough for a per-key three-way merge:
+       - entry unchanged here since the sync -> take the cloud's version
+       - entry changed here                  -> keep it, it goes up next
+     so two devices playing different games on one shared origin never
+     overwrite each other, and a newer save from another device replaces an
+     older one here. */
   var SYNC_PREFIX = "ach:gs-sync:";
 
   function uid() { return window.Session && window.Session.user ? String(window.Session.user.id) : ""; }
@@ -227,8 +229,8 @@
   }
 
   /* FNV-1a over the canonical JSON. Only ever compared with itself. */
-  function digest(payload) {
-    var text = stable(payload);
+  function digest(value) {
+    var text = stable(value);
     var h = 0x811c9dc5;
     for (var i = 0; i < text.length; i++) {
       h ^= text.charCodeAt(i);
@@ -257,107 +259,185 @@
            !Object.keys(p.cookies).length;
   }
 
-  /* Other device's row plus ours on top. Several games share one origin and
-     therefore one row, so a plain replace dropped every other game's keys
-     that this device happened not to have. */
-  function merge(cloud, mine) {
-    return {
-      local: Object.assign({}, cloud.local, mine.local),
-      idb: Object.assign({}, cloud.idb, mine.idb),
-      cookies: Object.assign({}, cloud.cookies, mine.cookies)
-    };
+  /* One flat map across the three stores: "l:key", "i:db", "c:cookie". */
+  var STORES = { l: "local", i: "idb", c: "cookies" };
+  function entries(p) {
+    var out = {};
+    Object.keys(STORES).forEach(function (tag) {
+      var src = p[STORES[tag]] || {};
+      Object.keys(src).forEach(function (k) { out[tag + ":" + k] = src[k]; });
+    });
+    return out;
+  }
+  function toPayload(map) {
+    var out = { local: {}, idb: {}, cookies: {} };
+    Object.keys(map).forEach(function (k) { out[STORES[k.charAt(0)]][k.slice(2)] = map[k]; });
+    return out;
+  }
+  function hashes(map) {
+    var out = {};
+    Object.keys(map).forEach(function (k) { out[k] = digest(map[k]); });
+    return out;
+  }
+
+  /* Pull the cloud's newer entries into this origin, keeping anything changed
+     here since the last sync. `force` takes the cloud's copy for everything. */
+  function reconcile(origin, cloudPayload, rec, force) {
+    var cloudE = entries(cloudPayload);
+    var base = rec && rec.keys ? rec.keys : null;
+
+    return ask(origin, { action: "read" }).then(function (res) {
+      var mineE = entries(payloadOf(res));
+      var mineH = hashes(mineE);
+      var plan = {}, removes = [], kept = 0;
+
+      Object.keys(cloudE).forEach(function (k) {
+        var ch = digest(cloudE[k]);
+        if (mineH[k] === ch) return;
+        if (force) { plan[k] = cloudE[k]; return; }
+        if (mineH[k] === undefined) {
+          /* Absent here: new from elsewhere, unless it was deleted here. */
+          if (base && base[k] === ch) return;
+          plan[k] = cloudE[k];
+          return;
+        }
+        if (base && mineH[k] === base[k]) { plan[k] = cloudE[k]; return; }
+        kept++;
+      });
+
+      /* Deleted elsewhere and untouched here — localStorage only; the bridge
+         has no per-row delete for the other stores. */
+      if (base && !force) {
+        Object.keys(base).forEach(function (k) {
+          if (k.charAt(0) === "l" && cloudE[k] === undefined && mineH[k] === base[k]) {
+            removes.push(k.slice(2));
+          }
+        });
+      }
+
+      if (!Object.keys(plan).length && !removes.length) {
+        return { written: 0, kept: kept, overwrote: false, after: res };
+      }
+
+      /* A game may have written while the cloud copy was downloading. Look
+         again and leave alone anything that moved. */
+      return ask(origin, { action: "read" }).then(function (again) {
+        var nowH = hashes(entries(payloadOf(again)));
+        Object.keys(plan).forEach(function (k) {
+          if (nowH[k] !== mineH[k]) { delete plan[k]; kept++; }
+        });
+        removes = removes.filter(function (key) {
+          return nowH["l:" + key] === mineH["l:" + key];
+        });
+
+        var todo = toPayload(plan);
+        var n = Object.keys(plan).length;
+        var write = n ? ask(origin, {
+          action: "write", data: todo.local, idb: todo.idb, cookies: todo.cookies,
+          overwrite: true
+        }) : Promise.resolve({});
+        return write.then(function () {
+          return removes.length ? ask(origin, { action: "remove", keys: removes }) : null;
+        }).then(function () {
+          return ask(origin, { action: "read" });
+        }).then(function (after) {
+          return { written: n + removes.length, kept: kept, overwrote: n > 0, after: after };
+        });
+      });
+    });
   }
 
   var inflight = {};
-
-  /* Upload one origin's storage if it changed since the last sync. `res` is
-     a bridge read (readAll shape or raw). */
-  function syncUp(origin, res) {
-    if (!uid()) return Promise.reject(new Error("Sign in to sync game progress."));
-    var host = keyFor(origin);
+  function once(host, fn) {
     if (inflight[host]) return inflight[host];
-
-    var startUser = uid();
-    var mine = payloadOf(res);
-    var hash = digest(mine);
-    var rec = syncRecord(host);
-    var truncated = !!(res.partial || (res.idbDropped && res.idbDropped.length));
-
-    if (rec && rec.hash === hash) return Promise.resolve({ host: host, unchanged: true });
-    if (!rec && isEmpty(mine)) return Promise.resolve({ host: host, skipped: true, keys: 0 });
-
-    var job = window.API.gameSaveStamp(host).then(function (stamp) {
-      /* Nobody else wrote since we last agreed: this device is the truth,
-         deletions included. Otherwise fold the other device's work in. */
-      if (rec && stamp <= rec.at && !truncated) return mine;
-      return window.API.getGameSave(host).then(function (cloud) {
-        return merge(normalise(cloud.payload), mine);
-      });
-    }).then(function (payload) {
-      if (uid() !== startUser) throw new Error("Account changed during backup; not uploading.");
-      if (isEmpty(payload)) return { host: host, skipped: true, keys: 0 };
-      return window.API.putGameSave(host, payload).then(function () {
-        return window.API.gameSaveStamp(host);
-      }).then(function (at) {
-        setSyncRecord(host, { at: at, hash: digest(payload) === hash ? hash : null });
-        return {
-          host: host,
-          keys: Object.keys(payload.local).length,
-          databases: Object.keys(payload.idb).length,
-          cookies: Object.keys(payload.cookies).length,
-          uploaded: true
-        };
-      });
-    });
+    var job = fn();
     inflight[host] = job;
     var clear = function () { delete inflight[host]; };
     job.then(clear, clear);
     return job;
   }
 
-  /* Bring the account's copy of one origin down into it.
-     Cloud wins outright when it moved on and nothing here changed since the
-     last sync; if both moved, only the gaps are filled and this device's
-     edits go back up on the next sync. `force` overwrites regardless. */
+  /* Bring the account's copy of one origin down into it. */
   function restoreHost(hostOrOrigin, force) {
     if (!uid()) return Promise.reject(new Error("Sign in to restore game progress."));
     var origin = originFor(hostOrOrigin);
     if (!origin) return Promise.reject(new Error("Unknown game host."));
     var host = keyFor(origin);
 
-    return Promise.all([
-      window.API.getGameSave(host),
-      ask(origin, { action: "read" })
-    ]).then(function (both) {
-      var cloud = both[0];
-      var stored = normalise(cloud.payload);
-      var mine = payloadOf(both[1]);
-      if (isEmpty(stored)) return { host: host, written: 0, empty: true };
-
-      var rec = syncRecord(host);
-      var localMoved = !rec || rec.hash !== digest(mine);
-      var cloudMoved = !rec || (cloud.updatedAt || 0) > rec.at;
-      if (!cloudMoved && !force) return { host: host, written: 0, current: true };
-      var overwrite = !!force || !localMoved || isEmpty(mine);
-
-      return ask(origin, {
-        action: "write", data: stored.local, idb: stored.idb, cookies: stored.cookies,
-        overwrite: overwrite
-      }).then(function (out) {
-        return ask(origin, { action: "read" }).then(function (after) {
-          var now = digest(payloadOf(after));
-          /* Anything here the cloud doesn't have leaves the digest unset, so
-             the next sync uploads it. */
+    return once(host, function () {
+      return window.API.getGameSave(host).then(function (cloud) {
+        var stored = normalise(cloud.payload);
+        if (isEmpty(stored)) return { host: host, written: 0, empty: true };
+        var rec = syncRecord(host);
+        return reconcile(origin, stored, rec, force).then(function (r) {
+          var cloudE = entries(stored);
+          var local = payloadOf(r.after);
+          var same = digest(entries(local)) === digest(cloudE);
           setSyncRecord(host, {
             at: cloud.updatedAt || 0,
-            hash: now === digest(stored) ? now : null
+            /* Only "in sync" if this device holds exactly the cloud copy;
+               otherwise what's here still needs to go up. */
+            hash: same ? digest(local) : null,
+            keys: hashes(cloudE)
           });
           return {
-            host: host,
-            written: (out.written || 0) + (out.idbWritten || 0) + (out.cookiesWritten || 0),
-            kept: out.kept,
-            overwrote: overwrite
+            host: host, written: r.written, kept: r.kept, overwrote: r.overwrote,
+            current: !r.written
           };
+        });
+      });
+    });
+  }
+
+  /* Upload one origin's storage if it changed since the last sync, pulling
+     in anything newer from other devices first. `res` is a bridge read. */
+  function syncUp(origin, res) {
+    if (!uid()) return Promise.reject(new Error("Sign in to sync game progress."));
+    var host = keyFor(origin);
+    var startUser = uid();
+    var rec = syncRecord(host);
+    if (rec && rec.hash && rec.hash === digest(payloadOf(res))) {
+      return Promise.resolve({ host: host, unchanged: true });
+    }
+
+    return once(host, function () {
+      var cloudCopy = null;
+      return window.API.gameSaveStamp(host).then(function (stamp) {
+        if (!stamp || (rec && stamp <= rec.at)) return res;
+        return window.API.getGameSave(host).then(function (cloud) {
+          cloudCopy = normalise(cloud.payload);
+          return reconcile(origin, cloudCopy, rec, false).then(function (r) { return r.after; });
+        });
+      }).then(function (latest) {
+        var payload = payloadOf(latest);
+        var dropped = latest.idbDropped || [];
+        /* Databases that didn't fit this read keep the cloud's copy rather
+           than being deleted from the account. */
+        var fill = !dropped.length ? Promise.resolve() :
+          (cloudCopy ? Promise.resolve(cloudCopy) :
+            window.API.getGameSave(host).then(function (c) { return normalise(c.payload); }))
+            .then(function (c) {
+              dropped.forEach(function (db) { if (c && c.idb[db]) payload.idb[db] = c.idb[db]; });
+            });
+        return fill.then(function () {
+          if (uid() !== startUser) throw new Error("Account changed during backup; not uploading.");
+          if (isEmpty(payload)) return { host: host, skipped: true, keys: 0 };
+          return window.API.putGameSave(host, payload).then(function () {
+            return window.API.gameSaveStamp(host);
+          }).then(function (at) {
+            setSyncRecord(host, {
+              at: at,
+              hash: dropped.length ? null : digest(payloadOf(latest)),
+              keys: hashes(entries(payload))
+            });
+            return {
+              host: host,
+              keys: Object.keys(payload.local).length,
+              databases: Object.keys(payload.idb).length,
+              cookies: Object.keys(payload.cookies).length,
+              uploaded: true
+            };
+          });
         });
       });
     });
@@ -373,7 +453,6 @@
         return ask(origin, { action: "read" })
           .then(function (res) {
             return syncUp(origin, res).then(function (out) {
-              if (out.unchanged) out.keys = res.keys || 0;
               if (out.skipped && res.idbUnsupported) out.note = "this browser can't list IndexedDB";
               done.push(out);
             });

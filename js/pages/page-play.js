@@ -518,7 +518,8 @@
 
   function watchProgress() {
     if (!canBackup()) return;
-    if (!saveShown) markSaved("progress saves automatically", "");
+    var shown = ($("save-state") || {}).textContent || "";
+    if (!saveShown && !/loaded|checking/.test(shown)) markSaved("progress saves automatically", "");
     takeBaseline();
     window.clearInterval(backupTimer);
     backupTimer = window.setInterval(function () {

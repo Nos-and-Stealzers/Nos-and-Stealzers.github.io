@@ -609,15 +609,29 @@
       entry.el.dataset.state = pc.connectionState;
       if (pc.connectionState === "connected") {
         entry.el.classList.remove("is-failed");
+        entry.restarted = false;   // a later drop gets its own restart attempt
         if (!state.startedAt) {
           state.startedAt = Date.now();
           status("In a call");
         }
       }
       if (pc.connectionState === "failed") {
-        /* Usually a network that blocks direct connections. There is no TURN
-           relay to fall back to, so say what happened instead of leaving a
-           silent dead tile that looks like the other person went quiet. */
+        /* A direct P2P path often fails on strict NATs / school-firewall
+           networks even though the TURN relay (see api-supabase.js iceFetch)
+           can still carry the call. restartIce() re-gathers candidates
+           against the same iceServers and, for the OFFERER, needs one more
+           offer/answer round — pump()'s next tick doesn't know to do that on
+           its own, so trigger it here. Only the deterministic offerer restarts
+           to avoid both sides re-negotiating at once; one retry only, so a
+           genuinely dead network still lands on the "couldn't connect" message
+           instead of retrying forever. */
+        if (!entry.restarted && shouldOffer(userId)) {
+          entry.restarted = true;
+          try { pc.restartIce(); } catch (e) {}
+          offerTo(userId);
+          status("Reconnecting to " + nameOf(userId) + "…");
+          return;
+        }
         entry.el.classList.add("is-failed");
         status("Couldn't connect to " + nameOf(userId));
         if (!entry.warned) {

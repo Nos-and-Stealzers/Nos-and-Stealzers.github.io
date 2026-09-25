@@ -222,8 +222,12 @@
     });
     var picked = shuffle(sameCat, daySeed() + game.index).slice(0, count || 8);
     if (picked.length < (count || 8)) {
+      /* Same O(n) indexOf-in-filter fix as forYou(): picked is tiny (<=8) so
+         this one was never actually slow, but a Set keeps the two functions
+         consistent and one less habit to copy wrong somewhere expensive. */
+      var pickedSet = new Set(picked.map(function (g) { return g.id; }));
       var filler = shuffle(playable.filter(function (g) {
-        return g.id !== game.id && picked.indexOf(g) === -1 && g.category !== game.category;
+        return g.id !== game.id && !pickedSet.has(g.id) && g.category !== game.category;
       }), daySeed()).slice(0, (count || 8) - picked.length);
       picked = picked.concat(filler);
     }
@@ -236,6 +240,13 @@
     var played = Object.keys(stats);
     if (!played.length) return daily(count);
 
+    /* played.indexOf(id) inside the filter below used to make this an
+       O(catalog x played) scan — fine for a few dozen games played, but the
+       catalog itself runs past 1,100 titles and a long play history made
+       this the single slowest thing computed for the homepage. A Set turns
+       each lookup into O(1). */
+    var playedSet = new Set(played);
+
     var weight = {};
     played.forEach(function (id) {
       var g = byId[id];
@@ -243,7 +254,7 @@
       weight[g.category] = (weight[g.category] || 0) + (stats[id].plays || 1);
     });
 
-    var unplayed = playable.filter(function (g) { return played.indexOf(g.id) === -1; });
+    var unplayed = playable.filter(function (g) { return !playedSet.has(g.id); });
     unplayed.sort(function (a, b) {
       return (weight[b.category] || 0) - (weight[a.category] || 0);
     });

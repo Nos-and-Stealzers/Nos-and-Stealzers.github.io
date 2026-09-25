@@ -317,6 +317,32 @@
     if (dataUrl.length > 160000) {
       return Promise.reject(fail("That image is too large — try a smaller one.", 413));
     }
+    /* This fallback fires whenever the storage bucket upload path fails (most
+       commonly: the "avatars" storage bucket itself was never created — see
+       supabase/finish-calls-avatars.sql — even though profiles.avatar_url has
+       existed in schema.sql from the start). The bucket only matters for
+       *storage*; the profiles.avatar_url TEXT column has no such dependency
+       and is exactly what thread_list()/friends()/user() already read to show
+       avatars to OTHER people. So: write the data URL there directly first.
+       Only fall back further to auth user_metadata (visible to nobody but the
+       owner) if that PATCH genuinely fails, meaning the column itself is
+       missing on a database that never ran ANY of the avatar migrations. */
+    return avatarReady().then(function (ready) {
+      if (ready) {
+        return API.updateProfile({ avatarUrl: dataUrl }).then(function (res) {
+          return { user: res.user, url: dataUrl };
+        }).catch(function () {
+          return uploadAvatarMetaOnly(dataUrl);
+        });
+      }
+      return uploadAvatarMetaOnly(dataUrl);
+    });
+  }
+
+  /* Last-resort fallback: self-only, via GoTrue user_metadata. No DB write at
+     all, so it works even against a database that has never run any avatar
+     migration — but friends/threads/calls never see this copy. */
+  function uploadAvatarMetaOnly(dataUrl) {
     return setAuthMeta({ avatar_url: dataUrl }).then(function () {
       if (selfProfile) selfProfile.avatar_url = dataUrl;
       return me(true).then(function (row) {

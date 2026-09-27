@@ -265,7 +265,7 @@
 
   /* Base profile columns that always exist. avatar_url is added at runtime only
      if the column is present (see AVATAR_READY probe), so the site never breaks
-     if the avatar migration (supabase/avatar-support.sql) hasn't been run yet. */
+     if the avatar migration (part of supabase/SETUP-ALL-IN-ONE.sql) hasn't been run yet. */
   var PROFILE_COLS_BASE = "id,username,display_name,bio,role,state,accepts_dms,show_activity," +
                      "friend_code,created_at,last_seen,is_plus,banned,ban_reason,email_verified,terms_version";
   var AVATAR_READY = null;   // null=unknown, true/false once probed
@@ -320,8 +320,8 @@
     }
     /* This fallback fires whenever the storage bucket upload path fails (most
        commonly: the "avatars" storage bucket itself was never created — see
-       supabase/finish-calls-avatars.sql — even though profiles.avatar_url has
-       existed in schema.sql from the start). The bucket only matters for
+       supabase/SETUP-ALL-IN-ONE.sql — even though profiles.avatar_url has
+       existed in the schema from the start). The bucket only matters for
        *storage*; the profiles.avatar_url TEXT column has no such dependency
        and is exactly what thread_list()/friends()/user() already read to show
        avatars to OTHER people. So: write the data URL there directly first.
@@ -450,7 +450,7 @@
              plainly, because everything else will fail confusingly. */
           if (err.status === 404) {
             API.configError = "Supabase reachable, but the schema isn't applied. " +
-              "Run supabase/schema.sql in the SQL editor.";
+              "Run supabase/SETUP-ALL-IN-ONE.sql in the SQL editor.";
           }
           return false;
         });
@@ -1091,7 +1091,7 @@
         .then(function (id) { return { thread: { id: id, isGroup: true, title: title, owner: true, memberCount: usernames.length + 1 } }; });
     },
     renameGroup: function (id, title) {
-      /* Parameter is `new_title`, not `title` — see the note in schema.sql. */
+      /* Parameter is `new_title`, not `title` — see the note in SETUP-ALL-IN-ONE.sql. */
       return rpc("rename_group", { t: Number(id), new_title: title })
         .then(function () { return { ok: true }; });
     },

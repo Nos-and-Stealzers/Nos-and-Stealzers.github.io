@@ -98,33 +98,38 @@
       .then(function (shot) { return Object.assign(shot, { kind: "camera" }); });
   }
 
+  /* Any image Blob/File — a picked file, a paste, or a drag-and-drop. */
+  function fromBlob(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file) return reject(new Error("No file chosen."));
+      if (!/^image\//.test(file.type || "")) return reject(new Error("That isn't an image."));
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        try {
+          var shot = encode(img, img.naturalWidth, img.naturalHeight);
+          URL.revokeObjectURL(url);
+          resolve(Object.assign(shot, { kind: "upload" }));
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        reject(new Error("That image could not be read."));
+      };
+      img.src = url;
+    });
+  }
+
   function fromFile() {
     return new Promise(function (resolve, reject) {
       var input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
       input.addEventListener("change", function () {
-        var file = input.files && input.files[0];
-        if (!file) return reject(new Error("No file chosen."));
-        if (!/^image\//.test(file.type)) return reject(new Error("That isn't an image."));
-
-        var img = new Image();
-        var url = URL.createObjectURL(file);
-        img.onload = function () {
-          try {
-            var shot = encode(img, img.naturalWidth, img.naturalHeight);
-            URL.revokeObjectURL(url);
-            resolve(Object.assign(shot, { kind: "upload" }));
-          } catch (err) {
-            URL.revokeObjectURL(url);
-            reject(err);
-          }
-        };
-        img.onerror = function () {
-          URL.revokeObjectURL(url);
-          reject(new Error("That image could not be read."));
-        };
-        img.src = url;
+        fromBlob(input.files && input.files[0]).then(resolve, reject);
       });
       input.click();
     });
@@ -285,6 +290,7 @@
     camera: camera,
     cameraDialog: cameraDialog,
     fromFile: fromFile,
+    fromBlob: fromBlob,
     avatarFromFile: avatarFromFile,
     avatarFromCamera: avatarFromCamera
   };

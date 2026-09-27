@@ -20,37 +20,38 @@
 
   <main class="main" id="main">
 
-    <header class="page-head" style="padding-bottom:1rem;margin-bottom:1.2rem">
-      <span class="label">Social</span>
-      <h1>Messages</h1>
-      <p class="social-intro">Make a plan. Share a moment. Keep playing.</p>
-    </header>
+    <h1 class="sr-only">Messages</h1>
 
-    <div class="dm" id="dm">
-      <aside class="dm-sidebar" aria-label="Conversations">
-        <div class="dm-sidebar-head"><h2>Conversations</h2><label class="sr-only" for="thread-search">Search conversations</label><input id="thread-search" type="search" placeholder="Search conversations" autocomplete="off"></div>
-        <p id="thread-status" class="social-status" role="status">Loading conversations…</p>
-        <button type="button" id="thread-retry" class="btn btn-sm" hidden>Retry</button>
-        <div class="dm-list" id="thread-list"></div>
+    <div class="msgs" id="msgs">
+      <aside class="msgs-side" aria-label="Conversations">
+        <div class="msgs-side-head">
+          <h2>Chats</h2>
+          <button type="button" class="btn btn-cta btn-sm msgs-new" id="new-chat">New chat</button>
+        </div>
+        <label class="chat-search msgs-search" id="search-wrap">
+          <input id="thread-search" type="search" placeholder="Search conversations" autocomplete="off" aria-label="Search conversations">
+        </label>
+        <div class="msgs-status" id="thread-status" role="status" hidden>
+          <span id="thread-status-text"></span>
+          <button type="button" id="thread-retry" class="btn btn-sm">Try again</button>
+        </div>
+        <div class="chat-rows msgs-rows" id="thread-list"></div>
       </aside>
 
-      <section class="dm-panel" id="panel">
-        <div class="dm-empty" id="dm-empty">
-          <strong>Pick a conversation</strong>
-          <p class="dim tiny">Or start one from <a href="friends.html">Friends</a>.</p>
+      <section class="msgs-main" id="panel" aria-label="Conversation">
+        <div class="msgs-welcome" id="dm-empty">
+          <span class="chat-empty-art" id="welcome-art"></span>
+          <strong>Your messages</strong>
+          <p>Pick a conversation, or start a new one with a friend.</p>
+          <button type="button" class="btn btn-cta" id="welcome-new">Start a chat</button>
         </div>
 
-        <div class="dm-open" id="dm-open" hidden>
-          <button type="button" id="dm-back" class="btn btn-flat dm-back">← Conversations</button>
-          <header class="dm-head" id="dm-head"></header>
-          <p id="conversation-status" class="social-status" role="status"></p>
-          <div class="dm-log" id="log" role="log" aria-label="Messages" tabindex="0" aria-live="polite" aria-relevant="additions"></div>
-          <form class="dm-compose" id="compose">
-            <label for="body" class="sr-only">Message</label>
-            <textarea id="body" rows="1" maxlength="2000" placeholder="Write a message…"></textarea>
-            <button class="btn btn-cta" type="submit" id="send">Send</button>
-          </form>
-          <p class="dm-locked" id="locked" hidden></p>
+        <div class="msgs-open" id="dm-open" hidden>
+          <header class="msgs-head" id="dm-head"></header>
+          <div class="msgs-body">
+            <div class="msgs-convo" id="convo-host"></div>
+            <aside class="msgs-info" id="info" hidden aria-label="Conversation details"></aside>
+          </div>
         </div>
       </section>
     </div>
@@ -71,6 +72,7 @@
   <script src="js/core/realtime.js"></script>
   <script src="js/features/social-ui.js"></script>
   <script src="js/features/capture.js"></script>
+  <script src="js/features/chat-core.js"></script>
   <script src="js/features/chat-dock.js"></script>
   <script src="js/features/call.js"></script>
   <script src="js/features/game-saves.js"></script>

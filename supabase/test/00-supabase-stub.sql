@@ -1,6 +1,6 @@
--- Minimal stand-ins for the Supabase-managed pieces schema.sql depends on,
+-- Minimal stand-ins for the Supabase-managed pieces SETUP-ALL-IN-ONE.sql depends on,
 -- so the real file can be run against a plain Postgres and its behaviour
--- observed. Only what schema.sql actually touches.
+-- observed. Only what the setup file actually touches.
 
 create schema if not exists auth;
 
@@ -37,3 +37,21 @@ end
 $$;
 
 grant usage on schema public to anon, authenticated;
+
+-- Pieces the later sections of SETUP-ALL-IN-ONE.sql touch: the extensions
+-- schema (pgcrypto), pg_net's http_post, Storage, and two auth.users columns.
+alter table auth.users add column if not exists email_confirmed_at timestamptz;
+alter table auth.users add column if not exists encrypted_password text;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+create schema if not exists net;
+create or replace function net.http_post(url text, headers jsonb, body jsonb)
+returns bigint language sql as $$ select 1::bigint $$;
+create schema if not exists storage;
+create table if not exists storage.buckets (id text primary key, name text, public boolean,
+  file_size_limit bigint, allowed_mime_types text[]);
+create table if not exists storage.objects (id uuid primary key default gen_random_uuid(),
+  bucket_id text, name text, owner uuid);
+alter table storage.objects enable row level security;
+create or replace function storage.foldername(name text) returns text[]
+language sql as $$ select string_to_array(name, '/') $$;

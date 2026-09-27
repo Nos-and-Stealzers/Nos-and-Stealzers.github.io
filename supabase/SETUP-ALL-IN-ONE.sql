@@ -1,4 +1,45 @@
 -- =====================================================================
+-- Arcade Campus Hub - COMPLETE SUPABASE SETUP (one file)
+--
+-- HOW TO USE: Supabase dashboard -> SQL Editor -> New query -> paste this
+-- ENTIRE file -> Run. That's it.
+--
+--  * Idempotent: safe to run on a brand-new project OR on your live one,
+--    and safe to run again. Nothing is dropped, no data is deleted.
+--  * Atomic: wrapped in one transaction - if anything errors, nothing
+--    changes, so you can't end up half-applied.
+--  * Your Resend API key is NOT touched if it is already set. On a brand-new
+--    project, set it once afterwards (never commit the real key):
+--      update public.app_secrets set value = 're_xxx' where key = 'resend_api_key';
+--
+-- Built from these former files, in this order (later sections replace
+-- earlier versions of the same function with the newer one):
+--   schema.sql                       Core schema: profiles, friends, threads, messages, calls, saves, admin, owner rank
+--   admin-expansion.sql              Staff notes, announcements, chat mute
+--   admin-password-reset.sql         Admin user list with email + staff password reset
+--   ban-system.sql                   Real bans (blocks sign-in)
+--   consent-tracking.sql             Terms/privacy acceptance record
+--   email-verification.sql           6-digit email verification
+--   email-verification-send.sql      Send the verification code via Resend (pg_net)
+--   require-verified.sql             Verified email required for chat/friends/calls
+--   auto-confirm-signup.sql          Auto-confirm Supabase Auth signups
+--   my-logins.sql                    Your own recent sign-ins
+--   campus-plus-playlists.sql        Campus+ playlists
+--   campus-plus-membership.sql       Campus+ membership tier
+--   campus-plus-members-only.sql     Campus+ creation is members-only
+--   finish-calls-avatars.sql         Avatars storage bucket + policies
+--
+-- Verify afterwards with the query at the very bottom of this file.
+-- =====================================================================
+
+begin;
+
+
+-- #####################################################################
+-- ## schema.sql  -  Core schema: profiles, friends, threads, messages, calls, saves, admin, owner rank
+-- #####################################################################
+
+-- =====================================================================
 -- Arcade Campus Hub — Supabase schema
 --
 -- Run this ONCE in the Supabase SQL editor (Dashboard → SQL Editor → New
@@ -3324,3 +3365,1660 @@ grant usage, select on all sequences in schema public to anon, authenticated;
 -- though `create or replace function` already ran successfully.
 -- =====================================================================
 NOTIFY pgrst, 'reload schema';
+
+-- #####################################################################
+-- ## admin-expansion.sql  -  Staff notes, announcements, chat mute
+-- #####################################################################
+
+-- Admin/mod/owner expansion: staff notes on users, site-wide announcements,
+-- chat mute. Same security model as the rest of the admin surface: RPCs
+-- check rank server-side, RLS backs every table, every write lands in the
+-- existing audit log via log_audit().
+--
+-- Run once against the project. Idempotent (safe to re-run).
+
+-- ---------------------------------------------------------------- notes
+-- Staff-only notes attached to a user account — NOT visible to the user
+-- themselves. This is what lets a report or a support ticket carry context
+-- ("this account already got a warning on 3/1") without that context
+-- leaking to the person it's about.
+create table if not exists public.staff_notes (
+  id          bigint generated always as identity primary key,
+  target_id   uuid not null references public.profiles(id) on delete cascade,
+  author_id   uuid references public.profiles(id) on delete set null,
+  body        text not null check (char_length(body) between 1 and 2000),
+  created_at  timestamptz not null default now()
+);
+create index if not exists staff_notes_target_idx on public.staff_notes(target_id, created_at desc);
+
+alter table public.staff_notes enable row level security;
+drop policy if exists staff_notes_staff_only on public.staff_notes;
+create policy staff_notes_staff_only on public.staff_notes
+  for all to authenticated
+  using (public.is_staff())
+  with check (public.is_staff());
+
+create or replace function public.admin_add_note(target uuid, note_body text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+  who public.profiles%rowtype;
+  row_out public.staff_notes%rowtype;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 1 then
+    raise exception 'You do not have access to that.';
+  end if;
+
+  select * into who from public.profiles where id = target;
+  if who.id is null then raise exception 'No such user.'; end if;
+
+  note_body := trim(coalesce(note_body, ''));
+  if note_body = '' then raise exception 'Note cannot be empty.'; end if;
+  if char_length(note_body) > 2000 then raise exception 'Note is too long.'; end if;
+
+  insert into public.staff_notes (target_id, author_id, body)
+  values (target, me.id, note_body)
+  returning * into row_out;
+
+  perform public.log_audit('note-add', who.username || ': ' || left(note_body, 80));
+
+  return jsonb_build_object(
+    'id', row_out.id, 'body', row_out.body,
+    'authorId', row_out.author_id, 'authorUsername', me.username,
+    'createdAt', row_out.created_at
+  );
+end;
+$$;
+
+create or replace function public.admin_list_notes(target uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 1 then
+    raise exception 'You do not have access to that.';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', n.id, 'body', n.body, 'authorId', n.author_id,
+      'authorUsername', p.username, 'createdAt', n.created_at
+    ) order by n.created_at desc)
+    from public.staff_notes n
+    left join public.profiles p on p.id = n.author_id
+    where n.target_id = target
+  ), '[]'::jsonb);
+end;
+$$;
+
+create or replace function public.admin_delete_note(note_id bigint)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+  row_target uuid;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 1 then
+    raise exception 'You do not have access to that.';
+  end if;
+
+  select target_id into row_target from public.staff_notes where id = note_id;
+  if row_target is null then raise exception 'No such note.'; end if;
+
+  delete from public.staff_notes where id = note_id;
+  perform public.log_audit('note-delete', 'note #' || note_id);
+  return true;
+end;
+$$;
+
+-- ---------------------------------------------------------- announcements
+-- Site-wide banner. One row is "live" at a time (is_active). Admin+ only —
+-- a banner going out to every signed-in user is louder than a rank change.
+create table if not exists public.announcements (
+  id          bigint generated always as identity primary key,
+  body        text not null check (char_length(body) between 1 and 500),
+  severity    text not null default 'info' check (severity in ('info','warning','critical')),
+  is_active   boolean not null default true,
+  author_id   uuid references public.profiles(id) on delete set null,
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz
+);
+create index if not exists announcements_active_idx on public.announcements(is_active, created_at desc);
+
+alter table public.announcements enable row level security;
+drop policy if exists announcements_read_all on public.announcements;
+create policy announcements_read_all on public.announcements
+  for select to authenticated
+  using (is_active and (expires_at is null or expires_at > now()));
+drop policy if exists announcements_write_admin on public.announcements;
+create policy announcements_write_admin on public.announcements
+  for all to authenticated
+  using (public.rank_of((select role from public.profiles where id = auth.uid())) >= 2)
+  with check (public.rank_of((select role from public.profiles where id = auth.uid())) >= 2);
+
+create or replace function public.admin_set_announcement(
+  body_text text, severity_level text default 'info', ttl_hours numeric default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+  row_out public.announcements%rowtype;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 2 then
+    raise exception 'Only administrators can post announcements.';
+  end if;
+
+  body_text := trim(coalesce(body_text, ''));
+  if body_text = '' then raise exception 'Announcement cannot be empty.'; end if;
+  if severity_level not in ('info','warning','critical') then
+    raise exception 'Unknown severity.';
+  end if;
+
+  update public.announcements set is_active = false where is_active;
+
+  insert into public.announcements (body, severity, author_id, expires_at)
+  values (
+    body_text, severity_level, me.id,
+    case when ttl_hours is null then null else now() + (ttl_hours || ' hours')::interval end
+  )
+  returning * into row_out;
+
+  perform public.log_audit('announcement-set', left(body_text, 80));
+
+  return jsonb_build_object(
+    'id', row_out.id, 'body', row_out.body, 'severity', row_out.severity,
+    'createdAt', row_out.created_at, 'expiresAt', row_out.expires_at
+  );
+end;
+$$;
+
+create or replace function public.admin_clear_announcement()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 2 then
+    raise exception 'Only administrators can clear announcements.';
+  end if;
+
+  update public.announcements set is_active = false where is_active;
+  perform public.log_audit('announcement-clear', '');
+  return true;
+end;
+$$;
+
+-- Public read of the live banner. Runs for any signed-in user, RLS already
+-- scopes it to active + unexpired, so this is just a convenience wrapper
+-- that returns null cleanly instead of an empty array.
+create or replace function public.current_announcement()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object('id', id, 'body', body, 'severity', severity, 'createdAt', created_at)
+  from public.announcements
+  where is_active and (expires_at is null or expires_at > now())
+  order by created_at desc
+  limit 1;
+$$;
+
+-- ---------------------------------------------------------------- mute
+-- Chat mute: a muted_until timestamp on profiles. Messages/DMs are refused
+-- by the database (not just hidden client-side) while it's in the future —
+-- mirrors how `suspended` already works for the whole account.
+alter table public.profiles add column if not exists muted_until timestamptz;
+
+create or replace function public.is_muted(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select muted_until > now() from public.profiles where id = uid), false);
+$$;
+
+create or replace function public.admin_set_mute(target uuid, minutes numeric)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+  who public.profiles%rowtype;
+  until timestamptz;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 1 then
+    raise exception 'You do not have access to that.';
+  end if;
+
+  select * into who from public.profiles where id = target;
+  if who.id is null then raise exception 'No such user.'; end if;
+  if who.role = 'owner' then raise exception 'The owner cannot be muted.'; end if;
+  if who.id = me.id then raise exception 'You cannot mute yourself.'; end if;
+  if public.rank_of(me.role) <= public.rank_of(who.role) then
+    raise exception 'You can only manage accounts below your own rank.';
+  end if;
+
+  if minutes is null or minutes <= 0 then
+    until := null;
+  else
+    until := now() + (minutes || ' minutes')::interval;
+  end if;
+
+  update public.profiles set muted_until = until where id = target;
+
+  perform public.log_audit('mute-set',
+    who.username || ': ' || case when until is null then 'cleared' else 'until ' || until::text end);
+
+  return jsonb_build_object('id', who.id, 'username', who.username, 'mutedUntil', until);
+end;
+$$;
+
+-- Enforce the mute at the write layer so it can't be bypassed by any client
+-- that skips the UI check. Messages table already exists; add the guard.
+create or replace function public.guard_message_mute()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_muted(new.sender) then
+    raise exception 'You are muted and cannot send messages right now.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists messages_mute_guard on public.messages;
+create trigger messages_mute_guard
+  before insert on public.messages
+  for each row execute function public.guard_message_mute();
+
+grant execute on function public.admin_add_note(uuid, text) to authenticated;
+grant execute on function public.admin_list_notes(uuid) to authenticated;
+grant execute on function public.admin_delete_note(bigint) to authenticated;
+grant execute on function public.admin_set_announcement(text, text, numeric) to authenticated;
+grant execute on function public.admin_clear_announcement() to authenticated;
+grant execute on function public.current_announcement() to authenticated;
+grant execute on function public.admin_set_mute(uuid, numeric) to authenticated;
+
+-- #####################################################################
+-- ## admin-password-reset.sql  -  Admin user list with email + staff password reset
+-- #####################################################################
+
+-- =====================================================================
+-- Admin user list: add email + a real "reset their password" action.
+--
+-- Real passwords can never be shown to staff, on this or any platform —
+-- Supabase Auth stores only a one-way bcrypt hash (encrypted_password in
+-- auth.users), and that is not reversible by design, not a limitation of
+-- this admin panel. The actual thing account-recovery support needs is
+-- the ability to SET a new password on someone's account so they can log
+-- in again after losing access — this migration adds that, plus their
+-- email address so staff can identify/contact the right account.
+--
+-- Idempotent: re-running is safe (create or replace, drop-if-exists).
+-- =====================================================================
+
+-- ---- 1. admin_users: add real email to the list staff already sees ----
+create or replace function public.admin_users(q text default null)
+returns jsonb
+language plpgsql
+stable security definer
+set search_path = public, auth
+as $$
+begin
+  if not public.is_staff() then raise exception 'You do not have access to that.'; end if;
+
+  return coalesce((
+    select jsonb_agg(row_to_json(u)) from (
+      select p.id, p.username, p.display_name, p.bio, p.role, p.state,
+             p.accepts_dms, p.show_activity, p.created_at, p.last_seen,
+             p.current_game,
+             lower(coalesce(au.email, '')) as email,
+             (select count(*) from public.friendships f
+               where f.state = 'accepted'
+                 and (f.requester = p.id or f.addressee = p.id)) as friends,
+             (select count(*) from public.messages m
+               where m.sender = p.id and not m.deleted)          as messages,
+             (select count(*) from public.reports r
+               where r.kind = 'user' and lower(r.target) = lower(p.username::text)) as reports,
+             (select max(l.at) from public.logins l where l.user_id = p.id) as last_login
+        from public.profiles p
+        left join auth.users au on au.id = p.id
+       where q is null or q = ''
+          or p.username ilike '%' || q || '%'
+          or p.display_name ilike '%' || q || '%'
+          or au.email ilike '%' || q || '%'
+       order by p.created_at desc limit 200
+    ) u
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- ---- 2. admin_set_password: staff sets a NEW password on an account ----
+-- Same guard ladder as admin_set_user (see that function's comments):
+-- the owner can never be targeted, nobody can act on themselves through
+-- this path, and you may only act on an account that outranks below you.
+-- Requires admin rank or higher — mods cannot reset passwords, matching
+-- the existing "only administrators suspend accounts" line for state
+-- changes. Every use is written to the audit log with the actor and
+-- target, but never the password itself.
+create or replace function public.admin_set_password(target uuid, new_password text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  me public.profiles%rowtype;
+  who public.profiles%rowtype;
+  target_email text;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 2 then
+    raise exception 'Only administrators reset passwords.';
+  end if;
+
+  select * into who from public.profiles where id = target;
+  if who.id is null then raise exception 'No such user.'; end if;
+
+  if who.role = 'owner' then
+    raise exception 'The owner cannot be changed by anyone.';
+  end if;
+  if who.id = me.id then
+    raise exception 'You cannot reset your own password here — use Settings.';
+  end if;
+  if public.rank_of(me.role) <= public.rank_of(who.role) then
+    raise exception 'You can only manage accounts below your own rank.';
+  end if;
+
+  if new_password is null or length(new_password) < 8 then
+    raise exception 'Password must be at least 8 characters.';
+  end if;
+
+  update auth.users
+     set encrypted_password = extensions.crypt(new_password, extensions.gen_salt('bf')),
+         updated_at = now()
+   where id = target
+  returning email into target_email;
+
+  -- Kill any sessions/refresh tokens the old password issued, so a
+  -- lost/compromised account is actually locked out immediately rather
+  -- than staying logged in somewhere on the old credentials.
+  delete from auth.refresh_tokens where user_id = target::text;
+  delete from auth.sessions where user_id = target;
+
+  perform public.log_audit('password-reset', who.username || ' (' || coalesce(target_email, '') || ')');
+
+  return jsonb_build_object('id', who.id, 'username', who.username, 'email', target_email);
+end;
+$$;
+
+revoke all on function public.admin_set_password(uuid, text) from public;
+grant execute on function public.admin_set_password(uuid, text) to authenticated;
+
+notify pgrst, 'reload schema';
+
+select 'admin_users now includes email; admin_set_password is live' as result;
+
+-- #####################################################################
+-- ## ban-system.sql  -  Real bans (blocks sign-in)
+-- #####################################################################
+
+-- Real bans (harder than "suspended").
+--
+-- suspended  = can still sign in and play; social features (friends, chat,
+--              calls) are refused. Reversible slap on the wrist.
+-- banned     = cannot sign in AT ALL. The login lookup refuses them, so they
+--              never get a session. Staff-set, with a reason, logged.
+--
+-- We keep this on the main profiles table (not the legacy user_profiles one)
+-- so it lives with the account the rest of the app actually uses.
+
+alter table public.profiles
+  add column if not exists banned      boolean not null default false,
+  add column if not exists ban_reason  text,
+  add column if not exists banned_at   timestamptz,
+  add column if not exists banned_by   uuid;
+
+-- Block sign-in for banned accounts. email_for_login is the first thing the
+-- client calls when logging in (username OR email -> the real email for the
+-- password grant). If the resolved account is banned, hand back a sentinel
+-- that can't match any real credentials, so the grant fails exactly like a
+-- wrong password — and surface a clear message via a dedicated check too.
+create or replace function public.email_for_login(identifier text)
+returns text
+language plpgsql
+stable security definer
+set search_path to 'public', 'auth'
+as $$
+declare
+  found text;
+  is_banned boolean := false;
+begin
+  if identifier is null or length(trim(identifier)) = 0 then
+    return null;
+  end if;
+
+  if identifier like '%@%' then
+    select p.banned into is_banned
+    from public.profiles p
+    join auth.users u on u.id = p.id
+    where lower(u.email) = lower(trim(identifier))
+    limit 1;
+    if coalesce(is_banned, false) then return '__banned__'; end if;
+    return lower(trim(identifier));
+  end if;
+
+  select u.email, p.banned into found, is_banned
+  from public.profiles p
+  join auth.users u on u.id = p.id
+  where p.username = trim(identifier)::citext
+  limit 1;
+
+  if coalesce(is_banned, false) then return '__banned__'; end if;
+  return coalesce(found, trim(identifier));
+end;
+$$;
+
+grant execute on function public.email_for_login(text) to anon, authenticated;
+
+-- Lets the login page tell "banned" apart from "wrong password" so it can show
+-- the ban reason instead of a generic error. Safe to expose: it only reveals
+-- ban status for a correct identifier, and a banned user already knows.
+create or replace function public.login_ban_reason(identifier text)
+returns text
+language plpgsql
+stable security definer
+set search_path to 'public', 'auth'
+as $$
+declare
+  r text;
+  b boolean;
+begin
+  if identifier is null or length(trim(identifier)) = 0 then return null; end if;
+  if identifier like '%@%' then
+    select p.banned, p.ban_reason into b, r
+    from public.profiles p join auth.users u on u.id = p.id
+    where lower(u.email) = lower(trim(identifier)) limit 1;
+  else
+    select p.banned, p.ban_reason into b, r
+    from public.profiles p
+    where p.username = trim(identifier)::citext limit 1;
+  end if;
+  if coalesce(b, false) then
+    return coalesce(nullif(trim(r), ''), 'This account has been banned.');
+  end if;
+  return null;
+end;
+$$;
+
+grant execute on function public.login_ban_reason(text) to anon, authenticated;
+
+-- Staff ban / unban. Same rank rules as admin_set_user: you can only act on
+-- someone below your rank, never the owner, never yourself. Banning also
+-- suspends (so any live session loses social features immediately) and records
+-- who/why/when. Uses the audit log.
+create or replace function public.admin_set_banned(target uuid, ban boolean, reason text default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  me public.profiles%rowtype;
+  who public.profiles%rowtype;
+begin
+  select * into me from public.profiles where id = auth.uid();
+  if me.id is null or public.rank_of(me.role) < 1 then
+    raise exception 'You do not have access to that.';
+  end if;
+  select * into who from public.profiles where id = target;
+  if who.id is null then raise exception 'No such user.'; end if;
+  if who.role = 'owner' then raise exception 'The owner cannot be banned.'; end if;
+  if who.id = me.id then raise exception 'You cannot ban your own account.'; end if;
+  if public.rank_of(me.role) <= public.rank_of(who.role) then
+    raise exception 'You can only manage accounts below your own rank.';
+  end if;
+
+  if ban then
+    update public.profiles
+       set banned = true,
+           ban_reason = nullif(trim(coalesce(reason, '')), ''),
+           banned_at = now(),
+           banned_by = me.id,
+           state = 'suspended'
+     where id = target;
+    -- Block sign-in at the Auth layer too, so a banned user can't get a token
+    -- even by typing their email directly (which bypasses email_for_login).
+    -- GoTrue enforces banned_until on the password grant itself. A far-future
+    -- finite timestamp is used rather than 'infinity', which GoTrue mishandles.
+    update auth.users
+       set banned_until = (now() + interval '100 years')
+     where id = target;
+    perform public.log_audit('user-ban',
+      who.username || coalesce(': ' || nullif(trim(coalesce(reason,'')),''), ''));
+  else
+    update public.profiles
+       set banned = false, ban_reason = null, banned_at = null, banned_by = null,
+           state = 'active'
+     where id = target;
+    update auth.users set banned_until = null where id = target;
+    perform public.log_audit('user-unban', who.username::text);
+  end if;
+
+  select * into who from public.profiles where id = target;
+  return jsonb_build_object(
+    'id', who.id, 'username', who.username, 'banned', who.banned,
+    'banReason', who.ban_reason, 'state', who.state
+  );
+end;
+$$;
+
+grant execute on function public.admin_set_banned(uuid, boolean, text) to authenticated;
+
+-- #####################################################################
+-- ## consent-tracking.sql  -  Terms/privacy acceptance record
+-- #####################################################################
+
+-- Consent tracking: record which policy version each account accepted, when.
+-- Local acceptance (localStorage) is the enforcement mechanism for the gate;
+-- this is the durable, per-account record that backs it up and lets staff
+-- confirm an account agreed to the current terms.
+
+alter table public.profiles
+  add column if not exists terms_version     text,
+  add column if not exists terms_accepted_at timestamptz;
+
+-- Called by the consent gate after the user ticks the box (best-effort).
+create or replace function public.accept_policy(version text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.profiles
+     set terms_version = version,
+         terms_accepted_at = now()
+   where id = auth.uid();
+$$;
+
+grant execute on function public.accept_policy(text) to authenticated;
+
+-- #####################################################################
+-- ## email-verification.sql  -  6-digit email verification
+-- #####################################################################
+
+-- Custom email verification with a 6-digit code (no reliance on Supabase's
+-- rate-limited built-in mailer). Flow:
+--   1. signup succeeds and auto-signs-in (unchanged), but the account starts
+--      email_verified = false.
+--   2. the client calls request_email_code(); we store a hashed code + expiry
+--      and an Edge Function emails it via Resend.
+--   3. the client calls verify_email_code(code); on match we set
+--      email_verified = true.
+--   4. social features (chat, friends, calls) require email_verified — you can
+--      browse and play unverified, but not talk. (Enforced separately.)
+
+alter table public.profiles
+  add column if not exists email_verified boolean not null default false;
+
+create table if not exists public.email_verifications (
+  user_id     uuid primary key references public.profiles(id) on delete cascade,
+  code_hash   text not null,
+  expires_at  timestamptz not null,
+  attempts    int not null default 0,
+  last_sent   timestamptz not null default now()
+);
+
+alter table public.email_verifications enable row level security;
+-- No direct client access; everything goes through security-definer RPCs.
+-- (No policies = deny all for anon/authenticated, which is what we want.)
+
+-- Mint a fresh code for the signed-in user. Rate-limited to one per 30s.
+-- Returns the plaintext code ONLY to the caller (the Edge Function invokes
+-- this with the user's JWT, mails it, and never stores the plaintext).
+-- Replaced below by the version that emails the code; drop first so a
+-- re-run doesn't fail on the changed return type.
+drop function if exists public.request_email_code();
+create or replace function public.request_email_code()
+returns text
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  uid uuid := auth.uid();
+  code text;
+  existing timestamptz;
+begin
+  if uid is null then raise exception 'Sign in required.'; end if;
+
+  if (select email_verified from public.profiles where id = uid) then
+    raise exception 'Your email is already verified.';
+  end if;
+
+  select last_sent into existing from public.email_verifications where user_id = uid;
+  if existing is not null and existing > now() - interval '30 seconds' then
+    raise exception 'Please wait a moment before requesting another code.';
+  end if;
+
+  -- 6 digits, zero-padded.
+  code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+
+  insert into public.email_verifications (user_id, code_hash, expires_at, attempts, last_sent)
+  values (uid, extensions.crypt(code, extensions.gen_salt('bf')),
+          now() + interval '15 minutes', 0, now())
+  on conflict (user_id) do update
+    set code_hash = excluded.code_hash,
+        expires_at = excluded.expires_at,
+        attempts = 0,
+        last_sent = now();
+
+  return code;
+end;
+$$;
+
+grant execute on function public.request_email_code() to authenticated;
+
+-- Check a code. Max 6 attempts per issued code, 15-minute expiry.
+create or replace function public.verify_email_code(code text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  uid uuid := auth.uid();
+  rec public.email_verifications%rowtype;
+begin
+  if uid is null then raise exception 'Sign in required.'; end if;
+
+  if (select email_verified from public.profiles where id = uid) then
+    return true;
+  end if;
+
+  select * into rec from public.email_verifications where user_id = uid;
+  if rec.user_id is null then raise exception 'Request a code first.'; end if;
+  if now() > rec.expires_at then raise exception 'That code has expired. Request a new one.'; end if;
+  if rec.attempts >= 6 then raise exception 'Too many attempts. Request a new code.'; end if;
+
+  update public.email_verifications set attempts = attempts + 1 where user_id = uid;
+
+  if extensions.crypt(trim(coalesce(code, '')), rec.code_hash) = rec.code_hash then
+    update public.profiles set email_verified = true where id = uid;
+    delete from public.email_verifications where user_id = uid;
+    return true;
+  end if;
+
+  raise exception 'That code is not right.';
+end;
+$$;
+
+grant execute on function public.verify_email_code(text) to authenticated;
+
+-- Convenience: is the current user verified?
+create or replace function public.my_email_verified()
+returns boolean
+language sql stable security definer set search_path = public
+as $$ select coalesce((select email_verified from public.profiles where id = auth.uid()), false); $$;
+
+grant execute on function public.my_email_verified() to authenticated;
+
+-- #####################################################################
+-- ## email-verification-send.sql  -  Send the verification code via Resend (pg_net)
+-- #####################################################################
+
+-- Send the verification code by email straight from Postgres via pg_net,
+-- calling Resend's HTTP API. No Edge Function, no CLI, no extra token — and
+-- the Resend key stays server-side inside this SECURITY DEFINER function,
+-- never reaching the browser.
+
+create extension if not exists pg_net with schema extensions;
+
+-- Store config out of the function body so rotating the key or sender is a
+-- one-line update, and the key isn't baked into every function's source.
+create table if not exists public.app_secrets (
+  key   text primary key,
+  value text not null
+);
+alter table public.app_secrets enable row level security;
+-- no policies => no client access at all; only SECURITY DEFINER functions read it.
+revoke all on public.app_secrets from anon, authenticated;
+
+-- The real key is set directly in the database, NOT stored in git (GitHub
+-- secret scanning blocks it, rightly). This file uses a placeholder; run the
+-- one-liner below manually with the real key, or it's already live in the DB.
+insert into public.app_secrets (key, value) values
+  ('resend_api_key', 'REPLACE_WITH_RESEND_KEY'),
+  ('resend_from',    'Arcade Campus Hub <onboarding@resend.dev>')
+on conflict (key) do nothing;  -- never overwrite a real key on re-run
+
+-- Rewrite request_email_code to also send the email. Still returns nothing
+-- sensitive to the client (just ok/true); the code only travels by email.
+drop function if exists public.request_email_code();
+create or replace function public.request_email_code()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  uid uuid := auth.uid();
+  code text;
+  existing timestamptz;
+  target_email text;
+  api_key text;
+  from_addr text;
+  body_html text;
+begin
+  if uid is null then raise exception 'Sign in required.'; end if;
+
+  if (select email_verified from public.profiles where id = uid) then
+    raise exception 'Your email is already verified.';
+  end if;
+
+  select last_sent into existing from public.email_verifications where user_id = uid;
+  if existing is not null and existing > now() - interval '30 seconds' then
+    raise exception 'Please wait a moment before requesting another code.';
+  end if;
+
+  select lower(email) into target_email from auth.users where id = uid;
+  if target_email is null then raise exception 'No email on file.'; end if;
+
+  code := lpad((floor(random() * 1000000))::int::text, 6, '0');
+
+  insert into public.email_verifications (user_id, code_hash, expires_at, attempts, last_sent)
+  values (uid, extensions.crypt(code, extensions.gen_salt('bf')),
+          now() + interval '15 minutes', 0, now())
+  on conflict (user_id) do update
+    set code_hash = excluded.code_hash,
+        expires_at = excluded.expires_at,
+        attempts = 0,
+        last_sent = now();
+
+  select value into api_key   from public.app_secrets where key = 'resend_api_key';
+  select value into from_addr from public.app_secrets where key = 'resend_from';
+
+  if api_key is null or api_key = '' or api_key like 'REPLACE%' then
+    raise exception 'Email sending is not set up yet. Ask an admin to add the Resend key.';
+  end if;
+
+  body_html :=
+    '<div style="font-family:system-ui,Segoe UI,Arial,sans-serif;max-width:420px;margin:auto">' ||
+    '<h2 style="margin:0 0 8px">Your Arcade Campus Hub code</h2>' ||
+    '<p style="color:#555;margin:0 0 16px">Enter this code to verify your email:</p>' ||
+    '<div style="font-size:34px;font-weight:800;letter-spacing:8px;background:#f2f3f5;' ||
+    'border-radius:10px;padding:16px;text-align:center">' || code || '</div>' ||
+    '<p style="color:#888;font-size:13px;margin:16px 0 0">This code expires in 15 minutes. ' ||
+    'If you didn''t sign up, you can ignore this email.</p></div>';
+
+  perform net.http_post(
+    url     := 'https://api.resend.com/emails',
+    headers := jsonb_build_object(
+                 'Authorization', 'Bearer ' || api_key,
+                 'Content-Type', 'application/json'),
+    body    := jsonb_build_object(
+                 'from', from_addr,
+                 'to', target_email,
+                 'subject', 'Your verification code: ' || code,
+                 'html', body_html)
+  );
+
+  return jsonb_build_object('ok', true, 'sentTo', target_email);
+end;
+$$;
+
+grant execute on function public.request_email_code() to authenticated;
+
+-- #####################################################################
+-- ## require-verified.sql  -  Verified email required for chat/friends/calls
+-- #####################################################################
+
+-- Require a verified email before "talking" (DMs, friend requests, calls).
+-- Browsing and playing games never require verification.
+--
+-- Grandfather everyone who already exists as verified, so turning this on
+-- doesn't lock out current accounts — only new signups from here on must verify.
+
+-- One-time grandfathering, pinned to accounts that existed when this shipped,
+-- so re-running the setup never auto-verifies newer unverified signups.
+update public.profiles set email_verified = true
+ where email_verified = false and created_at < '2026-09-12';
+
+create or replace function public.require_verified()
+returns void
+language plpgsql
+stable security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in to do that.'; end if;
+  if not coalesce((select email_verified from public.profiles where id = auth.uid()), false) then
+    raise exception 'Verify your email first (Settings -> Verify email) to use chat, friends and calls.';
+  end if;
+end;
+$$;
+
+grant execute on function public.require_verified() to authenticated;
+
+-- #####################################################################
+-- ## auto-confirm-signup.sql  -  Auto-confirm Supabase Auth signups
+-- #####################################################################
+
+-- Fix: signup was unusable because email confirmation was required but email
+-- delivery is unreliable ("email rate limit exceeded"), so brand-new accounts
+-- got "Email not confirmed" on their first login and users resorted to a
+-- password reset every time. Auto-confirm accounts at creation so the password
+-- they chose works immediately. Email is still collected (for password reset).
+--
+-- Implemented as a BEFORE INSERT trigger on auth.users so it applies to every
+-- new signup regardless of the GoTrue mailer_autoconfirm dashboard setting.
+
+create or replace function public.auto_confirm_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = auth, public
+as $$
+begin
+  if new.email_confirmed_at is null then
+    new.email_confirmed_at := now();
+  end if;
+  -- Some GoTrue versions also gate on confirmed_at (a generated/legacy column);
+  -- only touch it if it exists and is writable. email_confirmed_at is the one
+  -- that matters for the password grant.
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_autoconfirm on auth.users;
+create trigger on_auth_user_autoconfirm
+  before insert on auth.users
+  for each row execute function public.auto_confirm_user();
+
+-- Confirm everyone currently stuck unconfirmed so they can sign in now.
+update auth.users
+   set email_confirmed_at = coalesce(email_confirmed_at, now())
+ where email_confirmed_at is null;
+
+-- #####################################################################
+-- ## my-logins.sql  -  Your own recent sign-ins
+-- #####################################################################
+
+-- User-facing security: let people see their OWN recent sign-in activity so
+-- they can spot an account compromise (a login they don't recognise). Staff
+-- already have admin_logins; this is the self-serve version, scoped hard to
+-- auth.uid() so it can only ever return your own rows.
+
+create or replace function public.my_logins()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'at', at, 'agent', agent, 'outcome', outcome
+         ) order by at desc), '[]'::jsonb)
+  from (
+    select at, agent, outcome
+    from public.logins
+    where user_id = auth.uid()
+    order by id desc
+    limit 20
+  ) recent;
+$$;
+
+grant execute on function public.my_logins() to authenticated;
+
+-- #####################################################################
+-- ## campus-plus-playlists.sql  -  Campus+ playlists
+-- #####################################################################
+
+-- Campus+ : a real YouTube-link-embed player with personal/shared playlists.
+-- Free feature, "+" is just branding (a nicer tier of the arcade, not a paywall).
+--
+-- Design:
+--   playlists       — one row per playlist, owned by a user, public or private
+--   playlist_items  — video entries in a playlist, ordered by `position`
+--
+-- A public playlist is readable by anyone signed in; only the owner can edit it.
+-- Staff can moderate (delete) any playlist/item via the existing is_staff() check,
+-- same pattern as every other moderation surface on this site.
+
+create table if not exists public.playlists (
+  id          bigint generated always as identity primary key,
+  owner_id    uuid not null references public.profiles(id) on delete cascade,
+  title       text not null check (char_length(title) between 1 and 80),
+  description text not null default '' check (char_length(description) <= 300),
+  is_public   boolean not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists playlists_owner_idx on public.playlists(owner_id, created_at desc);
+create index if not exists playlists_public_idx on public.playlists(is_public, updated_at desc) where is_public;
+
+create table if not exists public.playlist_items (
+  id          bigint generated always as identity primary key,
+  playlist_id bigint not null references public.playlists(id) on delete cascade,
+  video_id    text not null check (video_id ~ '^[A-Za-z0-9_-]{11}$'),  -- YouTube's fixed-length id
+  title       text not null default '' check (char_length(title) <= 200),
+  added_by    uuid references public.profiles(id) on delete set null,
+  position    integer not null default 0,
+  added_at    timestamptz not null default now()
+);
+create index if not exists playlist_items_playlist_idx on public.playlist_items(playlist_id, position);
+create unique index if not exists playlist_items_no_dupe on public.playlist_items(playlist_id, video_id);
+
+alter table public.playlists enable row level security;
+alter table public.playlist_items enable row level security;
+
+drop policy if exists playlists_read on public.playlists;
+create policy playlists_read on public.playlists
+  for select to authenticated
+  using (owner_id = auth.uid() or is_public or public.is_staff());
+
+drop policy if exists playlists_write_own on public.playlists;
+create policy playlists_write_own on public.playlists
+  for all to authenticated
+  using (owner_id = auth.uid() or public.is_staff())
+  with check (owner_id = auth.uid());
+
+drop policy if exists playlist_items_read on public.playlist_items;
+create policy playlist_items_read on public.playlist_items
+  for select to authenticated
+  using (exists (
+    select 1 from public.playlists p
+    where p.id = playlist_items.playlist_id
+      and (p.owner_id = auth.uid() or p.is_public or public.is_staff())
+  ));
+
+drop policy if exists playlist_items_write on public.playlist_items;
+create policy playlist_items_write on public.playlist_items
+  for all to authenticated
+  using (exists (
+    select 1 from public.playlists p
+    where p.id = playlist_items.playlist_id and (p.owner_id = auth.uid() or public.is_staff())
+  ))
+  with check (exists (
+    select 1 from public.playlists p
+    where p.id = playlist_items.playlist_id and p.owner_id = auth.uid()
+  ));
+
+-- ---------------------------------------------------------------- RPCs
+
+create or replace function public.create_playlist(p_title text, p_description text default '', p_is_public boolean default false)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_out public.playlists%rowtype;
+begin
+  if auth.uid() is null then raise exception 'Sign in required.'; end if;
+  p_title := trim(coalesce(p_title, ''));
+  if p_title = '' then raise exception 'Give the playlist a title.'; end if;
+
+  insert into public.playlists (owner_id, title, description, is_public)
+  values (auth.uid(), p_title, coalesce(trim(p_description), ''), coalesce(p_is_public, false))
+  returning * into row_out;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'title', row_out.title, 'description', row_out.description,
+    'isPublic', row_out.is_public, 'createdAt', row_out.created_at
+  );
+end;
+$$;
+
+create or replace function public.update_playlist(p_id bigint, p_title text default null, p_description text default null, p_is_public boolean default null)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+begin
+  select owner_id into owner from public.playlists where id = p_id;
+  if owner is null then raise exception 'No such playlist.'; end if;
+  if owner <> auth.uid() and not public.is_staff() then raise exception 'Not your playlist.'; end if;
+
+  update public.playlists set
+    title = coalesce(nullif(trim(p_title), ''), title),
+    description = coalesce(trim(p_description), description),
+    is_public = coalesce(p_is_public, is_public),
+    updated_at = now()
+  where id = p_id;
+
+  return true;
+end;
+$$;
+
+create or replace function public.delete_playlist(p_id bigint)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+begin
+  select owner_id into owner from public.playlists where id = p_id;
+  if owner is null then raise exception 'No such playlist.'; end if;
+  if owner <> auth.uid() and not public.is_staff() then raise exception 'Not your playlist.'; end if;
+
+  delete from public.playlists where id = p_id;
+  return true;
+end;
+$$;
+
+-- Adds a video by YouTube ID (the client extracts the ID from whatever link
+-- shape was pasted — youtu.be/, watch?v=, embed/, shorts/ — before calling this).
+create or replace function public.add_playlist_item(p_playlist_id bigint, p_video_id text, p_title text default '')
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+  next_pos integer;
+  row_out public.playlist_items%rowtype;
+begin
+  select owner_id into owner from public.playlists where id = p_playlist_id;
+  if owner is null then raise exception 'No such playlist.'; end if;
+  if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
+
+  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
+    raise exception 'That does not look like a valid YouTube link.';
+  end if;
+
+  select coalesce(max(position), -1) + 1 into next_pos
+    from public.playlist_items where playlist_id = p_playlist_id;
+
+  insert into public.playlist_items (playlist_id, video_id, title, added_by, position)
+  values (p_playlist_id, p_video_id, coalesce(trim(p_title), ''), auth.uid(), next_pos)
+  on conflict (playlist_id, video_id) do nothing
+  returning * into row_out;
+
+  if row_out.id is null then
+    raise exception 'That video is already in the playlist.';
+  end if;
+
+  update public.playlists set updated_at = now() where id = p_playlist_id;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'videoId', row_out.video_id, 'title', row_out.title,
+    'position', row_out.position, 'addedAt', row_out.added_at
+  );
+end;
+$$;
+
+create or replace function public.remove_playlist_item(p_item_id bigint)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+begin
+  select p.owner_id into owner
+    from public.playlist_items i join public.playlists p on p.id = i.playlist_id
+    where i.id = p_item_id;
+  if owner is null then raise exception 'No such item.'; end if;
+  if owner <> auth.uid() and not public.is_staff() then raise exception 'Not your playlist.'; end if;
+
+  delete from public.playlist_items where id = p_item_id;
+  return true;
+end;
+$$;
+
+create or replace function public.reorder_playlist_item(p_item_id bigint, p_position integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+begin
+  select p.owner_id into owner
+    from public.playlist_items i join public.playlists p on p.id = i.playlist_id
+    where i.id = p_item_id;
+  if owner is null then raise exception 'No such item.'; end if;
+  if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
+
+  update public.playlist_items set position = p_position where id = p_item_id;
+  return true;
+end;
+$$;
+
+create or replace function public.my_playlists()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'title', p.title, 'description', p.description,
+    'isPublic', p.is_public, 'createdAt', p.created_at, 'updatedAt', p.updated_at,
+    'itemCount', (select count(*) from public.playlist_items i where i.playlist_id = p.id)
+  ) order by p.updated_at desc), '[]'::jsonb)
+  from public.playlists p
+  where p.owner_id = auth.uid();
+$$;
+
+create or replace function public.public_playlists(q text default null)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'title', p.title, 'description', p.description,
+    'ownerId', p.owner_id, 'ownerUsername', pr.username,
+    'createdAt', p.created_at, 'updatedAt', p.updated_at,
+    'itemCount', (select count(*) from public.playlist_items i where i.playlist_id = p.id)
+  ) order by p.updated_at desc), '[]'::jsonb)
+  from public.playlists p
+  join public.profiles pr on pr.id = p.owner_id
+  where p.is_public
+    and (q is null or q = '' or p.title ilike '%' || q || '%')
+  limit 60;
+$$;
+
+create or replace function public.playlist_detail(p_id bigint)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  row_p public.playlists%rowtype;
+  owner_name text;
+begin
+  select * into row_p from public.playlists where id = p_id;
+  if row_p.id is null then raise exception 'No such playlist.'; end if;
+  if row_p.owner_id <> auth.uid() and not row_p.is_public and not public.is_staff() then
+    raise exception 'That playlist is private.';
+  end if;
+
+  select username into owner_name from public.profiles where id = row_p.owner_id;
+
+  return jsonb_build_object(
+    'id', row_p.id, 'title', row_p.title, 'description', row_p.description,
+    'isPublic', row_p.is_public, 'ownerId', row_p.owner_id, 'ownerUsername', owner_name,
+    'mine', row_p.owner_id = auth.uid(),
+    'createdAt', row_p.created_at, 'updatedAt', row_p.updated_at,
+    'items', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', i.id, 'videoId', i.video_id, 'title', i.title,
+        'position', i.position, 'addedAt', i.added_at
+      ) order by i.position)
+      from public.playlist_items i where i.playlist_id = row_p.id
+    ), '[]'::jsonb)
+  );
+end;
+$$;
+
+grant execute on function public.create_playlist(text, text, boolean) to authenticated;
+grant execute on function public.update_playlist(bigint, text, text, boolean) to authenticated;
+grant execute on function public.delete_playlist(bigint) to authenticated;
+grant execute on function public.add_playlist_item(bigint, text, text) to authenticated;
+grant execute on function public.remove_playlist_item(bigint) to authenticated;
+grant execute on function public.reorder_playlist_item(bigint, integer) to authenticated;
+grant execute on function public.my_playlists() to authenticated;
+grant execute on function public.public_playlists(text) to authenticated;
+grant execute on function public.playlist_detail(bigint) to authenticated;
+
+-- Staff moderation view: every publicly shared playlist, plus whatever staff
+-- themselves own (never another user's private one — that stays private
+-- even from staff, same principle as messages/DMs on this site).
+create or replace function public.admin_list_playlists(q text default null)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'title', p.title, 'description', p.description,
+    'isPublic', p.is_public, 'ownerId', p.owner_id, 'ownerUsername', pr.username,
+    'itemCount', (select count(*) from public.playlist_items i where i.playlist_id = p.id),
+    'createdAt', p.created_at, 'updatedAt', p.updated_at
+  ) order by p.updated_at desc), '[]'::jsonb)
+  from public.playlists p
+  join public.profiles pr on pr.id = p.owner_id
+  where public.is_staff()
+    and (p.is_public or p.owner_id = auth.uid())
+    and (q is null or q = '' or p.title ilike '%' || q || '%' or pr.username ilike '%' || q || '%')
+  limit 200;
+$$;
+
+grant execute on function public.admin_list_playlists(text) to authenticated;
+
+-- #####################################################################
+-- ## campus-plus-membership.sql  -  Campus+ membership tier
+-- #####################################################################
+
+-- Campus+ membership.
+--
+-- Campus+ itself (the video/playlist page) is free for everyone. "Campus+
+-- membership" is a perk tier on top of it that staff can grant to people —
+-- it lifts the free limits and shows a badge. This is the "paid or give it
+-- away with better things" tier, implemented as a grant, not a payment.
+--
+--   free member      : up to  5 playlists, 100 videos each
+--   Campus+ member   : up to 50 playlists, 500 videos each, + a badge
+--
+-- Staff (mod+) can grant or revoke it. The limits are enforced server-side in
+-- create_playlist / add_playlist_item so they cannot be bypassed from the
+-- client.
+
+alter table public.profiles
+  add column if not exists is_plus       boolean not null default false,
+  add column if not exists plus_since     timestamptz,
+  add column if not exists plus_grantedby uuid;
+
+-- Limits, chosen by membership.
+create or replace function public.plus_limits(uid uuid)
+returns table (max_playlists int, max_items int)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    case when p.is_plus then 50 else 5 end,
+    case when p.is_plus then 500 else 100 end
+  from public.profiles p where p.id = uid;
+$$;
+
+-- Staff grant / revoke.
+create or replace function public.admin_set_plus(target uuid, grant_it boolean)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_staff() then raise exception 'Staff only.'; end if;
+  update public.profiles
+     set is_plus = coalesce(grant_it, false),
+         plus_since = case when grant_it then now() else null end,
+         plus_grantedby = case when grant_it then auth.uid() else null end
+   where id = target;
+  return true;
+end;
+$$;
+
+grant execute on function public.admin_set_plus(uuid, boolean) to authenticated;
+
+-- Re-create create_playlist with the per-member playlist-count limit.
+create or replace function public.create_playlist(p_title text, p_description text default '', p_is_public boolean default false)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_out public.playlists%rowtype;
+  cur_count int;
+  lim int;
+begin
+  if auth.uid() is null then raise exception 'Sign in required.'; end if;
+  p_title := trim(coalesce(p_title, ''));
+  if p_title = '' then raise exception 'Give the playlist a title.'; end if;
+
+  select count(*) into cur_count from public.playlists where owner_id = auth.uid();
+  select max_playlists into lim from public.plus_limits(auth.uid());
+  if cur_count >= lim then
+    raise exception 'You''ve reached your playlist limit (%). Ask staff about Campus+ for more.', lim;
+  end if;
+
+  insert into public.playlists (owner_id, title, description, is_public)
+  values (auth.uid(), p_title, coalesce(trim(p_description), ''), coalesce(p_is_public, false))
+  returning * into row_out;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'title', row_out.title, 'description', row_out.description,
+    'isPublic', row_out.is_public, 'createdAt', row_out.created_at
+  );
+end;
+$$;
+
+grant execute on function public.create_playlist(text, text, boolean) to authenticated;
+grant execute on function public.plus_limits(uuid) to authenticated;
+
+-- Re-create add_playlist_item with the per-member item-count limit.
+create or replace function public.add_playlist_item(p_playlist_id bigint, p_video_id text, p_title text default '')
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+  next_pos integer;
+  cur_items int;
+  lim int;
+  row_out public.playlist_items%rowtype;
+begin
+  select owner_id into owner from public.playlists where id = p_playlist_id;
+  if owner is null then raise exception 'No such playlist.'; end if;
+  if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
+
+  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
+    raise exception 'That does not look like a valid YouTube link.';
+  end if;
+
+  select count(*) into cur_items from public.playlist_items where playlist_id = p_playlist_id;
+  -- Limit is scoped to the playlist OWNER's membership, not whoever is adding.
+  select max_items into lim from public.plus_limits(owner);
+  if cur_items >= lim then
+    raise exception 'This playlist is full (% videos). Campus+ raises the limit.', lim;
+  end if;
+
+  select coalesce(max(position), -1) + 1 into next_pos
+    from public.playlist_items where playlist_id = p_playlist_id;
+
+  insert into public.playlist_items (playlist_id, video_id, title, added_by, position)
+  values (p_playlist_id, p_video_id, coalesce(trim(p_title), ''), auth.uid(), next_pos)
+  on conflict (playlist_id, video_id) do nothing
+  returning * into row_out;
+
+  if row_out.id is null then
+    raise exception 'That video is already in the playlist.';
+  end if;
+
+  update public.playlists set updated_at = now() where id = p_playlist_id;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'videoId', row_out.video_id, 'title', row_out.title,
+    'position', row_out.position, 'addedAt', row_out.added_at
+  );
+end;
+$$;
+
+grant execute on function public.add_playlist_item(bigint, text, text) to authenticated;
+
+-- Re-create admin_users to include is_plus so the admin users tab and the
+-- per-user detail panel know whether to show "Grant" or "Revoke" Campus+.
+create or replace function public.admin_users(q text default null)
+returns jsonb
+language plpgsql
+stable security definer
+set search_path to 'public', 'auth'
+as $function$
+begin
+  if not public.is_staff() then raise exception 'You do not have access to that.'; end if;
+
+  return coalesce((
+    select jsonb_agg(row_to_json(u)) from (
+      select p.id, p.username, p.display_name, p.bio, p.role, p.state,
+             p.accepts_dms, p.show_activity, p.created_at, p.last_seen,
+             p.current_game, p.muted_until, p.is_plus,
+             lower(coalesce(au.email, '')) as email,
+             (select count(*) from public.friendships f
+               where f.state = 'accepted'
+                 and (f.requester = p.id or f.addressee = p.id)) as friends,
+             (select count(*) from public.messages m
+               where m.sender = p.id and not m.deleted)          as messages,
+             (select count(*) from public.reports r
+               where r.kind = 'user' and lower(r.target) = lower(p.username::text)) as reports,
+             (select max(l.at) from public.logins l where l.user_id = p.id) as last_login
+        from public.profiles p
+        left join auth.users au on au.id = p.id
+       where q is null or q = ''
+          or p.username ilike '%' || q || '%'
+          or p.display_name ilike '%' || q || '%'
+          or au.email ilike '%' || q || '%'
+       order by p.created_at desc limit 200
+    ) u
+  ), '[]'::jsonb);
+end;
+$function$;
+
+grant execute on function public.admin_users(text) to authenticated;
+
+-- #####################################################################
+-- ## campus-plus-members-only.sql  -  Campus+ creation is members-only
+-- #####################################################################
+
+-- Campus+ is now a members-only feature (staff-granted). Enforce it at the
+-- database so it can't be bypassed from the client: only members (is_plus) or
+-- staff can create playlists or add videos. Reading public playlists stays
+-- open (harmless), but creating requires membership.
+
+create or replace function public.is_plus_member(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select is_plus from public.profiles where id = uid), false)
+         or public.is_staff();
+$$;
+
+grant execute on function public.is_plus_member(uuid) to authenticated;
+
+-- create_playlist: require membership.
+create or replace function public.create_playlist(p_title text, p_description text default '', p_is_public boolean default false)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  row_out public.playlists%rowtype;
+  cur_count int;
+  lim int;
+begin
+  if auth.uid() is null then raise exception 'Sign in required.'; end if;
+  if not public.is_plus_member(auth.uid()) then
+    raise exception 'Campus+ is a members-only feature. Ask staff to enable it for your account.';
+  end if;
+  p_title := trim(coalesce(p_title, ''));
+  if p_title = '' then raise exception 'Give the playlist a title.'; end if;
+
+  select count(*) into cur_count from public.playlists where owner_id = auth.uid();
+  select max_playlists into lim from public.plus_limits(auth.uid());
+  if cur_count >= lim then
+    raise exception 'You''ve reached your playlist limit (%).', lim;
+  end if;
+
+  insert into public.playlists (owner_id, title, description, is_public)
+  values (auth.uid(), p_title, coalesce(trim(p_description), ''), coalesce(p_is_public, false))
+  returning * into row_out;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'title', row_out.title, 'description', row_out.description,
+    'isPublic', row_out.is_public, 'createdAt', row_out.created_at
+  );
+end;
+$$;
+
+grant execute on function public.create_playlist(text, text, boolean) to authenticated;
+
+-- add_playlist_item: require membership too (owner is the member by definition,
+-- but guard anyway in case a grant was revoked mid-session).
+create or replace function public.add_playlist_item(p_playlist_id bigint, p_video_id text, p_title text default '')
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  owner uuid;
+  next_pos integer;
+  cur_items int;
+  lim int;
+  row_out public.playlist_items%rowtype;
+begin
+  select owner_id into owner from public.playlists where id = p_playlist_id;
+  if owner is null then raise exception 'No such playlist.'; end if;
+  if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
+  if not public.is_plus_member(auth.uid()) then
+    raise exception 'Campus+ is a members-only feature. Ask staff to enable it for your account.';
+  end if;
+
+  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
+    raise exception 'That does not look like a valid YouTube link.';
+  end if;
+
+  select count(*) into cur_items from public.playlist_items where playlist_id = p_playlist_id;
+  select max_items into lim from public.plus_limits(owner);
+  if cur_items >= lim then
+    raise exception 'This playlist is full (% videos).', lim;
+  end if;
+
+  select coalesce(max(position), -1) + 1 into next_pos
+    from public.playlist_items where playlist_id = p_playlist_id;
+
+  insert into public.playlist_items (playlist_id, video_id, title, added_by, position)
+  values (p_playlist_id, p_video_id, coalesce(trim(p_title), ''), auth.uid(), next_pos)
+  on conflict (playlist_id, video_id) do nothing
+  returning * into row_out;
+
+  if row_out.id is null then
+    raise exception 'That video is already in the playlist.';
+  end if;
+
+  update public.playlists set updated_at = now() where id = p_playlist_id;
+
+  return jsonb_build_object(
+    'id', row_out.id, 'videoId', row_out.video_id, 'title', row_out.title,
+    'position', row_out.position, 'addedAt', row_out.added_at
+  );
+end;
+$$;
+
+grant execute on function public.add_playlist_item(bigint, text, text) to authenticated;
+
+-- #####################################################################
+-- ## finish-calls-avatars.sql  -  Avatars storage bucket + policies
+-- #####################################################################
+
+-- Finish shared avatars. (The call/block/thread-list functions this file
+-- used to also carry are now merged into schema.sql — re-running schema.sql
+-- keeps those current. This file's only remaining job is the avatars bucket,
+-- which is NOT yet in schema.sql and was verified 2026-09-24 as still missing
+-- in production: GET /storage/v1/bucket/avatars -> 404 Bucket not found.
+--
+-- Symptom while this is unapplied: avatar upload silently falls back to
+-- storing a small (~100KB) copy of the image as base64 in the user's own
+-- auth metadata (see uploadAvatarMeta() in js/core/api-supabase.js). That
+-- lets YOU see your own avatar everywhere, but it is never written to
+-- public.profiles.avatar_url, so FRIENDS calling thread_list()/pending_calls()/
+-- take_signals() see an empty avatarUrl for you — broken shared avatars in
+-- chat/call UI is the direct, live consequence of skipping this file.
+--
+-- Run once in the Supabase dashboard -> SQL Editor -> New query -> paste all
+-- of this -> Run. Idempotent; safe to run again.
+
+alter table public.profiles
+  add column if not exists avatar_url text;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars','avatars', true, 2097152,
+        array['image/jpeg','image/png','image/webp','image/gif'])
+on conflict (id) do update set public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "avatars public read" on storage.objects;
+create policy "avatars public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+drop policy if exists "avatars owner write" on storage.objects;
+create policy "avatars owner write" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "avatars owner update" on storage.objects;
+create policy "avatars owner update" on storage.objects
+  for update using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  ) with check (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "avatars owner delete" on storage.objects;
+create policy "avatars owner delete" on storage.objects
+  for delete using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- #####################################################################
+-- ## Final grants (cover tables created by the later sections too)
+-- #####################################################################
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on all tables in schema public to anon, authenticated;
+grant usage, select on all sequences in schema public to anon, authenticated;
+-- app_secrets must stay unreadable from the browser, even after the blanket grant above.
+revoke all on public.app_secrets from anon, authenticated;
+revoke all on public.email_verifications from anon, authenticated;
+
+commit;
+
+-- Tell the API layer to pick up the new functions immediately.
+notify pgrst, 'reload schema';
+
+-- =====================================================================
+-- VERIFY: run this on its own after the setup. Every row should say ok.
+-- =====================================================================
+-- select name, case when ok then 'ok' else 'MISSING' end as status from (values
+--   ('profiles table',      to_regclass('public.profiles') is not null),
+--   ('messages table',      to_regclass('public.messages') is not null),
+--   ('playlists table',     to_regclass('public.playlists') is not null),
+--   ('staff_notes table',   to_regclass('public.staff_notes') is not null),
+--   ('send_message()',      to_regprocedure('public.send_message(bigint,text,jsonb)') is not null),
+--   ('thread_list()',       exists(select 1 from pg_proc where proname = 'thread_list')),
+--   ('create_playlist()',   exists(select 1 from pg_proc where proname = 'create_playlist')),
+--   ('login_ban_reason()',  exists(select 1 from pg_proc where proname = 'login_ban_reason')),
+--   ('avatars bucket',      exists(select 1 from storage.buckets where id = 'avatars')),
+--   ('resend key set',      exists(select 1 from public.app_secrets where key = 'resend_api_key' and value not like 'REPLACE%'))
+-- ) t(name, ok);

@@ -813,14 +813,23 @@
   function buildAnnouncementBanner() {
     if (!window.API || !window.API.currentAnnouncement) return;
     window.API.currentAnnouncement().then(function (a) {
-      if (!a) return;
+      if (!a || !a.body || !String(a.body).trim()) return;
+      /* Dismissing hides that exact announcement for good, instead of it
+         reappearing on every page you open afterwards. */
+      var key = "ach:announce-dismissed";
+      var sig = String(a.id || "") + ":" + String(a.body).length + ":" + String(a.body).slice(0, 40);
+      try { if (window.localStorage.getItem(key) === sig) return; } catch (e) { /* private mode */ }
       var bar = el("div", "site-announce site-announce-" + (a.severity || "info"));
+      bar.setAttribute("role", "status");
       var text = el("span", null, a.body);
       bar.appendChild(text);
       var close = el("button", "site-announce-close", "×");
       close.type = "button";
       close.setAttribute("aria-label", "Dismiss");
-      close.addEventListener("click", function () { bar.remove(); });
+      close.addEventListener("click", function () {
+        bar.remove();
+        try { window.localStorage.setItem(key, sig); } catch (e) { /* private mode */ }
+      });
       bar.appendChild(close);
       document.body.insertBefore(bar, document.body.firstChild);
     }).catch(function () { /* not signed in, or nothing live — fine either way */ });

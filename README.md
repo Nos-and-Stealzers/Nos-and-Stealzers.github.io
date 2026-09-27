@@ -6,7 +6,7 @@ no webfonts. Two halves that work independently:
 - **The site** — static HTML/CSS/JS. Deploys anywhere, works offline, needs nothing.
 - **The hub** — accounts, friends, messages, notifications and save sync, from **either**
   a Node + SQLite server in [`server/`](server/README.md) **or** Supabase
-  ([`supabase/schema.sql`](supabase/schema.sql)). One line in `js/config.js` picks:
+  ([`supabase/SETUP-ALL-IN-ONE.sql`](supabase/SETUP-ALL-IN-ONE.sql)). One line in `js/config.js` picks:
 
   ```js
   backend: "supabase" | "node" | "auto" | "none"
@@ -179,7 +179,7 @@ js/api-supabase.js         same surface, against Supabase — no CDN dependency
 js/session.js              who's signed in, save sync, unread badges
 js/capture.js              screenshot / camera / file, downscaled in-browser
 js/chat-dock.js            the floating bottom-right chat
-supabase/schema.sql        Postgres schema, RLS policies and RPCs
+supabase/SETUP-ALL-IN-ONE.sql Postgres schema, RLS policies and RPCs
 js/social-ui.js            people rows, relation buttons, page gating
 js/shell.js                rail, topbar, tabbar, settings sheet, finder, shortcuts
 js/page-*.js               one file per page
@@ -278,7 +278,7 @@ real cookies, covering auth, authorisation, friends, DM privacy, blocking, save-
 semantics, moderation guard rails, CSRF, rate limits and account deletion.
 
 `supabase/test/run.sh` needs the Postgres client tools (`initdb`, `pg_ctl`, `psql`) on PATH.
-It builds its own throwaway cluster on port 55432, applies `schema.sql` to it three times and
+It builds its own throwaway cluster on port 55432, applies `SETUP-ALL-IN-ONE.sql` to it three times and
 checks the owner rank behaves — so it never touches a database you care about and needs no
 credentials. **Run it after any schema change**: the Supabase half of the hub has no other way
 to be tested, and the failure mode it exists to catch is a statement that reports success and

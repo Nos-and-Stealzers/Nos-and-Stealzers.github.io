@@ -1,4 +1,4 @@
--- Behaviour of the owner rank, run against the real schema.sql on a real
+-- Behaviour of the owner rank, run against the real SETUP-ALL-IN-ONE.sql on a real
 -- Postgres. Each block prints PASS or FAIL.
 
 \set ON_ERROR_STOP off

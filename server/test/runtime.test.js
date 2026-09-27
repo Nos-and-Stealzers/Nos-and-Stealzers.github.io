@@ -19,7 +19,7 @@ const app = require('../app');
     assert.equal(context.window.SITE.backend, 'node', 'Node-hosted frontend must use its actual working backend');
     assert.equal(context.window.SITE.apiBase, '', 'Node-hosted frontend uses same-origin cookies');
     assert.match(response.headers.get('cache-control'), /no-store/);
-    for (const resource of ['/server/app.js', '/server/package.json', '/server/test/runtime.test.js', '/supabase/schema.sql', '/selfhost/README.md', '/workbench-src/package.json', '/tools/test-security.js']) {
+    for (const resource of ['/server/app.js', '/server/package.json', '/server/test/runtime.test.js', '/supabase/SETUP-ALL-IN-ONE.sql', '/selfhost/README.md', '/workbench-src/package.json', '/tools/test-security.js']) {
       const r = await fetch(base + resource);
       assert.equal(r.status, 404, 'Private implementation must not be publicly served: ' + resource);
     }

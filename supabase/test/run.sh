@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs supabase/schema.sql against a real, throwaway Postgres and checks how
+# Runs supabase/SETUP-ALL-IN-ONE.sql against a real, throwaway Postgres and checks how
 # the owner rank actually behaves.
 #
 # This exists because a bug got through that no amount of reading could have
@@ -19,7 +19,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCHEMA="$HERE/../schema.sql"
+SCHEMA="$HERE/../SETUP-ALL-IN-ONE.sql"
 # initdb/pg_ctl/psql are native Windows binaries under MSYS/git-bash. They
 # don't understand bash-style paths (/c/Users/...) the way bash itself
 # does, so every path handed to one of them needs the native C:\... form.
@@ -28,7 +28,11 @@ SCHEMA="$HERE/../schema.sql"
 nativepath() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi
 }
-SCHEMA_NATIVE="$(nativepath "$SCHEMA")"
+# pg_net can't be installed on a plain Postgres; the stub provides
+# net.http_post, so run a copy with that one line commented out.
+SCHEMA_TEST="${TMPDIR:-/tmp}/arcade-setup-$$.sql"
+sed 's/^create extension if not exists pg_net/-- &/' "$SCHEMA" > "$SCHEMA_TEST"
+SCHEMA_NATIVE="$(nativepath "$SCHEMA_TEST")"
 HERE_NATIVE="$(nativepath "$HERE")"
 # initdb/pg_ctl/psql are native Windows binaries under MSYS/git-bash, so a
 # bash-only path like /tmp/... (valid to bash, meaningless to them) makes
@@ -49,7 +53,7 @@ command -v initdb >/dev/null || {
 
 cleanup() {
   pg_ctl -D "$PGDIR_NATIVE" stop -m immediate >/dev/null 2>&1
-  rm -rf "$PGDIR"
+  rm -rf "$PGDIR" "$SCHEMA_TEST"
 }
 trap cleanup EXIT
 

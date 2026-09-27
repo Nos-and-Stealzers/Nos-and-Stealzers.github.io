@@ -44,7 +44,7 @@
        "supabase" — hosted Postgres + Auth. Talks straight from the
                     browser, so the whole thing runs on Vercel with no
                     second server. Fill in `supabase` below and run
-                    supabase/schema.sql once in the SQL editor.
+                    supabase/SETUP-ALL-IN-ONE.sql once in the SQL editor.
 
        "node"     — the Express + SQLite server in server/. Needs a host
                     that runs a real process with a persistent disk.

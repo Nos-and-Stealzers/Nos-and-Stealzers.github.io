@@ -543,8 +543,12 @@
   function backupHost(hostOrOrigin) {
     var origin = originFor(hostOrOrigin);
     if (!origin) return Promise.reject(new Error("Unknown game host."));
+    /* Who the snapshot belongs to is decided before it's read: switching
+       accounts mid-read must not upload one person's saves into another's. */
+    var startUser = uid();
     return ask(origin, { action: "read" }).then(function (res) {
       if (res.partial) throw new Error("Save snapshot was incomplete; not uploading.");
+      if (uid() !== startUser) throw new Error("Account changed during backup; not uploading.");
       return syncUp(origin, res);
     });
   }

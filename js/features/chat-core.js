@@ -1085,6 +1085,9 @@
     };
   }
 
+  /* The dialogs are generic; other pages use them through this name. */
+  window.Dialogs = { ask: ask, confirm: confirmBox, sheet: sheet };
+
   window.ChatCore = {
     conversation: conversation,
     threadList: threadList,

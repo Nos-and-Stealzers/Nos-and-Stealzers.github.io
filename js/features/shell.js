@@ -138,9 +138,9 @@
     quick.hidden = true;
     foot.appendChild(quick);
 
-    var account = el("div");
-    account.id = "rail-account";
-    foot.appendChild(account);
+    var accountFoot = el("div");
+    accountFoot.id = "rail-account";
+    foot.appendChild(accountFoot);
 
     var meta = el("div", "meta");
     meta.appendChild(el("div", null, window.Catalog.all.length + " titles indexed"));
@@ -870,7 +870,7 @@
           links.appendChild(a);
         });
       f.appendChild(links);
-      f.appendChild(el("span", null, "stored locally · no accounts · no tracking"));
+      f.appendChild(el("span", null, "no ads · no tracking · saves sync when you sign in"));
       foot.replaceWith(f);
     }
 

@@ -75,7 +75,7 @@ test('bridge replies bind request id to exact source AND origin', async () => {
 });
 test('backupHost refuses partial snapshots and identity changes before upload', async () => {
  const h=harness('js/features/game-saves.js'); h.w.Session={user:{id:'alice'}};
- let uploads=0; h.w.API.putGameSave=()=>{uploads++;return Promise.resolve({});};
+ let uploads=0; h.w.API.putGameSave=()=>{uploads++;return Promise.resolve({});}; h.w.API.gameSaveStamp=()=>Promise.resolve(0);
  assert.equal(typeof h.w.GameSaves.backupHost,'function');
  const a=h.w.GameSaves.backupHost('one.example'); await tick();
  const reply=data=>h.w.dispatchEvent({type:'message',source:h.frames[0].contentWindow,origin:'https://one.example',data:{channel:'ach-save-bridge',id:h.frames[0].contentWindow.last.data.id,ok:true,keys:1,data:{save:'1'},...data}});

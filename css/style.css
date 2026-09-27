@@ -1881,111 +1881,6 @@ kbd {
 .chip-person button:hover { color: var(--bad); }
 
 /* --------------------------------------------------------------------------
-   25 · CALLING — floating, sits above the chat dock, survives a game
-   -------------------------------------------------------------------------- */
-
-.callroot {
-  position: fixed; right: 1rem; bottom: 1rem; z-index: 80;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
-}
-.callroot[hidden] { display: none; }
-@media (max-width: 900px) {
-  .callroot { bottom: 4.6rem; right: 0.75rem; left: 0.75rem; align-items: stretch; }
-}
-
-/* ---- incoming ---- */
-.ring {
-  width: min(300px, calc(100vw - 1.5rem));
-  background: var(--surface); border: 1px solid var(--accent);
-  border-radius: var(--r); padding: 0.8rem;
-  animation: ring-in 0.25s ease-out;
-}
-.ring[hidden] { display: none; }
-@keyframes ring-in { from { opacity: 0; transform: translateY(8px); } }
-.ring-who { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
-.ring-who .avatar { width: 2.4rem; height: 2.4rem; flex: none; animation: ring-pulse 1.4s ease-in-out infinite; }
-@keyframes ring-pulse { 50% { transform: scale(1.07); } }
-.ring-text { min-width: 0; }
-.ring-text strong { display: block; font-size: 0.92rem; }
-.ring-kind { font-size: 0.75rem; color: var(--ink-2); }
-.ring-acts { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-.ring-acts .btn { flex: 1; }
-
-/* ---- live call ---- */
-.callbar {
-  width: min(320px, calc(100vw - 1.5rem));
-  background: var(--surface); border: 1px solid var(--line-2);
-  border-radius: var(--r); overflow: hidden;
-  display: flex; flex-direction: column;
-}
-.callbar[hidden] { display: none; }
-.callroot.is-big .callbar {
-  position: fixed; inset: 3vh 3vw auto; width: auto;
-  height: 94vh; max-height: 94vh;
-}
-
-.callbar-head {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  background: var(--surface-2); border-bottom: 1px solid var(--line);
-  flex: none;
-}
-.callbar-status { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 650;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.callbar-timer { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-2); }
-.callbar-btn {
-  background: none; border: 0; cursor: pointer; color: var(--ink-2);
-  font: inherit; font-size: 1rem; line-height: 1; padding: 0.1rem 0.3rem;
-}
-.callbar-btn:hover { color: var(--accent); }
-
-.calltiles {
-  flex: 1; display: grid; gap: 2px; padding: 2px;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  background: var(--line); min-height: 96px;
-}
-.callbar.is-min .calltiles, .callbar.is-min .callbar-deck { display: none; }
-
-.calltile {
-  position: relative; aspect-ratio: 4 / 3;
-  background: var(--paper); overflow: hidden;
-  display: grid; place-items: center;
-}
-.calltile video { display: none; width: 100%; height: 100%; object-fit: cover; }
-.calltile.has-video video { display: block; }
-.calltile.has-video .calltile-face { display: none; }
-/* A shared screen is letterboxed, never cropped — cropping hides the thing
-   the other person is trying to point at. */
-.calltile.is-screen video { object-fit: contain; background: #000; }
-.calltile-face .avatar { width: 2.6rem; height: 2.6rem; }
-.calltile-name {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.7rem; color: #fff;
-  background: linear-gradient(transparent, rgba(0,0,0,0.72));
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.calltile[data-state="connecting"], .calltile[data-state="new"] { opacity: 0.55; }
-.calltile.is-failed::after {
-  content: "can't connect"; position: absolute; inset: auto 0 1.2rem;
-  text-align: center; font-size: 0.68rem; color: var(--bad);
-}
-
-.callbar-deck {
-  display: flex; gap: 0.3rem; padding: 0.5rem; flex: none;
-  border-top: 1px solid var(--line); background: var(--surface-2);
-}
-.callbtn {
-  flex: 1; padding: 0.4rem; cursor: pointer;
-  font: inherit; font-size: 0.95rem; line-height: 1.2;
-  background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line-2); border-radius: var(--r);
-}
-.callbtn:hover { border-color: var(--accent); }
-.callbtn.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.callbtn.is-end { background: var(--bad); border-color: var(--bad); color: #fff; flex: 0 0 3rem; }
-
-/* --------------------------------------------------------------------------
    26 · SUPPORT TICKETS
    -------------------------------------------------------------------------- */
 
@@ -2230,113 +2125,6 @@ kbd {
 }
 
 /* ==========================================================================
-   28 · CALLS + MESSAGING — 2026 REWORK
-   A cohesive visual + UX overhaul layered on top of the existing markup
-   hooks (.callroot/.callbar/.callbtn/.ring*/.dm-*/.bubble*). Everything below
-   only restyles; no class names were removed, so all JS keeps working.
-   ========================================================================== */
-
-/* ---- Live call panel ---- */
-.callbar {
-  width: min(300px, calc(100vw - 1.5rem));
-  border: 1px solid var(--line-2);
-  border-radius: 16px;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
-  backdrop-filter: blur(6px);
-  animation: callbar-in 0.22s cubic-bezier(.2,.8,.2,1);
-}
-@keyframes callbar-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
-
-.callbar-head {
-  padding: 0.55rem 0.7rem;
-  background: linear-gradient(135deg,
-    color-mix(in srgb, var(--accent) 22%, var(--surface-2)),
-    var(--surface-2));
-  border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; gap: 0.5rem;
-}
-.callbar-headtext { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.5rem; }
-.callbar-status { font-size: 0.82rem; font-weight: 700; letter-spacing: -0.01em;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.callbar-status::before {
-  content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 0.45rem;
-  border-radius: 50%; background: var(--good); vertical-align: middle;
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 70%, transparent);
-  animation: call-live 1.8s ease-out infinite;
-}
-@keyframes call-live { 70%,100% { box-shadow: 0 0 0 6px transparent; } }
-.callbar-timer { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-2); flex: none; }
-.callbar-btn { font-size: 1.05rem; border-radius: 8px; padding: 0.15rem 0.4rem;
-  transition: background .12s, color .12s; flex: none; }
-.callbar-btn:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.callbar-toggle-ico { transition: transform .18s ease; display: inline-flex; }
-.callbar.is-expanded .callbar-toggle-ico { transform: rotate(180deg); }
-
-/* COMPACT by default: the video tiles and secondary controls are hidden, so a
-   voice call is a slim two-button pill. Expanding reveals the rest. */
-.calltiles { gap: 4px; padding: 4px; border-radius: 0; background: transparent;
-  display: none; }
-.callbar.is-expanded .calltiles { display: grid; }
-/* Audio-only participants get an inviting tile (soft gradient + big avatar +
-   name), not a flat black rectangle. Video replaces it when a stream arrives. */
-.calltile { border-radius: 12px; aspect-ratio: 4/3;
-  background: radial-gradient(120% 120% at 50% 30%,
-    color-mix(in srgb, var(--accent) 16%, var(--surface-2)), var(--surface-2)); }
-.calltile-face { display: grid; place-items: center; gap: 0.35rem; }
-.calltile-face .avatar { width: 3.4rem; height: 3.4rem; border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.35); }
-.calltile:not(.has-video)::before {
-  /* a subtle "speaking" halo ring behind the avatar */
-  content: ""; position: absolute; width: 4.4rem; height: 4.4rem; border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  opacity: 0.6;
-}
-.calltile-name { font-size: 0.72rem; font-weight: 600; padding: 0.25rem 0.5rem;
-  background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
-
-.callbar-deck { gap: 0.4rem; padding: 0.55rem 0.6rem; }
-.callbtn {
-  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
-  padding: 0.5rem 0.3rem; border-radius: 12px;
-  border: 1px solid var(--line-2); background: var(--surface);
-  transition: transform .1s, background .12s, border-color .12s, color .12s;
-}
-/* Placed AFTER .callbtn so equal-specificity source order hides secondaries
-   until the panel is expanded (a plain voice call shows only Mute + End). */
-.callbar-deck .callbtn-secondary { display: none; }
-.callbar.is-expanded .callbar-deck .callbtn-secondary { display: flex; }
-.callbtn:hover { transform: translateY(-1px); border-color: var(--accent); }
-.callbtn:active { transform: translateY(0) scale(.96); }
-.callbtn-ico { font-size: 1.15rem; line-height: 1; }
-.callbtn-lbl { font-size: 0.62rem; font-weight: 600; color: var(--ink-2); letter-spacing: 0.01em; }
-.callbtn.is-on { background: var(--accent); border-color: var(--accent); }
-.callbtn.is-on .callbtn-lbl, .callbtn.is-on .callbtn-ico { color: var(--accent-ink); }
-.callbtn.is-end { flex: 0 0 3.4rem; background: var(--bad); border-color: var(--bad); }
-.callbtn.is-end .callbtn-ico { transform: rotate(135deg); }
-.callbtn.is-end .callbtn-ico, .callbtn.is-end .callbtn-lbl { color: #fff; }
-.callbtn.is-end:hover { filter: brightness(1.08); }
-
-/* ---- Incoming call card ---- */
-.ring {
-  width: min(320px, calc(100vw - 1.5rem));
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line-2));
-  border-radius: 16px; padding: 1rem;
-  box-shadow: 0 18px 48px rgba(0,0,0,0.5);
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--accent) 12%, var(--surface)), var(--surface));
-}
-.ring-who { gap: 0.75rem; margin-bottom: 0.9rem; }
-.ring-who .avatar { width: 3rem; height: 3rem; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
-.ring-text strong { font-size: 1rem; }
-.ring-kind { font-size: 0.78rem; }
-.ring-kind::before { content: "📞 "; }
-.ring-acts { gap: 0.5rem; }
-.ring-acts .btn { flex: 1; padding: 0.7rem 0.5rem; border-radius: 11px; font-weight: 700; }
-.ring-acts .btn-cta { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent); animation: ring-glow 1.6s ease-in-out infinite; }
-@keyframes ring-glow { 50% { box-shadow: 0 4px 22px color-mix(in srgb, var(--accent) 70%, transparent); } }
-.ring-acts .btn-flat { background: var(--bad); border-color: var(--bad); color: #fff; }
-
-/* ==========================================================================
    30 · SVG ICON SYSTEM — legible, human buttons
    Replaces cryptic Unicode glyphs with crisp inline SVGs. Icons inherit color
    and sit inline with their labels so every button reads at a glance.
@@ -2357,18 +2145,6 @@ kbd {
   color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 40%, transparent);
 }
 .btn-call:hover { background: var(--good); color: #fff; border-color: var(--good); }
-
-/* Call control deck: the SVG icon sits above the text label. */
-.callbtn-ico { font-size: 1.15rem; display: grid; place-items: center; }
-.callbtn-ico svg { width: 1.15rem; height: 1.15rem; }
-
-/* Incoming-call Answer/Decline: icon + word, colour-coded. */
-.ring-acts .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; }
-.ring-answer { background: var(--good); border-color: var(--good); color: #fff; }
-.ring-answer:hover { filter: brightness(1.08); }
-.ring-decline { background: var(--bad); border-color: var(--bad); color: #fff; }
-.ring-decline:hover { filter: brightness(1.08); }
-.ring-decline .svg-ico { transform: rotate(135deg); }
 
 /* ==========================================================================
    31 · CAMPUS AI (BETA)
@@ -2996,7 +2772,8 @@ kbd {
 .chat-convo.is-compact .chat-intro .chat-group-av.is-lg { width: 3.4rem; height: 3.4rem; }
 
 /* A live call panel shares the corner: move the dock left of it. */
-body:has(.callroot:not([hidden])) .cdock { right: 21rem; }
+body:has(.callroot:not([hidden])) .cdock { right: calc(min(340px, 100vw) + 2rem); }
+body:has(.callbar.is-expanded:not([hidden])) .cdock { right: calc(min(440px, 100vw) + 2rem); }
 
 @media (max-width: 900px) {
   .cdock { right: 0.8rem; bottom: calc(4.8rem + env(safe-area-inset-bottom)); }
@@ -3473,3 +3250,156 @@ html[data-skin="paper"] .utag.is-admin, html[data-skin="linen"] .utag.is-admin {
 .toggle input:checked + i::after { background: #fff; transform: translateX(1.2rem); }
 .toggle input:focus-visible + i { outline: 2px solid var(--accent); outline-offset: 2px; }
 .toggle input:disabled + i { opacity: 0.45; }
+
+/* ==========================================================================
+   45 · CALLS — floating call card, video stage, incoming-call card
+   ========================================================================== */
+.callroot {
+  position: fixed; right: 1.1rem; bottom: 1.1rem; z-index: 80;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 0.7rem;
+}
+.callroot[hidden] { display: none; }
+
+/* ---- incoming ---- */
+.ring {
+  width: min(320px, calc(100vw - 1.6rem));
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.35rem;
+  padding: 1.4rem 1.2rem 1.1rem; border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,0.7);
+  backdrop-filter: blur(14px);
+  animation: ring-in .28s cubic-bezier(.2,.9,.2,1.2);
+}
+@keyframes ring-in { from { opacity: 0; transform: translateY(16px) scale(.94); } }
+.ring-face { position: relative; margin-bottom: 0.4rem; }
+.ring-face .avatar, .ring-face > svg { width: 4.6rem; height: 4.6rem; border-radius: 50%; }
+.ring-face::before, .ring-face::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--good); animation: ring-pulse 1.8s ease-out infinite; pointer-events: none;
+}
+.ring-face::after { animation-delay: .9s; }
+@keyframes ring-pulse { from { transform: scale(1); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }
+.ring-text { display: flex; flex-direction: column; gap: 0.1rem; }
+.ring-text strong { font-size: 1.15rem; }
+.ring-kind { font-size: 0.82rem; color: var(--ink-3); }
+.ring-acts { display: flex; justify-content: center; gap: 1.4rem; margin-top: 0.9rem; }
+.ring-act { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; font-size: 0.72rem; color: var(--ink-2); font-weight: 600; }
+.ring-btn {
+  width: 3.4rem; height: 3.4rem; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; font-size: 1.35rem; color: #fff;
+  transition: transform .12s, filter .12s;
+}
+.ring-btn:hover { transform: scale(1.07); filter: brightness(1.08); }
+.ring-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 3px; }
+.ring-answer { background: #22c55e; animation: ring-bob 1.2s ease-in-out infinite; }
+.ring-decline { background: #ef4444; }
+.ring-decline .svg-ico { transform: rotate(135deg); }
+.ring-audio { background: var(--surface-3); color: var(--ink); }
+@keyframes ring-bob { 50% { transform: translateY(-3px); } }
+
+/* ---- live call card ---- */
+.callbar {
+  width: min(340px, calc(100vw - 1.6rem));
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 22px; color: #f4f6fb;
+  background: linear-gradient(160deg, #1b2230, #11151d);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 28px 70px -22px rgba(0,0,0,0.75);
+  animation: ring-in .22s ease-out;
+}
+.callbar[hidden] { display: none; }
+.callbar-head { display: flex; align-items: center; gap: 0.65rem; padding: 0.75rem 0.6rem 0.4rem 0.85rem; }
+.callbar-who { display: flex; flex: none; }
+.callbar-face { display: inline-flex; border-radius: 50%; box-shadow: 0 0 0 2px #151a24; }
+.callbar-face + .callbar-face { margin-left: -0.7rem; }
+.callbar-face .avatar, .callbar-face > svg { width: 2.4rem; height: 2.4rem; border-radius: 50%; border: 0; }
+.callbar-face .avatar .dot { display: none; }
+.callbar-face.is-empty { width: 2.4rem; height: 2.4rem; background: rgba(255,255,255,0.1); }
+.callbar-headtext { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.callbar-title { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.callbar-line { font-size: 0.75rem; color: #9aa6b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.callbar-btn {
+  width: 2.1rem; height: 2.1rem; flex: none; border: 0; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; background: transparent; color: #c5cedb; font-size: 1rem;
+}
+.callbar-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.callbar-big { display: none; }
+.callbar.is-expanded .callbar-big { display: grid; }
+
+.calltiles { display: none; gap: 6px; padding: 0 0.6rem; }
+.callbar.is-expanded .calltiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.calltile {
+  position: relative; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #2a3547, #161b25);
+  display: grid; place-items: center;
+}
+.calltile video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; background: #000; }
+.calltile.has-video video { display: block; }
+.calltile.is-screen video { object-fit: contain; }
+.calltile.has-video .calltile-face { display: none; }
+.calltile audio { display: none; }
+.calltile-face .avatar, .calltile-face > svg { width: 3.4rem; height: 3.4rem; border-radius: 50%; border: 0; }
+.calltile-face .avatar .dot { display: none; }
+.calltile-name {
+  position: absolute; left: 0.45rem; bottom: 0.45rem; max-width: calc(100% - 0.9rem);
+  padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700;
+  background: rgba(0,0,0,0.55); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.calltile.is-failed::after {
+  content: "Connection lost"; position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(0,0,0,0.55); color: #ffb4b4; font-size: 0.78rem; font-weight: 700;
+}
+
+.callbar-deck { display: flex; justify-content: center; gap: 0.55rem; padding: 0.55rem 0.7rem 0.8rem; }
+.callbtn {
+  position: relative; display: grid; place-items: center; width: 2.9rem; height: 2.9rem; flex: none;
+  border: 0; border-radius: 50%; cursor: pointer; font-size: 1.15rem;
+  background: rgba(255,255,255,0.1); color: #fff;
+  transition: background .12s, transform .1s;
+}
+.callbtn:hover { background: rgba(255,255,255,0.18); }
+.callbtn:active { transform: scale(.95); }
+.callbtn:focus-visible { outline: 2px solid #8fb4ff; outline-offset: 2px; }
+.callbtn-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.callbtn.is-on { background: #fff; color: #11151d; }
+.callbtn[data-act="mute"].is-on { background: #ef4444; color: #fff; }
+.callbtn.is-end { width: auto; padding: 0 1.2rem; border-radius: 999px; background: #ef4444; display: inline-flex; gap: 0.4rem; }
+.callbtn.is-end .callbtn-lbl { position: static; width: auto; height: auto; clip: auto; font-size: 0.85rem; font-weight: 800; }
+.callbtn.is-end .svg-ico { transform: rotate(135deg); }
+.callbtn.is-end:hover { background: #dc2626; }
+.callbtn-secondary { display: none; }
+.callbar.is-expanded .callbtn-secondary { display: grid; }
+
+/* Expanded: a wider card with room for video. */
+.callbar.is-expanded { width: min(440px, calc(100vw - 1.6rem)); }
+
+/* Big: fills the screen, video first. */
+.callroot.is-big { inset: 0; right: 0; bottom: 0; align-items: stretch; background: rgba(5,7,12,0.92); padding: 1rem; }
+.callroot.is-big .callbar { width: 100%; height: 100%; border-radius: 20px; }
+.callroot.is-big .calltiles { flex: 1; min-height: 0; align-content: center; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); padding: 0 1rem; }
+.callroot.is-big .calltile { max-height: 100%; }
+.callroot.is-big .callbar-deck { padding: 1rem; gap: 0.8rem; }
+.callroot.is-big .callbtn { width: 3.4rem; height: 3.4rem; font-size: 1.3rem; }
+.callroot.is-big .callbar-big .svg-ico { transform: rotate(180deg); }
+
+@media (max-width: 900px) {
+  .callroot { right: 0.75rem; left: 0.75rem; bottom: calc(4.8rem + env(safe-area-inset-bottom)); align-items: stretch; }
+  .callbar, .callbar.is-expanded, .ring { width: 100%; }
+  .callroot.is-big { left: 0; bottom: 0; padding: 0; }
+  .callroot.is-big .callbar { border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring, .callbar, .ring-answer, .ring-face::before, .ring-face::after { animation: none; }
+}
+/* Pin the avatar boxes so the pulse rings and faces can't stretch to the card. */
+.ring-face { width: 4.6rem; height: 4.6rem; flex: none; }
+.ring-face > *, .ring-face svg { width: 100% !important; height: 100% !important; }
+.calltile-face { width: 3.4rem; height: 3.4rem; }
+.calltile-face > *, .calltile-face svg { width: 100% !important; height: 100% !important; }
+.callbar-face { width: 2.4rem; height: 2.4rem; }
+.callbar-face > *, .callbar-face svg { width: 100% !important; height: 100% !important; }
+.ring-face svg, .calltile-face svg, .callbar-face svg { border-radius: 50%; }
+.ring-face > *, .calltile-face > *, .callbar-face > * { display: block; }
+.callroot.is-big .callbtn.is-end { width: auto; padding: 0 1.5rem; }
+.callroot.is-big .calltile-face { width: 6rem; height: 6rem; }

@@ -64,44 +64,64 @@
     root.appendChild(ringEl);
 
     /* --- the live call panel ---
-       Compact by default: a slim pill showing who/status, mute and end. The
-       expand toggle reveals the video tiles and the secondary controls, so a
-       plain voice call takes almost no room. */
+       Collapsed it's a slim card (who, status, mute, end). Expanded it adds the
+       video tiles and every control; "big" fills the screen. */
     bar = el("div", "callbar");
     bar.hidden = true;
+    bar.setAttribute("role", "region");
+    bar.setAttribute("aria-label", "Call");
 
     var head = el("div", "callbar-head");
+    var who = el("div", "callbar-who");
+    who.setAttribute("aria-hidden", "true");
+    head.appendChild(who);
+    bar._who = who;
+
     var textWrap = el("div", "callbar-headtext");
+    var title = el("strong", "callbar-title", "Call");
+    bar._title = title;
+    textWrap.appendChild(title);
+    var line = el("span", "callbar-line");
     statusEl = el("span", "callbar-status", "Connecting…");
-    textWrap.appendChild(statusEl);
-    timerEl = el("span", "callbar-timer", "0:00");
-    textWrap.appendChild(timerEl);
+    statusEl.setAttribute("aria-live", "polite");
+    line.appendChild(statusEl);
+    timerEl = el("span", "callbar-timer", "");
+    line.appendChild(timerEl);
+    textWrap.appendChild(line);
     head.appendChild(textWrap);
 
-    var toggle = el("button", "callbar-btn callbar-toggle");
-    toggle.type = "button";
-    toggle.title = "Expand call";
-    toggle.setAttribute("aria-label", "Expand call");
-    toggle.appendChild(window.UI.icon("expand", "callbar-toggle-ico"));
-    toggle.addEventListener("click", function () {
+    function headBtn(iconName, label, cls, onClick) {
+      var b = el("button", "callbar-btn " + cls);
+      b.type = "button";
+      b.title = label;
+      b.setAttribute("aria-label", label);
+      b.appendChild(window.UI.icon(iconName));
+      b.addEventListener("click", onClick);
+      head.appendChild(b);
+      return b;
+    }
+    var toggle = headBtn("expand", "Show video", "callbar-toggle", function () {
       var open = bar.classList.toggle("is-expanded");
-      toggle.title = open ? "Collapse" : "Expand call";
+      toggle.title = open ? "Hide video" : "Show video";
       toggle.setAttribute("aria-label", toggle.title);
+      if (!open) root.classList.remove("is-big");
     });
-    head.appendChild(toggle);
+    headBtn("popout", "Full screen", "callbar-big", function () {
+      var big = root.classList.toggle("is-big");
+      if (big) bar.classList.add("is-expanded");
+    });
     bar.appendChild(head);
 
     tiles = el("div", "calltiles");
     bar.appendChild(tiles);
 
-    /* Two button tiers. Primary (mute, end) always shows — even collapsed.
-       Secondary (camera, screen, fullscreen) only appears once expanded. */
+    /* Mute and End always show; camera and screen share join them once the
+       panel is expanded (a plain voice call stays tiny). */
     var deck = el("div", "callbar-deck");
     [
-      ["mute",   "mic",    "Mute",   toggleMute,   "primary"],
-      ["cam",    "camera", "Camera", toggleCam,    "secondary"],
-      ["screen", "screen", "Share",  toggleScreen, "secondary"],
-      ["full",   "expand", "Full",   function () { root.classList.toggle("is-big"); }, "secondary"]
+      ["mute",   "mic",    "Mute",         toggleMute,   "primary"],
+      ["cam",    "video",  "Camera",       toggleCam,    "secondary"],
+      ["screen", "screen", "Share screen", toggleScreen, "secondary"]
     ].forEach(function (spec) {
       var b = el("button", "callbtn callbtn-" + spec[4]);
       b.type = "button";
@@ -109,6 +129,7 @@
       b.dataset.icon = spec[1];
       b.title = spec[2];
       b.setAttribute("aria-label", spec[2]);
+      b.setAttribute("aria-pressed", "false");
       b.appendChild(window.UI.icon(spec[1], "callbtn-ico"));
       b.appendChild(el("span", "callbtn-lbl", spec[2]));
       b.addEventListener("click", function () { spec[3](); });
@@ -120,13 +141,34 @@
     end.title = "Leave the call";
     end.setAttribute("aria-label", "Leave the call");
     end.appendChild(window.UI.icon("hangup", "callbtn-ico"));
-    end.appendChild(el("span", "callbtn-lbl", "End"));
+    end.appendChild(el("span", "callbtn-lbl", "Leave"));
     end.addEventListener("click", function () { hangUp(); });
     deck.appendChild(end);
 
     bar.appendChild(deck);
     root.appendChild(bar);
     document.body.appendChild(root);
+  }
+
+  /* Header: who you're talking to, as faces and a name line. */
+  function drawWho() {
+    if (!bar || !state.call) return;
+    var others = (state.call.peers || []).filter(function (p) { return p.id !== state.self; });
+    var key = others.map(function (p) { return p.id + ":" + (p.avatarUrl || "") + ":" + (p.displayName || p.username); }).join("|");
+    if (bar._whoKey === key) return;
+    bar._whoKey = key;
+    var who = bar._who;
+    who.innerHTML = "";
+    others.slice(0, 3).forEach(function (p) {
+      var face = el("span", "callbar-face");
+      face.appendChild(avatarFor(p.id, p.displayName || p.username));
+      who.appendChild(face);
+    });
+    if (!others.length) who.appendChild(el("span", "callbar-face is-empty"));
+    var names = others.map(function (p) { return p.displayName || p.username; });
+    bar._title.textContent = !names.length ? "Call"
+      : names.length <= 2 ? names.join(" & ")
+      : names.slice(0, 2).join(", ") + " +" + (names.length - 2);
   }
 
   /* Open the tile view automatically the first time real video shows up, so a
@@ -147,7 +189,7 @@
   function clock() {
     if (!timerEl || !state.startedAt) return;
     var s = Math.floor((Date.now() - state.startedAt) / 1000);
-    timerEl.textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+    timerEl.textContent = " · " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
   }
 
   /* Each participant gets a tile. Audio-only peers still get one so you can
@@ -513,6 +555,14 @@
     var b = bar.querySelector('[data-act="' + act + '"]');
     if (!b) return;
     b.classList.toggle("is-on", !!on);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    if (act === "cam" || act === "screen") {
+      var names = act === "cam" ? ["Camera", "Stop camera"] : ["Share screen", "Stop sharing"];
+      var l2 = b.querySelector(".callbtn-lbl");
+      if (l2) l2.textContent = on ? names[1] : names[0];
+      b.title = on ? names[1] : names[0];
+      b.setAttribute("aria-label", b.title);
+    }
     /* The mic swaps to a struck-through icon when muted, and the label to
        "Unmute", so the button always says exactly what it will do next. */
     if (act === "mute") {
@@ -522,6 +572,7 @@
       var lbl = b.querySelector(".callbtn-lbl");
       if (lbl) lbl.textContent = on ? "Unmute" : "Mute";
       b.title = on ? "Unmute" : "Mute";
+      b.setAttribute("aria-label", b.title);
     }
   }
 
@@ -800,6 +851,7 @@
          long as the tab stayed open. */
       if (!res.call) return teardown("Call ended");
       state.call = res.call;
+      drawWho();
       if (res.call.state === "ended") return teardown("Call ended");
 
       /* Still ringing on the other end — say so rather than sitting on
@@ -861,6 +913,8 @@
     bar.hidden = false;
     ringEl.hidden = true;
     status(call && call.state === "ringing" ? "Ringing…" : "Connecting…");
+    if (timerEl) timerEl.textContent = "";
+    drawWho();
 
     return getLocal(wantVideo).then(function () {
       /* Only after the media actually arrives — getLocal falls back to audio
@@ -962,7 +1016,9 @@
 
     if (bar) {
       bar.hidden = true;
-      bar.classList.remove("is-min");
+      bar.classList.remove("is-min", "is-expanded");
+      bar._autoExpanded = false;
+      bar._whoKey = null;
       ["mute", "cam", "screen"].forEach(function (a) { mark(a, false); });
     }
     if (root) {
@@ -980,56 +1036,56 @@
 
     var caller = (call.peers || []).filter(function (p) { return p.id === call.startedBy; })[0];
     var label = caller ? (caller.displayName || caller.username) : "Someone";
+    var others = (call.peers || []).filter(function (p) { return p.id !== state.self && p.id !== call.startedBy; });
+    var video = call.kind === "video";
+    ringEl.setAttribute("aria-label", (video ? "Incoming video call from " : "Incoming call from ") + label);
 
-    var top = el("div", "ring-who");
-    top.appendChild(caller && window.SocialUI && window.SocialUI.avatar
-      ? window.SocialUI.avatar({ username: caller.username, avatarUrl: caller.avatarUrl, online: true })
+    var face = el("div", "ring-face");
+    face.appendChild(caller && window.SocialUI && window.SocialUI.avatar
+      ? window.SocialUI.avatar({ username: caller.username, avatarUrl: caller.avatarUrl })
       : window.Art.avatar(caller ? caller.username : "?"));
+    ringEl.appendChild(face);
+
     var text = el("div", "ring-text");
     text.appendChild(el("strong", null, label));
     text.appendChild(el("span", "ring-kind",
-      call.kind === "video" ? "Incoming video call" : "Incoming call"));
-    top.appendChild(text);
-    ringEl.appendChild(top);
+      (video ? "Video call" : "Voice call") +
+      (others.length ? " · with " + others.length + " other" + (others.length > 1 ? "s" : "") : "")));
+    ringEl.appendChild(text);
 
     var acts = el("div", "ring-acts");
-
-    var take = el("button", "btn btn-cta btn-sm ring-answer");
-    take.type = "button";
-    take.appendChild(window.UI.icon(call.kind === "video" ? "video" : "phone"));
-    take.appendChild(el("span", null, "Answer"));
-    take.addEventListener("click", function () {
-      ringEl.hidden = true;
-      answer(call.id, call.kind === "video");
-    });
-    acts.appendChild(take);
-
-    if (call.kind === "video") {
-      var audioOnly = el("button", "btn btn-sm");
-      audioOnly.type = "button";
-      audioOnly.appendChild(window.UI.icon("phone"));
-      audioOnly.appendChild(el("span", null, "Audio"));
-      audioOnly.addEventListener("click", function () {
-        ringEl.hidden = true;
-        answer(call.id, false);
-      });
-      acts.appendChild(audioOnly);
+    function act(cls, iconName, lbl, fn) {
+      var wrap = el("div", "ring-act");
+      var b = el("button", "ring-btn " + cls);
+      b.type = "button";
+      b.setAttribute("aria-label", lbl);
+      b.appendChild(window.UI.icon(iconName));
+      b.addEventListener("click", fn);
+      wrap.appendChild(b);
+      wrap.appendChild(el("span", null, lbl));
+      acts.appendChild(wrap);
+      return b;
     }
-
-    var no = el("button", "btn btn-sm ring-decline");
-    no.type = "button";
-    no.appendChild(window.UI.icon("hangup"));
-    no.appendChild(el("span", null, "Decline"));
-    no.addEventListener("click", function () {
+    act("ring-decline", "hangup", "Decline", function () {
       window.API.leaveCall(call.id).catch(function () {});
       dismissRing();
     });
-    acts.appendChild(no);
+    if (video) {
+      act("ring-audio", "phone", "Voice only", function () {
+        ringEl.hidden = true;
+        answer(call.id, false);
+      });
+    }
+    var take = act("ring-answer", video ? "video" : "phone", "Answer", function () {
+      ringEl.hidden = true;
+      answer(call.id, video);
+    });
 
     ringEl.appendChild(acts);
     ringEl.hidden = false;
     root.hidden = false;
     startRinging();
+    try { take.focus({ preventScroll: true }); } catch (e) {}
   }
 
   function dismissRing() {

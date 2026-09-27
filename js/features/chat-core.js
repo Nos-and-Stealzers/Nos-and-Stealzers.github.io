@@ -328,7 +328,9 @@
             row.setAttribute("aria-selected", on ? "true" : "false");
             row.appendChild(avatarFor(u));
             var names = el("span", "chat-pick-names");
-            names.appendChild(el("span", "chat-pick-n1", u.displayName || u.username));
+            var n1 = el("span", "chat-pick-n1", u.displayName || u.username);
+            n1.appendChild(window.UI.userTags(u, { compact: true, noPlus: true }));
+            names.appendChild(n1);
             names.appendChild(el("span", "chat-pick-n2", "@" + u.username + (u.online ? " · online" : "")));
             row.appendChild(names);
             var tick = el("span", "chat-pick-tick");
@@ -432,7 +434,10 @@
 
       var mid = el("span", "chat-row-mid");
       var top = el("span", "chat-row-top");
-      top.appendChild(el("span", "chat-row-name", t.title));
+      var nm = el("span", "chat-row-name");
+      nm.appendChild(el("span", "chat-row-title", t.title));
+      if (!t.isGroup && t.with) nm.appendChild(window.UI.userTags(t.with, { compact: true, noPlus: true }));
+      top.appendChild(nm);
       top.appendChild(el("span", "chat-row-when", listWhen(t.lastAt)));
       mid.appendChild(top);
 

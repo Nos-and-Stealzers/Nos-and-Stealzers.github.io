@@ -194,6 +194,7 @@
   function drawHead() {
     if (!current) return;
     titleEl.textContent = current.title;
+    if (!current.isGroup && current.with) titleEl.appendChild(window.UI.userTags(current.with, { compact: true, noPlus: true }));
     headAv.innerHTML = "";
     headAv.appendChild(current.isGroup ? window.ChatCore.groupAvatar("sm")
                                        : window.ChatCore.avatar(current.with, "sm"));

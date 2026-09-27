@@ -42,6 +42,10 @@
     arrowDown:  '<path d="M12 5v14M6 13l6 6 6-6"/>',
     retry:      '<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/>',
     attach:     '<path d="m20 11.5-8.1 8.1a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/>',
+    crown:      '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
+    shield:     '<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/>',
+    shieldCheck:'<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    star:       '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     check:      '<path d="m5 12.5 4.5 4.5L19 7"/>',
     user:       '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.4 4-6.8 8-6.8s7.2 2.4 8 6.8"/>'
   };
@@ -55,6 +59,40 @@
       'stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
       'stroke-linejoin="round">' + p + '</svg>';
     return span;
+  }
+
+  /* Rank / membership tags that sit to the right of a person's name.
+     Returns a fragment (possibly empty) so callers can append unconditionally. */
+  var ROLE_TAGS = {
+    owner: { label: "Owner", icon: "crown", cls: "is-owner" },
+    admin: { label: "Admin", icon: "shield", cls: "is-admin" },
+    mod:   { label: "Mod",   icon: "shieldCheck", cls: "is-mod" }
+  };
+  function userTags(user, opts) {
+    opts = opts || {};
+    var frag = document.createDocumentFragment();
+    if (!user) return frag;
+    var r = ROLE_TAGS[user.role];
+    if (r) {
+      var t = el("span", "utag " + r.cls);
+      t.title = r.label + " of Arcade Campus Hub";
+      t.appendChild(icon(r.icon));
+      if (!opts.compact) t.appendChild(el("span", "utag-l", r.label));
+      else t.setAttribute("aria-label", r.label);
+      frag.appendChild(t);
+    }
+    if (user.isPlus && !opts.noPlus) {
+      var pl = el("span", "utag is-plus");
+      pl.title = "Campus+ member";
+      pl.appendChild(icon("star"));
+      if (!opts.compact) pl.appendChild(el("span", "utag-l", "Campus+"));
+      else pl.setAttribute("aria-label", "Campus+ member");
+      frag.appendChild(pl);
+    }
+    if (user.state === "suspended" && opts.showState) {
+      frag.appendChild(el("span", "utag is-bad", "Suspended"));
+    }
+    return frag;
   }
 
   function playHref(game) {
@@ -372,6 +410,7 @@
   window.UI = {
     el: el,
     icon: icon,
+    userTags: userTags,
     pad: pad,
     tile: tile,
     row: row,

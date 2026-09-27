@@ -20,380 +20,313 @@
 
   <main class="main" id="main">
 
-    <header class="page-head">
-      <span class="label">Preferences</span>
+    <header class="set-head">
       <h1>Settings</h1>
-      <div class="readout" id="readout">
-        <span>signed in as <b id="r-user">not signed in</b></span>
-        <span>role <b id="r-role">—</b></span>
-        <span>since <b id="r-since">—</b></span>
-      </div>
+      <p class="dim">Your profile, account and how the arcade looks and behaves.</p>
     </header>
 
-    <!-- ============ display: works with no account and no backend ============ -->
-    <section class="block">
-      <div class="block-head"><h2>Display</h2><span class="fill"></span>
-        <span class="more dimmer">follows your account</span></div>
-
-      <div class="panel">
-        <div class="opt" style="display:block">
-          <div style="margin-bottom:0.8rem">
-            <div class="k">Skin</div>
-            <div class="d">Applied the moment you pick one. Saved on this device.</div>
-          </div>
-          <div class="skin-gallery" id="skins"></div>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Text size</div>
-            <div class="d">Scales the whole interface, not just body copy.</div>
-          </div>
-          <div class="seg">
-            <button class="btn btn-sm" type="button" data-textsize="normal" aria-pressed="false">Normal</button>
-            <button class="btn btn-sm" type="button" data-textsize="large" aria-pressed="false">Large</button>
-            <button class="btn btn-sm" type="button" data-textsize="huge" aria-pressed="false">Huge</button>
-          </div>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Animations</div>
-            <div class="d">Off stops things sliding and fading. Follows your system
-              setting unless you change it here.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="motion"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Lite mode</div>
-            <div class="d">Drops motion and the grid overlay on slow machines.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="lite"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Default library view</div>
-            <div class="d">How the index opens: tiles or a dense table.</div>
-          </div>
-          <div class="seg">
-            <button class="btn btn-sm" type="button" id="view-grid" aria-pressed="false">▦ Grid</button>
-            <button class="btn btn-sm" type="button" id="view-list" aria-pressed="false">≣ List</button>
-          </div>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Auto fullscreen</div>
-            <div class="d">Expand the stage as soon as a game loads.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="autofull"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Confirm new-tab launches</div>
-            <div class="d">Ask before opening a game outside the page.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="confirm-ext"><i></i></label>
-        </div>
+    <!-- Shown instead of the account panes when nobody is signed in / no server. -->
+    <div class="set-callout" id="signed-out" hidden>
+      <div>
+        <strong>You're not signed in</strong>
+        <p>Appearance and gameplay settings still work and are saved in this browser. Sign in to sync pins, history and playtime across devices, and to use friends and chat.</p>
       </div>
-    </section>
-
-    <!-- ============ behaviour ============ -->
-    <section class="block">
-      <div class="block-head"><h2>Behaviour</h2><span class="fill"></span>
-        <span class="more dimmer">follows your account</span></div>
-      <div class="panel">
-        <div class="opt">
-          <div>
-            <div class="k">Keyboard shortcuts</div>
-            <div class="d">
-              <kbd>/</kbd> search, <kbd>K</kbd> finder, <kbd>R</kbd> random,
-              <kbd>P</kbd> play, <kbd>F</kbd> pin. Always off while a game is
-              running, so a stray key can't reload or leave it.
-            </div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="shortcuts"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Chat dock</div>
-            <div class="d">The floating chat bottom-right. Off hides it everywhere;
-              Messages still works.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="dock"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Back up game progress automatically</div>
-            <div class="d">Saves a game's own progress to your account while you
-              play, so it follows you to another device.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="autobackup"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Hide unavailable titles</div>
-            <div class="d">11 entries have no host carrying their files. They're
-              listed and flagged by default; this drops them from the index.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="hide-gone"><i></i></label>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Default sort in the index</div>
-            <div class="d">What Browse opens with when you haven't searched.</div>
-          </div>
-          <select id="default-sort" style="width:auto">
-            <option value="title">A → Z</option>
-            <option value="title-desc">Z → A</option>
-            <option value="category">Category</option>
-            <option value="played">Most played</option>
-            <option value="recent">Recently played</option>
-            <option value="random">Shuffle</option>
-          </select>
-        </div>
+      <div class="btn-row">
+        <a class="btn btn-cta" href="login.html?next=settings.html">Sign in</a>
+        <a class="btn" href="signup.html">Create an account</a>
       </div>
-    </section>
-
-    <!-- ============ staff: admin and above only ============ -->
-    <!-- Hidden by default and only revealed by js/page-settings.js once the
-         signed-in account is admin or owner. Nothing here is secret — the
-         console itself is guarded on the server — but there is no reason to
-         show a control that would do nothing for everyone else. -->
-    <section class="block" id="staff-block" hidden>
-      <div class="block-head"><h2>Staff</h2><span class="fill"></span>
-        <span class="more dimmer" id="staff-role">admin</span></div>
-      <div class="panel">
-
-        <div class="opt">
-          <div>
-            <div class="k">Open the admin console with</div>
-            <div class="d">
-              A modifier combo, not a single key, so it still works while a
-              game has the keyboard — the single-key shortcuts stand down
-              there deliberately. The modifiers are fixed; pick the letter.
-              Anything marked <em>taken</em> is one the browser handles itself.
-            </div>
-          </div>
-          <div class="combo-picker">
-            <span class="combo-mod" id="combo-mod">Ctrl</span>
-            <span class="combo-plus">+</span>
-            <select id="admin-key" aria-label="Admin console shortcut key"></select>
-          </div>
-        </div>
-
-        <div class="opt" id="admin-key-warn" hidden>
-          <div>
-            <div class="k">Heads up</div>
-            <div class="d" id="admin-key-warn-text"></div>
-          </div>
-        </div>
-
-        <div class="opt">
-          <div>
-            <div class="k">Enable that shortcut</div>
-            <div class="d">Off means the console is reachable only from the
-              sidebar or by opening <code>admin.html</code> yourself. Your rank
-              is unchanged either way.</div>
-          </div>
-          <label class="toggle"><input type="checkbox" id="admin-key-on"><i></i></label>
-        </div>
-
-        <p class="tiny dimmer" style="margin:0.9rem 0 0">
-          Kept on this device, like every other setting here. It changes how
-          <em>you</em> open the console, not who may.
-          <a href="admin.html">Open the console →</a>
-        </p>
+    </div>
+    <div class="set-callout" id="no-backend" hidden>
+      <div>
+        <strong>Accounts are offline right now</strong>
+        <p>The hub's server isn't reachable, so account settings are unavailable. Everything on this page that's about this device still works.</p>
       </div>
-    </section>
+    </div>
 
-    <!-- ============ local data: always available ============ -->
-    <section class="block">
-      <div class="block-head"><h2>Your data</h2><span class="fill"></span></div>
-      <div class="panel">
-        <p class="tiny dimmer" id="data-note" style="margin:0 0 0.9rem"></p>
-        <div class="btn-row">
-          <button class="btn btn-sm" type="button" id="sync-now" hidden>Sync now</button>
-          <button class="btn btn-sm" type="button" id="export">Export JSON</button>
-          <button class="btn btn-sm" type="button" id="import">Import JSON</button>
-          <button class="btn btn-sm btn-flat" type="button" id="wipe-local">Wipe this device</button>
-        </div>
-        <p class="tiny dimmer" id="sync-state" style="margin:0.8rem 0 0"></p>
-      </div>
-    </section>
+    <div class="set" id="set">
+      <nav class="set-nav" aria-label="Settings sections">
+        <div class="set-me" id="me-card" hidden></div>
+        <button type="button" class="set-link" data-pane="profile" data-account>Profile</button>
+        <button type="button" class="set-link" data-pane="security" data-account>Account &amp; security</button>
+        <button type="button" class="set-link" data-pane="privacy" data-account>Privacy</button>
+        <button type="button" class="set-link" data-pane="appearance">Appearance</button>
+        <button type="button" class="set-link" data-pane="playing">Playing</button>
+        <button type="button" class="set-link" data-pane="chat">Chat</button>
+        <button type="button" class="set-link" data-pane="data">Data &amp; saves</button>
+        <button type="button" class="set-link" data-pane="staff" id="staff-link" hidden>Staff</button>
+      </nav>
 
-    <!-- ============ game progress ============ -->
-    <section class="block" id="game-progress" hidden>
-      <div class="block-head"><h2>Game progress</h2><span class="fill"></span>
-        <span class="more dimmer">every game, not just the hub</span></div>
-      <div class="panel">
-        <p class="tiny dimmer" style="margin:0 0 0.9rem">
-          Games keep their own saves in the browser, on the site that serves them —
-          so they normally stay on one device. Back them up here and they follow
-          your account. Restoring never overwrites newer progress unless you ask it to.
-        </p>
-        <div class="btn-row">
-          <button class="btn btn-sm btn-cta" type="button" id="gs-backup">Back up now</button>
-          <button class="btn btn-sm" type="button" id="gs-restore">Restore here</button>
-          <button class="btn btn-sm btn-flat" type="button" id="gs-force">Restore &amp; overwrite</button>
-        </div>
-        <div class="rows" id="gs-list" style="border:0;margin-top:0.9rem"></div>
-        <p class="tiny dimmer" id="gs-state" style="margin:0.8rem 0 0"></p>
-      </div>
-    </section>
+      <div class="set-body">
 
-    <!-- ============ signed out prompt ============ -->
-    <section class="block" id="signed-out" hidden>
-      <div class="block-head"><h2>Account</h2><span class="fill"></span></div>
-      <div class="panel">
-        <p style="margin:0 0 0.9rem">
-          You're not signed in. Everything above is saved in this browser only.
-          An account syncs your pins, history and playtime across devices, and adds
-          friends and messages.
-        </p>
-        <div class="btn-row">
-          <a class="btn btn-cta" href="login.html?next=settings.html">Sign in</a>
-          <a class="btn" href="signup.html">Create an account</a>
-        </div>
-      </div>
-    </section>
+        <!-- ================= PROFILE ================= -->
+        <section class="set-pane" id="pane-profile" data-account hidden aria-labelledby="h-profile">
+          <h2 id="h-profile">Profile</h2>
+          <p class="set-sub">How other people see you across the hub.</p>
 
-    <!-- ============ offline prompt ============ -->
-    <section class="block" id="no-backend" hidden>
-      <div class="block-head"><h2>Account</h2><span class="fill"></span></div>
-      <div class="panel">
-        <p class="dim" style="margin:0">
-          Accounts need the hub's server running. Everything above works without it.
-        </p>
-      </div>
-    </section>
-
-    <!-- ============ account-only sections ============ -->
-    <div id="account-area" hidden>
-
-      <section class="block">
-        <div class="block-head"><h2>Profile</h2><span class="fill"></span></div>
-        <form class="panel form" id="profile-form">
-          <div class="field">
-            <label>Profile picture</label>
-            <div class="pfp-row">
+          <form class="set-card" id="profile-form">
+            <div class="set-pfp">
               <span class="avatar avatar-lg" id="pfp-preview"></span>
-              <div class="pfp-actions">
-                <button class="btn btn-sm btn-cta" type="button" id="pfp-upload">Upload picture</button>
-                <button class="btn btn-sm" type="button" id="pfp-camera">Take photo</button>
-                <button class="btn btn-sm btn-flat" type="button" id="pfp-remove" hidden>Remove</button>
-                <p class="hint" id="pfp-hint" style="margin:0.4rem 0 0">JPG, PNG, GIF or WebP. Squared and shrunk automatically.</p>
+              <div>
+                <strong>Profile picture</strong>
+                <p class="set-hint" id="pfp-hint">JPG, PNG, GIF or WebP. Cropped square and shrunk automatically.</p>
+                <div class="btn-row">
+                  <button class="btn btn-sm btn-cta" type="button" id="pfp-upload">Upload</button>
+                  <button class="btn btn-sm" type="button" id="pfp-camera">Take a photo</button>
+                  <button class="btn btn-sm btn-flat" type="button" id="pfp-remove" hidden>Remove</button>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="field">
-            <label for="display">Display name</label>
-            <input type="text" id="display" maxlength="32">
-            <p class="hint">Shown instead of your username. Your @handle never changes.</p>
-          </div>
-          <div class="field">
-            <label for="bio">Bio</label>
-            <textarea id="bio" rows="3" maxlength="300"></textarea>
-            <p class="hint"><span id="bio-count">0</span>/300</p>
-          </div>
-          <button class="btn btn-cta" type="submit">Save profile</button>
-        </form>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2>Email</h2><span class="fill"></span></div>
-        <div class="panel" id="email-verify">
-          <p class="tiny dimmer" id="ev-status" style="margin:0">Checking…</p>
-          <div id="ev-actions" style="margin-top:0.8rem" hidden>
-            <p class="tiny dimmer" style="margin:0 0 0.6rem">
-              Verify your email to use chat, friends and calls. We'll send a
-              6-digit code to your inbox.
-            </p>
-            <div class="btn-row" style="gap:0.5rem;flex-wrap:wrap">
-              <input type="text" id="ev-code" inputmode="numeric" maxlength="6"
-                     placeholder="000000" autocomplete="one-time-code"
-                     style="width:8rem;letter-spacing:0.3rem;text-align:center" hidden>
-              <button class="btn btn-sm btn-cta" type="button" id="ev-send">Send code</button>
-              <button class="btn btn-sm" type="button" id="ev-check" hidden>Verify</button>
+            <div class="set-field">
+              <label for="display">Display name</label>
+              <input type="text" id="display" maxlength="32" autocomplete="nickname">
+              <p class="set-hint">Shown instead of your username. Your <span id="handle-hint">@handle</span> never changes.</p>
             </div>
-            <p class="tiny dimmer" id="ev-msg" style="margin:0.6rem 0 0" hidden></p>
-          </div>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2>Privacy</h2><span class="fill"></span></div>
-        <div class="panel" id="privacy"></div>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2>Password</h2><span class="fill"></span></div>
-        <form class="panel form" id="password-form">
-          <div class="field">
-            <label for="current">Current password</label>
-            <input type="password" id="current" autocomplete="current-password" required>
-          </div>
-          <div class="field">
-            <label for="next">New password</label>
-            <input type="password" id="next" autocomplete="new-password" required minlength="8">
-            <p class="hint">At least 8 characters, with a letter and a number.</p>
-          </div>
-          <div class="field">
-            <label for="next2">Confirm new password</label>
-            <input type="password" id="next2" autocomplete="new-password" required>
-          </div>
-          <p class="hint">Changing this signs you out everywhere else.</p>
-          <p class="form-error" id="pw-error" hidden></p>
-          <button class="btn btn-cta" type="submit">Change password</button>
-        </form>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2>Signed-in devices</h2><span class="fill"></span></div>
-        <div class="panel">
-          <div class="rows" id="sessions" style="border:0"></div>
-          <button class="btn btn-sm" type="button" id="signout-all" style="margin-top:0.9rem">
-            Sign out everywhere else
-          </button>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2>Recent sign-ins</h2><span class="fill"></span></div>
-        <div class="panel">
-          <p class="tiny dimmer" style="margin:0 0 0.8rem">
-            The last 20 times your account was signed into (or someone tried and
-            failed). If you see one you don't recognise, change your password.
-          </p>
-          <div class="rows" id="login-history" style="border:0"></div>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-head"><h2 style="color:var(--bad)">Danger zone</h2><span class="fill"></span></div>
-        <div class="panel danger">
-          <p class="tiny" style="margin:0 0 0.8rem">
-            Deleting your account erases your profile, friendships, messages and synced save.
-            It cannot be undone. Anything saved locally in this browser stays.
-          </p>
-          <form class="form" id="delete-form">
-            <div class="field">
-              <label for="confirm-name">Type your username to confirm</label>
-              <input type="text" id="confirm-name" autocapitalize="none" spellcheck="false">
+            <div class="set-field">
+              <label for="bio">Bio</label>
+              <textarea id="bio" rows="3" maxlength="300" placeholder="A line or two about you, your favourite games…"></textarea>
+              <p class="set-hint set-count"><span id="bio-count">0</span>/300</p>
             </div>
-            <p class="form-error" id="del-error" hidden></p>
-            <button class="btn btn-danger" type="submit">Delete my account</button>
+            <div class="set-actions">
+              <a class="btn btn-flat" id="view-profile" href="profile.html">View my profile</a>
+              <button class="btn btn-cta" type="submit" id="profile-save" disabled>Save changes</button>
+            </div>
           </form>
-        </div>
-      </section>
+        </section>
+
+        <!-- ================= SECURITY ================= -->
+        <section class="set-pane" id="pane-security" data-account hidden aria-labelledby="h-security">
+          <h2 id="h-security">Account &amp; security</h2>
+          <p class="set-sub">Sign-in details and where your account is used.</p>
+
+          <div class="set-card" id="email-verify">
+            <div class="set-row">
+              <div class="set-text">
+                <strong>Email</strong>
+                <span class="set-hint" id="ev-status">Checking…</span>
+              </div>
+              <span class="set-pill" id="ev-pill" hidden></span>
+            </div>
+            <div id="ev-actions" hidden>
+              <p class="set-hint">Verify your email to use chat, friends and calls. We'll send a 6-digit code.</p>
+              <div class="btn-row">
+                <input type="text" id="ev-code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" class="set-code" hidden>
+                <button class="btn btn-sm btn-cta" type="button" id="ev-send">Send code</button>
+                <button class="btn btn-sm" type="button" id="ev-check" hidden>Verify</button>
+              </div>
+              <p class="set-hint" id="ev-msg" hidden></p>
+            </div>
+          </div>
+
+          <form class="set-card" id="password-form">
+            <strong class="set-card-title">Change password</strong>
+            <div class="set-field">
+              <label for="current">Current password</label>
+              <input type="password" id="current" autocomplete="current-password" required>
+            </div>
+            <div class="set-grid2">
+              <div class="set-field">
+                <label for="next">New password</label>
+                <input type="password" id="next" autocomplete="new-password" required minlength="8">
+              </div>
+              <div class="set-field">
+                <label for="next2">Confirm new password</label>
+                <input type="password" id="next2" autocomplete="new-password" required>
+              </div>
+            </div>
+            <p class="set-hint">At least 8 characters with a letter and a number. Changing it signs you out everywhere else.</p>
+            <p class="form-error" id="pw-error" hidden></p>
+            <div class="set-actions"><button class="btn btn-cta" type="submit">Update password</button></div>
+          </form>
+
+          <div class="set-card">
+            <div class="set-row">
+              <div class="set-text">
+                <strong>Signed-in devices</strong>
+                <span class="set-hint">Where your account is signed in right now.</span>
+              </div>
+              <button class="btn btn-sm" type="button" id="signout-all">Sign out others</button>
+            </div>
+            <div class="set-list" id="sessions"></div>
+          </div>
+
+          <div class="set-card">
+            <div class="set-text">
+              <strong>Recent sign-ins</strong>
+              <span class="set-hint">The last 20 sign-ins and failed attempts. Don't recognise one? Change your password.</span>
+            </div>
+            <div class="set-list" id="login-history"></div>
+          </div>
+
+          <div class="set-card is-danger">
+            <strong class="set-card-title">Delete account</strong>
+            <p class="set-hint">Erases your profile, friendships, messages and synced saves. This can't be undone. Anything saved only in this browser stays.</p>
+            <form id="delete-form" class="set-delete">
+              <div class="set-field">
+                <label for="confirm-name">Type your username to confirm</label>
+                <input type="text" id="confirm-name" autocapitalize="none" spellcheck="false" autocomplete="off">
+              </div>
+              <p class="form-error" id="del-error" hidden></p>
+              <button class="btn btn-danger" type="submit">Delete my account</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ================= PRIVACY ================= -->
+        <section class="set-pane" id="pane-privacy" data-account hidden aria-labelledby="h-privacy">
+          <h2 id="h-privacy">Privacy</h2>
+          <p class="set-sub">Who can reach you and what they can see. Saved to your account.</p>
+          <div class="set-card set-rows" id="privacy"></div>
+        </section>
+
+        <!-- ================= APPEARANCE ================= -->
+        <section class="set-pane" id="pane-appearance" hidden aria-labelledby="h-appearance">
+          <h2 id="h-appearance">Appearance</h2>
+          <p class="set-sub">Applied instantly. Follows your account when you're signed in.</p>
+          <div class="set-card">
+            <strong class="set-card-title">Skin</strong>
+            <p class="set-hint">Hover to preview, click to keep.</p>
+            <div class="skin-gallery" id="skins"></div>
+          </div>
+          <div class="set-card set-rows">
+            <div class="set-row">
+              <div class="set-text"><strong>Text size</strong><span class="set-hint">Scales the whole interface.</span></div>
+              <div class="set-seg" role="group" aria-label="Text size">
+                <button type="button" data-textsize="normal" aria-pressed="false">Normal</button>
+                <button type="button" data-textsize="large" aria-pressed="false">Large</button>
+                <button type="button" data-textsize="huge" aria-pressed="false">Huge</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Animations</strong><span class="set-hint">Turn off to stop things sliding and fading.</span></div>
+              <label class="toggle"><input type="checkbox" id="motion" aria-label="Animations"><i></i></label>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Lite mode</strong><span class="set-hint">Lighter visuals for slow or school-managed computers.</span></div>
+              <label class="toggle"><input type="checkbox" id="lite" aria-label="Lite mode"><i></i></label>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= PLAYING ================= -->
+        <section class="set-pane" id="pane-playing" hidden aria-labelledby="h-playing">
+          <h2 id="h-playing">Playing</h2>
+          <p class="set-sub">How the library opens and how games launch.</p>
+          <div class="set-card set-rows">
+            <div class="set-row">
+              <div class="set-text"><strong>Library layout</strong><span class="set-hint">How All games opens.</span></div>
+              <div class="set-seg" role="group" aria-label="Library layout">
+                <button type="button" id="view-grid" aria-pressed="false">Grid</button>
+                <button type="button" id="view-list" aria-pressed="false">List</button>
+              </div>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Default sort</strong><span class="set-hint">What the index shows before you search.</span></div>
+              <select id="default-sort" class="set-select" aria-label="Default sort">
+                <option value="title">A → Z</option>
+                <option value="title-desc">Z → A</option>
+                <option value="category">Category</option>
+                <option value="played">Most played</option>
+                <option value="recent">Recently played</option>
+                <option value="random">Shuffle</option>
+              </select>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Hide unavailable games</strong><span class="set-hint">Drop titles no host currently carries.</span></div>
+              <label class="toggle"><input type="checkbox" id="hide-gone" aria-label="Hide unavailable games"><i></i></label>
+            </div>
+          </div>
+          <div class="set-card set-rows">
+            <div class="set-row">
+              <div class="set-text"><strong>Auto fullscreen</strong><span class="set-hint">Expand the game as soon as it loads.</span></div>
+              <label class="toggle"><input type="checkbox" id="autofull" aria-label="Auto fullscreen"><i></i></label>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Ask before opening a new tab</strong><span class="set-hint">For games that can't play inside the page.</span></div>
+              <label class="toggle"><input type="checkbox" id="confirm-ext" aria-label="Ask before opening a new tab"><i></i></label>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Keyboard shortcuts</strong><span class="set-hint"><kbd>/</kbd> search · <kbd>K</kbd> finder · <kbd>R</kbd> random · <kbd>P</kbd> play · <kbd>F</kbd> pin. Always off while a game runs.</span></div>
+              <label class="toggle"><input type="checkbox" id="shortcuts" aria-label="Keyboard shortcuts"><i></i></label>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= CHAT ================= -->
+        <section class="set-pane" id="pane-chat" hidden aria-labelledby="h-chat">
+          <h2 id="h-chat">Chat</h2>
+          <p class="set-sub">The floating chat and messages.</p>
+          <div class="set-card set-rows">
+            <div class="set-row">
+              <div class="set-text"><strong>Floating chat button</strong><span class="set-hint">Chat from any page, even mid-game. Turning it off keeps Messages working.</span></div>
+              <label class="toggle"><input type="checkbox" id="dock" aria-label="Floating chat button"><i></i></label>
+            </div>
+          </div>
+          <div class="set-card set-links">
+            <a href="messages.html">Open Messages</a>
+            <a href="friends.html">Manage friends &amp; blocks</a>
+            <a href="notifications.html">Notifications</a>
+          </div>
+        </section>
+
+        <!-- ================= DATA ================= -->
+        <section class="set-pane" id="pane-data" hidden aria-labelledby="h-data">
+          <h2 id="h-data">Data &amp; saves</h2>
+          <p class="set-sub">Your pins, history, playtime and game progress.</p>
+          <div class="set-card">
+            <strong class="set-card-title">Arcade data</strong>
+            <p class="set-hint" id="data-note"></p>
+            <div class="btn-row">
+              <button class="btn btn-sm btn-cta" type="button" id="sync-now" hidden>Sync now</button>
+              <button class="btn btn-sm" type="button" id="export">Export</button>
+              <button class="btn btn-sm" type="button" id="import">Import</button>
+              <button class="btn btn-sm btn-flat" type="button" id="wipe-local">Clear this device</button>
+            </div>
+            <p class="set-hint" id="sync-state"></p>
+          </div>
+          <div class="set-card" id="game-progress" hidden>
+            <div class="set-row">
+              <div class="set-text">
+                <strong>Game progress</strong>
+                <span class="set-hint">Games keep their own saves in the browser. Back them up and they follow your account. Restoring never overwrites newer progress unless you choose Overwrite.</span>
+              </div>
+              <label class="toggle" title="Back up automatically while you play"><input type="checkbox" id="autobackup" aria-label="Back up game progress automatically"><i></i></label>
+            </div>
+            <p class="set-hint set-auto-note">Automatic backup while you play: toggle above.</p>
+            <div class="btn-row">
+              <button class="btn btn-sm btn-cta" type="button" id="gs-backup">Back up now</button>
+              <button class="btn btn-sm" type="button" id="gs-restore">Restore here</button>
+              <button class="btn btn-sm btn-flat" type="button" id="gs-force">Overwrite this device</button>
+            </div>
+            <div class="set-list" id="gs-list"></div>
+            <p class="set-hint" id="gs-state"></p>
+          </div>
+        </section>
+
+        <!-- ================= STAFF ================= -->
+        <section class="set-pane" id="staff-block" hidden aria-labelledby="h-staff">
+          <h2 id="h-staff">Staff</h2>
+          <p class="set-sub">Only visible to <span id="staff-role">admins</span>. Kept on this device; it changes how <em>you</em> open the console, not who may.</p>
+          <div class="set-card set-rows">
+            <div class="set-row">
+              <div class="set-text"><strong>Console shortcut</strong><span class="set-hint">A modifier combo, so it still works while a game has the keyboard.</span></div>
+              <label class="toggle"><input type="checkbox" id="admin-key-on" aria-label="Enable console shortcut"><i></i></label>
+            </div>
+            <div class="set-row">
+              <div class="set-text"><strong>Key</strong><span class="set-hint">Letters marked <em>taken</em> are normally used by the browser.</span></div>
+              <div class="combo-picker">
+                <span class="combo-mod" id="combo-mod">Ctrl</span>
+                <span class="combo-plus">+</span>
+                <select id="admin-key" class="set-select" aria-label="Admin console shortcut key"></select>
+              </div>
+            </div>
+            <div class="set-row" id="admin-key-warn" hidden>
+              <div class="set-text"><strong>Heads up</strong><span class="set-hint" id="admin-key-warn-text"></span></div>
+            </div>
+          </div>
+          <div class="set-card set-links"><a href="admin.html">Open the admin console</a></div>
+        </section>
+
+      </div>
     </div>
 
     <div data-shell="foot"></div>

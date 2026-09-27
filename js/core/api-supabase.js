@@ -287,6 +287,7 @@
      and a session restored from an older token may not carry it at all —
      which is how sending a message could throw on `.username` of undefined. */
   var selfProfile = null;
+  var healingAvatar = false;
 
   /* Write to the account's GoTrue user_metadata (no DB schema needed). Used as
      the avatar fallback when the profiles.avatar_url migration hasn't run. */
@@ -331,7 +332,10 @@
     return avatarReady().then(function (ready) {
       if (ready) {
         return API.updateProfile({ avatarUrl: dataUrl }).then(function (res) {
-          return { user: res.user, url: dataUrl };
+          /* The public copy is now authoritative; drop the private one so the
+             two can never disagree again. */
+          setAuthMeta({ avatar_url: null }).catch(function () {});
+          return { user: res.user, url: dataUrl, shared: true };
         }).catch(function () {
           return uploadAvatarMetaOnly(dataUrl);
         });
@@ -348,7 +352,9 @@
       if (selfProfile) selfProfile.avatar_url = dataUrl;
       return me(true).then(function (row) {
         if (row) row.avatar_url = dataUrl;   // reflect immediately
-        return { user: shapeSelf(row || selfProfile), url: dataUrl };
+        /* Only this account can read auth metadata: other people won't see
+           this picture. Callers surface that instead of claiming success. */
+        return { user: shapeSelf(row || selfProfile), url: dataUrl, shared: false };
       });
     });
   }
@@ -370,7 +376,20 @@
              shows everywhere they're signed in. */
           if (!row.avatar_url) {
             var meta = session.user.user_metadata || {};
-            if (meta.avatar_url) row.avatar_url = meta.avatar_url;
+            if (meta.avatar_url) {
+              row.avatar_url = meta.avatar_url;
+              /* Self-heal: a picture saved by the old private-only fallback
+                 is copied onto the public profile so friends see it too. */
+              if (AVATAR_READY && !healingAvatar) {
+                healingAvatar = true;
+                rest("/profiles?id=eq." + session.user.id, {
+                  method: "PATCH", body: { avatar_url: meta.avatar_url },
+                  headers: { Prefer: "return=representation" }
+                }).then(function (rows) {
+                  if (one(rows)) setAuthMeta({ avatar_url: null }).catch(function () {});
+                }).catch(function () {});
+              }
+            }
           }
         }
         selfProfile = row;
@@ -640,7 +659,12 @@
       return rest("/profiles?id=eq." + session.user.id, {
         method: "PATCH", body: row, headers: { Prefer: "return=representation" }
       }).then(function (rows) {
-        selfProfile = one(rows);
+        var row = one(rows);
+        /* PostgREST answers 200 with no rows when row-level security quietly
+           filters the update out. That is a failure, not a success. */
+        if (!row) throw fail("Your profile couldn't be saved. Try signing out and back in.", 403);
+        if (session && session.user) row.email = session.user.email || "";
+        selfProfile = row;
         return { user: shapeSelf(selfProfile) };
       });
     },
@@ -681,7 +705,8 @@
               return listAvatarObjects(session.user.id).then(function (paths) {
                 return deleteAvatarObjects(paths.filter(function (item) { return item !== path; }));
               }).catch(function () {}).then(function () {
-                return { user: res.user, url: publicUrl };
+                setAuthMeta({ avatar_url: null }).catch(function () {});
+                return { user: res.user, url: publicUrl, shared: true };
               });
             });
           }).catch(function () { return uploadAvatarMeta(dataUrl); });

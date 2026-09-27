@@ -32,7 +32,7 @@
     var box = el("span", "names");
     var line = el("span", "n1");
     line.textContent = user.displayName || user.username;
-    line.appendChild(window.UI.userTags(user, { compact: !!opts.compactTags }));
+    if (window.UI.userTags) line.appendChild(window.UI.userTags(user, { compact: !!opts.compactTags }));
     box.appendChild(line);
 
     var sub = el("span", "n2");

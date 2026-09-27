@@ -3403,3 +3403,98 @@ html[data-skin="paper"] .utag.is-admin, html[data-skin="linen"] .utag.is-admin {
 .ring-face > *, .calltile-face > *, .callbar-face > * { display: block; }
 .callroot.is-big .callbtn.is-end { width: auto; padding: 0 1.5rem; }
 .callroot.is-big .calltile-face { width: 6rem; height: 6rem; }
+
+/* ==========================================================================
+   46 · ADMIN CONSOLE — grouped menu, top bar, people list
+   ========================================================================== */
+.admin-shell { grid-template-columns: 14.5rem minmax(0, 1fr); gap: 2rem; padding-top: 1.4rem; }
+.admin-nav { top: 1rem; border-radius: 16px; padding: 0.6rem; gap: 1px; max-height: calc(100dvh - 2rem); overflow-y: auto; }
+.admin-nav-label {
+  display: block; padding: 0.8rem 0.65rem 0.3rem; font-size: 0.66rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+}
+.admin-nav-label:first-child { padding-top: 0.3rem; }
+.admin-nav-link { border-left: 0; border-radius: 10px; padding: 0.5rem 0.65rem; font-size: 0.87rem; gap: 0.65rem; }
+.admin-nav-link.on { background: var(--sel); color: var(--accent); }
+.admin-nav-link .svg-ico.ico { width: 1.1rem; font-size: 1.05rem; color: var(--ink-3); }
+.admin-nav-link.on .svg-ico.ico, .admin-nav-link:hover .svg-ico.ico { color: inherit; }
+.admin-nav-n {
+  border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+  font-family: var(--font); font-weight: 800; font-size: 0.68rem; padding: 0.15rem 0.45rem;
+}
+.admin-nav-link[data-tab="reports"] .admin-nav-n { background: var(--bad); color: #fff; }
+.admin-nav-foot { border-top: 1px solid var(--line); margin-top: 0.5rem; padding-top: 0.6rem; }
+.admin-nav-foot .btn { border-radius: 999px; }
+
+.admin-topbar { align-items: center; padding-bottom: 1.1rem; margin-bottom: 1.4rem; }
+.admin-title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem 1rem; }
+.admin-title h1 { margin: 0; font-size: clamp(1.7rem, 3.2vw, 2.2rem); letter-spacing: -0.02em; }
+.admin-you {
+  display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.6rem 0.25rem 0.3rem;
+  border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 0.84rem; font-weight: 600;
+}
+.admin-you:empty { display: none; }
+.admin-you .avatar { width: 1.6rem; height: 1.6rem; }
+.admin-you .avatar .dot { display: none; }
+.admin-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.admin-stat {
+  padding: 0.35rem 0.8rem; border-radius: 999px; font-size: 0.8rem; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--line);
+}
+.admin-stat b { color: var(--good); }
+.admin-stat.is-warn b { color: var(--bad); }
+
+/* Metric tiles: rounded cards with a gap rather than one hairline sheet. */
+#console .metrics { gap: 0.7rem; background: transparent; border: 0; }
+#console .metric { border-radius: 14px; border: 1px solid var(--line); }
+#console .metric b { font-family: var(--font); }
+#console .metric span { font-family: var(--font); letter-spacing: 0; text-transform: none; font-size: 0.78rem; }
+#console button.metric { cursor: pointer; text-align: left; transition: border-color .12s, transform .12s; }
+#console button.metric:hover { border-color: var(--accent); transform: translateY(-2px); }
+#console .block-head h2 { font-size: 1.15rem; }
+.admin-ann-row { gap: 0.5rem; align-items: center; }
+.admin-ann-row select { width: auto; min-height: 2.3rem; border-radius: 10px; }
+.admin-ann .btn { border-radius: 999px; }
+
+/* People list: adapts to whatever width the pane leaves it. */
+#user-rows { display: flex; flex-direction: column; gap: 2px; padding: 0.35rem; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.admin-urow {
+  display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0.65rem; border-radius: 12px; cursor: pointer;
+  transition: background .12s;
+}
+.admin-urow:hover { background: var(--surface-2); }
+.admin-urow.is-on { background: var(--sel); }
+.admin-urow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.admin-urow-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.7rem; color: var(--ink); }
+.admin-urow-who:hover { text-decoration: none; }
+.admin-urow-who .avatar { width: 2.4rem; height: 2.4rem; }
+.admin-urow-names { min-width: 0; display: flex; flex-direction: column; }
+.admin-urow-n1 { display: flex; align-items: center; min-width: 0; }
+.admin-urow-name { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-urow-n2 { font-size: 0.76rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-urow-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; flex: none; }
+.admin-urow-stats { font-size: 0.72rem; color: var(--ink-3); white-space: nowrap; }
+.admin-urow-stats.is-bad { color: var(--bad); }
+.admin-urow .admin-acts { flex: none; color: var(--ink-3); font-size: 0.75rem; }
+.admin-chev { transform: rotate(180deg); }
+.admin-pill {
+  font-size: 0.7rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 999px; text-transform: capitalize;
+}
+.admin-pill.is-good { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.admin-pill.is-bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.admin-empty { padding: 1.5rem; text-align: center; margin: 0; }
+.admin-detail-head { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 0.9rem; }
+.admin-detail-head > div { min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.admin-detail-head strong { display: flex; flex-wrap: wrap; align-items: center; font-size: 1.1rem; }
+.admin-detail-head .dim { font-size: 0.8rem; overflow-wrap: anywhere; }
+#user-detail { border-radius: 16px; }
+
+@media (max-width: 860px) {
+  .admin-shell { grid-template-columns: 1fr; padding-top: 0.6rem; }
+  .admin-nav { max-height: none; flex-direction: row; border-radius: 14px; }
+  .admin-nav-label { display: none; }
+  .admin-nav-link { width: auto; flex: none; }
+  .admin-urow-stats { display: none; }
+}
+#console .report, #console .panel, #console .ticket, #console .fb { border-radius: 14px; }
+#console .report .btn, #console .panel .btn { border-radius: 999px; }

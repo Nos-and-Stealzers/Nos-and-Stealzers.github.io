@@ -52,7 +52,7 @@ there is **no second server to run**. This is the path that works with the
 Vercel deploy above.
 
 1. **Apply the schema.** Supabase dashboard → *SQL Editor → New query* → paste
-   all of [`supabase/schema.sql`](supabase/schema.sql) → **Run**. It is
+   all of [`supabase/SETUP-ALL-IN-ONE.sql`](supabase/SETUP-ALL-IN-ONE.sql) → **Run**. It is
    idempotent, so re-running after an update is safe.
 
 2. **Turn off email confirmation.** *Authentication → Providers → Email* →

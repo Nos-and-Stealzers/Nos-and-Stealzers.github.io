@@ -31,7 +31,19 @@
     close:      '<path d="m5 5 14 14M19 5 5 19"/>',
     popout:     '<path d="M9 15 20 4M14 4h6v6M6 5H4v15h15v-2"/>',
     group:      '<circle cx="9" cy="9" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M3.5 19c.6-3.4 3-5.2 5.5-5.2s4.9 1.8 5.5 5.2M14.8 14.3c2 .2 3.6 1.7 4.1 4.4"/>',
-    plus:       '<path d="M12 5v14M5 12h14"/>'
+    plus:       '<path d="M12 5v14M5 12h14"/>',
+    trash:      '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>',
+    copy:       '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+    search:     '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+    edit:       '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+    info:       '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+    userPlus:   '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c.7-3.8 3.2-5.8 6-5.8s5.3 2 6 5.8M19 8v6M16 11h6"/>',
+    logout:     '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
+    arrowDown:  '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    retry:      '<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/>',
+    attach:     '<path d="m20 11.5-8.1 8.1a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/>',
+    check:      '<path d="m5 12.5 4.5 4.5L19 7"/>',
+    user:       '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.4 4-6.8 8-6.8s7.2 2.4 8 6.8"/>'
   };
   function icon(name, cls) {
     var span = document.createElement("span");

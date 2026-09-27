@@ -3,6 +3,67 @@
 (function () {
   "use strict";
 
+  /* In-page confirm when the dialogs are loaded, the browser's otherwise. */
+  function ask(title, body, label, danger) {
+    if (window.Dialogs && window.Dialogs.confirm) {
+      return window.Dialogs.confirm({ title: title, body: body, confirmLabel: label || "OK", danger: !!danger });
+    }
+    return Promise.resolve(window.confirm(title + (body ? "\n\n" + body : "")));
+  }
+
+  /* ------------------------------------------------------------ sections */
+
+  /* One pane at a time, picked from the side menu and kept in the URL hash so
+     a reload or a shared link (settings.html#privacy) lands in the same place. */
+  function panes() {
+    var signedIn = false;
+    /* What was asked for (link or hash), kept separately from what is shown,
+       so #profile survives the moment before the session has loaded. */
+    var requested = window.location.hash.slice(1);
+    var links = Array.prototype.slice.call(document.querySelectorAll(".set-link"));
+    function paintAccount() {
+      links.forEach(function (l) { if (l.hasAttribute("data-account")) l.hidden = !signedIn; });
+    }
+    paintAccount();
+    function paneEl(name) {
+      return document.getElementById(name === "staff" ? "staff-block" : "pane-" + name);
+    }
+    function usable(name) {
+      var link = links.filter(function (l) { return l.dataset.pane === name; })[0];
+      return link && !link.hidden;
+    }
+    function show(name, focus) {
+      if (!usable(name)) name = signedIn ? "profile" : "appearance";
+      links.forEach(function (l) {
+        var on = l.dataset.pane === name;
+        l.classList.toggle("is-active", on);
+        if (on) l.setAttribute("aria-current", "page"); else l.removeAttribute("aria-current");
+        var pane = paneEl(l.dataset.pane);
+        if (pane) pane.hidden = !on;
+      });
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", "#" + name);
+      }
+      var active = links.filter(function (l) { return l.dataset.pane === name; })[0];
+      if (active && active.scrollIntoView && window.innerWidth <= 760) {
+        active.scrollIntoView({ block: "nearest", inline: "center" });
+      }
+      if (focus) {
+        var h = paneEl(name) && paneEl(name).querySelector("h2");
+        if (h) { h.tabIndex = -1; h.focus({ preventScroll: window.innerWidth > 760 }); }
+      }
+    }
+    links.forEach(function (l) {
+      l.addEventListener("click", function () { requested = l.dataset.pane; show(requested, true); });
+    });
+    window.addEventListener("hashchange", function () { requested = window.location.hash.slice(1); show(requested); });
+    return {
+      show: show,
+      refresh: function () { show(requested); },
+      signIn: function () { signedIn = true; paintAccount(); }
+    };
+  }
+
   /* ------------------------------------------------------------- display */
 
   function displaySection() {
@@ -202,11 +263,41 @@
     });
 
     document.getElementById("wipe-local").addEventListener("click", function () {
-      if (!window.confirm("Erase pins, history and playtime stored in this browser?" +
-          (user ? " Your synced copy on the server is kept." : ""))) return;
-      window.Store.resetAll();
-      window.location.reload();
+      ask("Clear this device?", "Pins, history and playtime stored in this browser are erased." +
+          (user ? " Your synced copy in your account is kept." : " There's no other copy."), "Clear it", true)
+        .then(function (yes) {
+          if (!yes) return;
+          window.Store.resetAll();
+          window.location.reload();
+        });
     });
+  }
+
+  /* "Mozilla/5.0 (Windows NT 10.0…) Chrome/…" → "Chrome on Windows". */
+  function deviceName(agent) {
+    var a = String(agent || "");
+    if (!a || a === "This device") return a || "Unknown device";
+    var browser = /Edg\//.test(a) ? "Edge" : /OPR\//.test(a) ? "Opera" : /Firefox\//.test(a) ? "Firefox"
+      : /CrOS/.test(a) && /Chrome\//.test(a) ? "Chrome" : /Chrome\//.test(a) ? "Chrome"
+      : /Safari\//.test(a) ? "Safari" : "";
+    var os = /CrOS/.test(a) ? "Chromebook" : /Windows/.test(a) ? "Windows" : /iPhone|iPad/.test(a) ? "iOS"
+      : /Mac OS X/.test(a) ? "Mac" : /Android/.test(a) ? "Android" : /Linux/.test(a) ? "Linux" : "";
+    if (browser && os) return browser + " on " + os;
+    return (browser || os || a).slice(0, 60);
+  }
+
+  function listRow(iconName, title, sub, tone, action) {
+    var UI = window.UI;
+    var row = UI.el("div", "set-item" + (tone ? " is-" + tone : ""));
+    var ico = UI.el("span", "set-item-ico");
+    ico.appendChild(UI.icon(iconName));
+    row.appendChild(ico);
+    var text = UI.el("span", "set-item-text");
+    text.appendChild(UI.el("strong", null, title));
+    if (sub) text.appendChild(UI.el("span", null, sub));
+    row.appendChild(text);
+    if (action) row.appendChild(action);
+    return row;
   }
 
   /* ------------------------------------------------------------- account */
@@ -215,21 +306,42 @@
     var UI = window.UI;
     var API = window.API;
 
-    document.getElementById("account-area").hidden = false;
-    document.getElementById("r-user").textContent = "@" + user.username;
-    document.getElementById("r-role").textContent = user.role;
-    document.getElementById("r-since").textContent =
-      new Date(user.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" });
+    /* Who you are, at the top of the menu. */
+    var meCard = document.getElementById("me-card");
+    function drawMe(u) {
+      meCard.innerHTML = "";
+      meCard.appendChild(window.SocialUI ? window.SocialUI.avatar(u) : UI.el("span"));
+      var names = UI.el("span", "set-me-names");
+      var n1 = UI.el("strong", null, u.displayName || u.username);
+      n1.appendChild(UI.userTags(u, { compact: true }));
+      names.appendChild(n1);
+      names.appendChild(UI.el("span", null, "@" + u.username +
+        (u.createdAt ? " · since " + new Date(u.createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "")));
+      meCard.appendChild(names);
+      meCard.hidden = false;
+    }
+    drawMe(user);
+    document.getElementById("handle-hint").textContent = "@" + user.username;
+    document.getElementById("view-profile").href = "profile.html?u=" + encodeURIComponent(user.username);
 
     /* ---- profile ---- */
     var display = document.getElementById("display");
     var bio = document.getElementById("bio");
     var bioCount = document.getElementById("bio-count");
 
-    display.value = user.displayName || "";
-    bio.value = user.bio || "";
-    bioCount.textContent = bio.value.length;
-    bio.addEventListener("input", function () { bioCount.textContent = bio.value.length; });
+    var saveBtn = document.getElementById("profile-save");
+    var saved = { display: user.displayName || "", bio: user.bio || "" };
+    display.value = saved.display;
+    bio.value = saved.bio;
+    /* Save lights up only when something actually changed. */
+    function dirty() {
+      var changed = display.value.trim() !== saved.display || bio.value.trim() !== saved.bio;
+      saveBtn.disabled = !changed;
+      bioCount.textContent = bio.value.length;
+    }
+    display.addEventListener("input", dirty);
+    bio.addEventListener("input", dirty);
+    dirty();
 
     /* ---- profile picture ---- */
     var pfpPreview = document.getElementById("pfp-preview");
@@ -262,7 +374,16 @@
       return API.uploadAvatar(blob, mime, shot.dataUrl).then(function (res) {
         window.Session.setUser(res.user);
         drawPfp(res.user);
-        UI.toast("Profile picture updated");
+        drawMe(res.user);
+        if (res.shared === false) {
+          pfpHint.textContent = "Saved, but only you can see it right now: the site's avatar storage " +
+            "isn't set up. It will be shared automatically once it is.";
+          pfpHint.classList.add("is-warn");
+          UI.toast("Only you can see this picture for now", 4000);
+        } else {
+          pfpHint.classList.remove("is-warn");
+          UI.toast("Profile picture updated — everyone can see it");
+        }
       }).finally(function () { if (button) button.disabled = false; });
     }
 
@@ -292,6 +413,7 @@
         API.removeAvatar().then(function (res) {
           window.Session.setUser(res.user);
           drawPfp(res.user);
+          drawMe(res.user);
           UI.toast("Picture removed");
         }).catch(function (err) { UI.toast(err.message); })
           .then(function () { pfpRemove.disabled = false; });
@@ -300,24 +422,32 @@
 
     document.getElementById("profile-form").addEventListener("submit", function (event) {
       event.preventDefault();
+      saveBtn.disabled = true;
       API.updateProfile({ displayName: display.value.trim(), bio: bio.value.trim() })
-        .then(function (res) { window.Session.setUser(res.user); UI.toast("Profile saved"); })
-        .catch(function (err) { UI.toast(err.message); });
+        .then(function (res) {
+          window.Session.setUser(res.user);
+          saved = { display: res.user.displayName || "", bio: res.user.bio || "" };
+          drawMe(res.user);
+          UI.toast("Profile saved");
+        })
+        .catch(function (err) { UI.toast(err.message); })
+        .then(dirty);
     });
 
     /* ---- privacy ---- */
     var privacy = document.getElementById("privacy");
 
     function toggleRow(key, title, hint, value) {
-      var row = UI.el("div", "opt");
-      var text = UI.el("div");
-      text.appendChild(UI.el("div", "k", title));
-      text.appendChild(UI.el("div", "d", hint));
+      var row = UI.el("div", "set-row");
+      var text = UI.el("div", "set-text");
+      text.appendChild(UI.el("strong", null, title));
+      text.appendChild(UI.el("span", "set-hint", hint));
       row.appendChild(text);
 
       var wrap = UI.el("label", "toggle");
       var input = UI.el("input");
       input.type = "checkbox";
+      input.setAttribute("aria-label", title);
       input.checked = !!value;
       input.addEventListener("change", function () {
         var patch = {};
@@ -370,18 +500,9 @@
       API.sessions().then(function (res) {
         var host = document.getElementById("sessions");
         host.innerHTML = "";
-        res.sessions.forEach(function (s, i) {
-          var row = UI.el("div", "row");
-          row.style.gridTemplateColumns = "3rem 1fr auto";
-          row.appendChild(UI.el("span", "idx", UI.pad(i + 1)));
-
-          var mid = UI.el("span", "name");
-          mid.textContent = (s.agent || "Unknown device").slice(0, 70);
-          if (s.current) mid.appendChild(UI.el("span", "role", "this device"));
-          row.appendChild(mid);
-
-          row.appendChild(UI.el("span", "plays", "started " + UI.formatWhen(s.createdAt)));
-          host.appendChild(row);
+        res.sessions.forEach(function (s) {
+          host.appendChild(listRow("screen", deviceName(s.agent),
+            s.current ? "This device" : "Signed in " + UI.formatWhen(s.createdAt), s.current ? "good" : ""));
         });
       }).catch(function () { /* non-critical */ });
     }
@@ -399,23 +520,21 @@
           return;
         }
         rows.forEach(function (l) {
-          var row = UI.el("div", "row");
-          row.style.gridTemplateColumns = "1fr auto";
-          var mid = UI.el("span", "name");
-          mid.textContent = (l.agent || "Unknown device").slice(0, 70);
-          row.appendChild(mid);
-          var when = UI.el("span", "plays",
-            (l.outcome === "failed" ? "\u26a0 failed \u00b7 " : "") +
-            UI.formatWhen(new Date(l.at).getTime()));
-          if (l.outcome === "failed") when.style.color = "var(--bad)";
-          row.appendChild(when);
-          host.appendChild(row);
+          var failed = l.outcome === "failed";
+          host.appendChild(listRow(failed ? "block" : "check", deviceName(l.agent),
+            (failed ? "Failed attempt · " : "") + UI.formatWhen(new Date(l.at).getTime()), failed ? "bad" : ""));
         });
       }).catch(function () { /* non-critical */ });
     }
     loadLoginHistory();
 
     /* ---- email verification ---- */
+    var evPill = document.getElementById("ev-pill");
+    function pill(ok) {
+      evPill.hidden = false;
+      evPill.textContent = ok ? "Verified" : "Not verified";
+      evPill.className = "set-pill " + (ok ? "is-good" : "is-warn");
+    }
     (function emailVerify() {
       var statusEl = document.getElementById("ev-status");
       var actions = document.getElementById("ev-actions");
@@ -428,13 +547,9 @@
       function say(t) { if (msg) { msg.textContent = t; msg.hidden = false; } }
 
       API.myEmailVerified().then(function (ok) {
-        if (ok) {
-          statusEl.textContent = "✅ Your email is verified.";
-          if (actions) actions.hidden = true;
-        } else {
-          statusEl.textContent = "Your email is not verified yet.";
-          if (actions) actions.hidden = false;
-        }
+        statusEl.textContent = (user.email || "Your email") + (ok ? "" : " — verify it to use chat, friends and calls.");
+        pill(!!ok);
+        if (actions) actions.hidden = !!ok;
       }).catch(function () { statusEl.textContent = ""; });
 
       if (sendBtn) sendBtn.addEventListener("click", function () {
@@ -456,7 +571,8 @@
         checkBtn.disabled = true;
         API.verifyEmailCode(code).then(function () {
           UI.toast("Email verified 🎉");
-          statusEl.textContent = "✅ Your email is verified.";
+          statusEl.textContent = user.email || "Your email";
+          pill(true);
           actions.hidden = true;
         }).catch(function (err) {
           say(err.message || "That code didn't work.");
@@ -466,10 +582,13 @@
     })();
 
     document.getElementById("signout-all").addEventListener("click", function () {
-      if (!window.confirm("Sign out of every other device?")) return;
-      API.signOutEverywhere()
-        .then(function () { UI.toast("Other devices signed out"); loadSessions(); })
-        .catch(function (err) { UI.toast(err.message); });
+      ask("Sign out other devices?", "Every other browser signed into this account will need to sign in again.", "Sign them out")
+        .then(function (yes) {
+          if (!yes) return;
+          API.signOutEverywhere()
+            .then(function () { UI.toast("Other devices signed out"); loadSessions(); })
+            .catch(function (err) { UI.toast(err.message); });
+        });
     });
 
     /* ---- delete ---- */
@@ -484,16 +603,18 @@
         delError.hidden = false;
         return;
       }
-      if (!window.confirm("Permanently delete @" + user.username + "? This cannot be undone.")) return;
-
-      API.deleteAccount(typed)
-        .then(function () {
-          window.Session.setUser(null);
-          window.location.href = "index.html";
-        })
-        .catch(function (err) {
-          delError.textContent = err.message;
-          delError.hidden = false;
+      ask("Delete @" + user.username + " forever?", "Your profile, friends, messages and synced saves are erased. This cannot be undone.", "Delete forever", true)
+        .then(function (yes) {
+          if (!yes) return;
+          API.deleteAccount(typed)
+            .then(function () {
+              window.Session.setUser(null);
+              window.location.href = "index.html";
+            })
+            .catch(function (err) {
+              delError.textContent = err.message;
+              delError.hidden = false;
+            });
         });
     });
   }
@@ -517,31 +638,23 @@
           if (!keepMessage) say("Nothing backed up yet.");
           return;
         }
-        res.hosts.forEach(function (h, i) {
-          var row = UI.el("div", "row");
-          row.style.gridTemplateColumns = "3rem 1fr auto auto";
-          row.appendChild(UI.el("span", "idx", UI.pad(i + 1)));
-
-          var name = UI.el("span", "name");
-          name.textContent = h.host;
-          row.appendChild(name);
-
-          row.appendChild(UI.el("span", "plays", "saved " + UI.formatWhen(h.updatedAt)));
-
+        res.hosts.forEach(function (h) {
           var drop = UI.el("button", "btn btn-sm btn-flat", "Forget");
           drop.type = "button";
+          list.appendChild(listRow("image", h.host, "Backed up " + UI.formatWhen(h.updatedAt), "", drop));
           drop.addEventListener("click", function () {
-            if (!window.confirm("Delete the backed-up progress for " + h.host + "?")) return;
-            window.API.dropGameSave(h.host)
+            ask("Forget the backup for " + h.host + "?", "The copy in your account is deleted. Progress on this device isn't touched.", "Forget it", true)
+              .then(function (yes) { if (yes) return forget(); });
+          });
+          function forget() {
+            return window.API.dropGameSave(h.host)
               .then(function () {
                 if (window.GameSaves.forget) window.GameSaves.forget(h.host);
                 UI.toast("Removed");
                 draw();
               })
               .catch(function (err) { UI.toast(err.message); });
-          });
-          row.appendChild(drop);
-          list.appendChild(row);
+          }
         });
         if (!keepMessage) say("Last backed up " + UI.formatWhen(
           Math.max.apply(null, res.hosts.map(function (h) { return h.updatedAt; }))) + ".");
@@ -583,10 +696,10 @@
     });
 
     document.getElementById("gs-force").addEventListener("click", function () {
-      if (!window.confirm(
-        "Overwrite this device's game progress with the backed-up copy? " +
-        "Anything newer here is lost.")) return;
-      run("Overwriting", function () { return window.GameSaves.restore(true); });
+      ask("Overwrite this device?", "This device's game progress is replaced with the backed-up copy. Anything newer here is lost.", "Overwrite", true)
+        .then(function (yes) {
+          if (yes) run("Overwriting", function () { return window.GameSaves.restore(true); });
+        });
     });
 
     draw();
@@ -609,8 +722,8 @@
 
     var block = document.getElementById("staff-block");
     if (!block) return;
-    block.hidden = false;
-    document.getElementById("staff-role").textContent = user.role;
+    document.getElementById("staff-link").hidden = false;
+    document.getElementById("staff-role").textContent = user.role === "owner" ? "the owner and admins" : "admins";
 
     var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
     document.getElementById("combo-mod").textContent = mac ? "⌘" : "Ctrl";
@@ -700,6 +813,8 @@
   function init() {
     /* Display preferences must not wait on — or require — the backend. */
     displaySection();
+    var nav = panes();
+    nav.refresh();
 
     window.Session.ready.then(function (state) {
       if (!state.backend) {
@@ -712,6 +827,7 @@
         dataSection(null);
         return;
       }
+      nav.signIn();
       /* Each section is built independently, so one throwing cannot take the
          rest of the page down with it. They used to run as four bare calls in
          a row: anything that threw — and the two backends do not fail
@@ -725,6 +841,7 @@
       section("data", function () { dataSection(state.user); });
       section("account", function () { accountSection(state.user); });
       section("game progress", gameProgressSection);
+      nav.refresh();
     });
   }
 

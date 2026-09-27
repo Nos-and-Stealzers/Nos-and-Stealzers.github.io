@@ -151,7 +151,9 @@
         }
         who.appendChild(current.isGroup ? Core.groupAvatar() : Core.avatar(current.with));
         var names = el("span", "msgs-who-names");
-        names.appendChild(el("strong", null, current.title || "…"));
+        var nameLine = el("strong", "msgs-who-name", current.title || "…");
+        if (!current.isGroup && current.with) nameLine.appendChild(UI.userTags(current.with, { compact: true }));
+        names.appendChild(nameLine);
         var sub = el("span", "msgs-who-sub");
         if (current.isGroup) {
           sub.textContent = current.memberCount ? current.memberCount + " people" : "";
@@ -235,7 +237,9 @@
             var link = el("a", "msgs-member-link");
             link.href = "profile.html?u=" + encodeURIComponent(m.username);
             link.appendChild(Core.avatar(m, "sm"));
-            link.appendChild(el("span", "msgs-member-name", m.displayName || m.username));
+            var mn = el("span", "msgs-member-name", m.displayName || m.username);
+            mn.appendChild(UI.userTags(m, { compact: true, noPlus: true }));
+            link.appendChild(mn);
             row.appendChild(link);
             if (current.owner) {
               var x = headBtn("close", "Remove " + (m.displayName || m.username), function () {

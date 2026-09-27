@@ -42,6 +42,17 @@
     arrowDown:  '<path d="M12 5v14M6 13l6 6 6-6"/>',
     retry:      '<path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/>',
     attach:     '<path d="m20 11.5-8.1 8.1a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8"/>',
+    grid:       '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    pulse:      '<path d="M3 12h4l2.5-6 5 12 2.5-6H21"/>',
+    list:       '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+    key:        '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9m-4 4 3 3m-6 0 2 2"/>',
+    gamepad:    '<path d="M7 8h10a4 4 0 0 1 4 4v2.5a2.5 2.5 0 0 1-4.6 1.4L15 14H9l-1.4 1.9A2.5 2.5 0 0 1 3 14.5V12a4 4 0 0 1 4-4z"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 13.5h.01"/>',
+    database:   '<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+    code:       '<path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/>',
+    crown:      '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
+    shield:     '<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/>',
+    shieldCheck:'<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    star:       '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
     check:      '<path d="m5 12.5 4.5 4.5L19 7"/>',
     user:       '<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.4 4-6.8 8-6.8s7.2 2.4 8 6.8"/>'
   };
@@ -55,6 +66,40 @@
       'stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
       'stroke-linejoin="round">' + p + '</svg>';
     return span;
+  }
+
+  /* Rank / membership tags that sit to the right of a person's name.
+     Returns a fragment (possibly empty) so callers can append unconditionally. */
+  var ROLE_TAGS = {
+    owner: { label: "Owner", icon: "crown", cls: "is-owner" },
+    admin: { label: "Admin", icon: "shield", cls: "is-admin" },
+    mod:   { label: "Mod",   icon: "shieldCheck", cls: "is-mod" }
+  };
+  function userTags(user, opts) {
+    opts = opts || {};
+    var frag = document.createDocumentFragment();
+    if (!user) return frag;
+    var r = ROLE_TAGS[user.role];
+    if (r) {
+      var t = el("span", "utag " + r.cls);
+      t.title = r.label + " of Arcade Campus Hub";
+      t.appendChild(icon(r.icon));
+      if (!opts.compact) t.appendChild(el("span", "utag-l", r.label));
+      else t.setAttribute("aria-label", r.label);
+      frag.appendChild(t);
+    }
+    if (user.isPlus && !opts.noPlus) {
+      var pl = el("span", "utag is-plus");
+      pl.title = "Campus+ member";
+      pl.appendChild(icon("star"));
+      if (!opts.compact) pl.appendChild(el("span", "utag-l", "Campus+"));
+      else pl.setAttribute("aria-label", "Campus+ member");
+      frag.appendChild(pl);
+    }
+    if (user.state === "suspended" && opts.showState) {
+      frag.appendChild(el("span", "utag is-bad", "Suspended"));
+    }
+    return frag;
   }
 
   function playHref(game) {
@@ -372,6 +417,7 @@
   window.UI = {
     el: el,
     icon: icon,
+    userTags: userTags,
     pad: pad,
     tile: tile,
     row: row,

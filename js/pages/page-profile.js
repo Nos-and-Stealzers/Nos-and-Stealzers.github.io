@@ -43,14 +43,14 @@
           });
         }
         var block = UI.el("div");
+        var nameLine = UI.el("div", "profile-name-line");
         var h1 = UI.el("h1");
         h1.textContent = user.displayName || user.username;
-        block.appendChild(h1);
+        nameLine.appendChild(h1);
+        nameLine.appendChild(UI.userTags(user, { showState: true }));
+        block.appendChild(nameLine);
         var handle = UI.el("p", "handle");
         handle.textContent = "@" + user.username;
-        if (user.role !== "user") handle.appendChild(UI.el("span", "role", user.role));
-        if (user.isPlus) handle.appendChild(UI.el("span", "role plus", "Campus+"));
-        if (user.state === "suspended") handle.appendChild(UI.el("span", "role bad", "suspended"));
         block.appendChild(handle);
         var presence = UI.el("p", "tiny dimmer");
         presence.textContent = user.online ? "● online now" : "last seen " + UI.formatWhen(user.lastSeen);
@@ -172,7 +172,9 @@
             var blob = dataUrlToBlob(shot.dataUrl);
             return API.uploadAvatar(blob, blob.type, shot.dataUrl).then(function (res) {
               if (window.Session && res.user) window.Session.setUser(res.user);
-              UI.toast("Profile picture updated");
+              UI.toast(res.shared === false
+                ? "Saved, but only you can see it until the site's database setup is finished."
+                : "Profile picture updated", res.shared === false ? 5000 : undefined);
               return load();
             });
           }).catch(function (err) {

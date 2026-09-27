@@ -57,6 +57,16 @@
 
       document.getElementById("console").hidden = false;
       document.getElementById("r-role").textContent = me.role;
+      /* Real icons on the section menu, and who you are beside the title. */
+      document.querySelectorAll(".admin-nav-link[data-icon]").forEach(function (n) {
+        if (!n.querySelector(".svg-ico")) n.insertBefore(UI.icon(n.dataset.icon, "ico"), n.firstChild);
+      });
+      var you = document.getElementById("admin-you");
+      if (you) {
+        you.appendChild(window.SocialUI.avatar(me));
+        you.appendChild(UI.el("span", null, me.displayName || me.username));
+        you.appendChild(UI.userTags(me, { noPlus: true }));
+      }
       document.querySelectorAll("[data-owner]").forEach(function (n) { n.hidden = !isOwner; });
       document.querySelectorAll("[data-owner-or-admin]").forEach(function (n) { n.hidden = !isAdmin; });
 
@@ -313,7 +323,7 @@
             track.appendChild(fill);
             meter.appendChild(track);
             meter.appendChild(UI.el("span", "v",
-              UI.formatDuration(row.seconds) + " · " + row.plays + "×"));
+              UI.formatDuration(row.seconds) + (row.plays != null ? " · " + row.plays + "×" : "")));
             host.appendChild(meter);
           });
         });
@@ -356,55 +366,36 @@
         host.innerHTML = "";
         setText("user-count", rows.length + " of " + userCache.length);
 
-        var cols = "1fr 12rem 5.5rem 6rem 7rem 6rem";
-        var head = UI.el("div", "rows-head user-head");
-        head.style.gridTemplateColumns = cols;
-        ["Account", "Email", "Rank", "State", "Activity", ""].forEach(function (h) {
-          head.appendChild(UI.el("span", null, h));
-        });
-        host.appendChild(head);
-
         if (!rows.length) {
-          host.appendChild(UI.el("p", "dim", "Nobody matches that."));
+          host.appendChild(UI.el("p", "dim admin-empty", "Nobody matches that."));
           return;
         }
 
         rows.forEach(function (u) {
-          var row = UI.el("div", "row user-row-grid");
-          row.style.gridTemplateColumns = cols;
+          var row = UI.el("div", "admin-urow");
 
-          var who = UI.el("a", "admin-who");
+          var who = UI.el("a", "admin-urow-who");
           who.href = "profile.html?u=" + encodeURIComponent(u.username);
           who.appendChild(window.SocialUI.avatar(u));
-          who.appendChild(window.SocialUI.nameBlock(u, { presence: true }));
+          var names = UI.el("span", "admin-urow-names");
+          var n1 = UI.el("span", "admin-urow-n1");
+          n1.appendChild(UI.el("span", "admin-urow-name", u.displayName || u.username));
+          n1.appendChild(UI.userTags(u, { compact: true }));
+          names.appendChild(n1);
+          names.appendChild(UI.el("span", "admin-urow-n2",
+            "@" + u.username + (u.email ? " · " + u.email : "")));
+          who.appendChild(names);
           row.appendChild(who);
 
-          var emailCell = UI.el("span", "tiny dimmer u-cell");
-          emailCell.dataset.label = "Email";
-          emailCell.textContent = u.email || "—";
-          emailCell.style.overflow = "hidden";
-          emailCell.style.textOverflow = "ellipsis";
-          emailCell.style.whiteSpace = "nowrap";
-          emailCell.title = u.email || "";
-          row.appendChild(emailCell);
-
-          var roleCell = UI.el("span", "cat u-cell");
-          roleCell.dataset.label = "Rank";
-          roleCell.textContent = u.role;
-          row.appendChild(roleCell);
-
-          var state = UI.el("span", "flag u-cell " + (u.state === "active" ? "flag-good" : "flag-bad"));
-          state.dataset.label = "State";
-          state.textContent = u.state;
-          row.appendChild(state);
-
-          var stats = UI.el("span", "plays u-cell");
-          stats.dataset.label = "Activity";
-          stats.textContent = u.friends + "f · " + u.messages + "m" +
-            (u.reports ? " · " + u.reports + "⚑" : "");
-          stats.title = u.friends + " friends, " + u.messages + " messages" +
-            (u.reports ? ", " + u.reports + " reports against them" : "");
-          row.appendChild(stats);
+          var meta = UI.el("span", "admin-urow-meta");
+          var st = UI.el("span", "admin-pill " + (u.state === "active" ? "is-good" : "is-bad"),
+            u.state === "active" ? (u.online ? "Online" : "Active") : u.state);
+          meta.appendChild(st);
+          var stats = UI.el("span", "admin-urow-stats",
+            u.friends + " friends · " + u.messages + " msgs" + (u.reports ? " · " + u.reports + " reports" : ""));
+          if (u.reports) stats.classList.add("is-bad");
+          meta.appendChild(stats);
+          row.appendChild(meta);
 
           var acts = UI.el("span", "admin-acts");
           /* One rule decides whether anything is offered at all, and it is
@@ -420,7 +411,7 @@
             acts.appendChild(UI.el("span", "tiny dimmer",
               isAdmin ? "outranks you" : "admins only"));
           } else {
-            acts.appendChild(UI.el("span", "tiny dimmer", "›"));
+            acts.appendChild(UI.icon("back", "admin-chev"));
           }
           row.appendChild(acts);
 
@@ -460,11 +451,15 @@
       function renderUserDetail(u, manageable) {
         var body = document.getElementById("user-detail");
         body.innerHTML = "";
-        body.appendChild(UI.el("span", "label", "@" + u.username));
-        if (u.isPlus) {
-          var plusTag = UI.el("span", "role plus", "Campus+");
-          body.appendChild(plusTag);
-        }
+        var dh = UI.el("div", "admin-detail-head");
+        dh.appendChild(window.SocialUI.avatar(u, "lg"));
+        var dn = UI.el("div");
+        var dn1 = UI.el("strong", null, u.displayName || u.username);
+        dn1.appendChild(UI.userTags(u, { showState: true }));
+        dn.appendChild(dn1);
+        dn.appendChild(UI.el("span", "dim", "@" + u.username + (u.email ? " · " + u.email : "")));
+        dh.appendChild(dn);
+        body.appendChild(dh);
 
         var summary = UI.el("p", "tiny dimmer");
         summary.style.margin = "0 0 1rem";

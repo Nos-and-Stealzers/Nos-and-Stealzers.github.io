@@ -287,10 +287,7 @@
     }
 
     var frag = document.createDocumentFragment();
-    /* Entrance stagger plays on a container's first fill only. Re-renders
-       (search-as-you-type, "load more", filter changes) mark the container
-       done so cards swap in instantly instead of re-animating on every
-       keystroke. */
+    /* Entrance stagger plays on a container's first fill only. */
     var animate = !container.dataset.rendered;
     games.forEach(function (game, i) {
       var node = tile(game, {
@@ -347,10 +344,7 @@
     window.setTimeout(function () { node.remove(); }, ms || 2100);
   }
 
-  /* Chat attachments arrive differently per backend: the Node API serves a
-     real URL, while PostgREST can only hand back base64 in a JSON row. The
-     adapter attaches a `fetchData` loader in that case, so renderers set the
-     source through here and don't have to care which backend is live. */
+  /* Chat attachments arrive differently per backend: the Node API serves a real URL, while PostgREST can only… */
   function attachImage(img, image) {
     if (!image) return img;
     if (typeof image.fetchData === "function") {

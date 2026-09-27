@@ -1,17 +1,4 @@
-/* Fully custom right-click menu.
- *
- * Replaces the browser's default context menu everywhere on the site with one
- * that matches the skin and is aware of what you clicked:
- *
- *   - on a game tile/row  → Play, Play in new tab, Pin/Unpin, Copy link, Details
- *   - on a link           → Open, Open in new tab, Copy link
- *   - on selected text     → Copy, Search the catalogue for it
- *   - anywhere else        → quick nav (Home, All games, Campus+, Library, Settings)
- *
- * It never blocks inside form fields and inputs (you still want the native
- * menu there for spellcheck/paste), and it closes on click, scroll, Escape or
- * a second right-click elsewhere. Dependency-free; injects its own styles.
- */
+/* Fully custom right-click menu. */
 (function () {
   "use strict";
 

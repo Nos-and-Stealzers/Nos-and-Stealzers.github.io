@@ -119,10 +119,7 @@
             button(a.label, a.kind === "cta" ? "btn-cta" : "", a.onClick);
           });
 
-          /* Not a friend yet, but their DMs are open? Then there is still a
-             conversation to start. relationActions already gives friends a
-             Message button, so adding one unconditionally — as this used to —
-             put two identical buttons side by side on every friend's page. */
+          /* Not a friend yet, but their DMs are open? */
           if (user.relation !== "friends" && user.relation !== "blocked" &&
               user.relation !== "blocked-by") {
             button("Message", "", openConversation);

@@ -1,17 +1,4 @@
-/* Campus AI (Beta) — the built-in assistant.
- *
- * HONEST SCOPE: this is a real, working helper, but it is NOT a large language
- * model. It answers from two sources that are actually on the page:
- *   1. the live game catalog (window.GAME_CATALOG / window.Catalog), so game
- *      recommendations are real titles that really exist here, and
- *   2. a built-in guide to the site's own features.
- * Everything runs in the browser; nothing typed here is sent anywhere.
- *
- * FUTURE-PROOFED: if window.SITE.aiEndpoint is ever set to a real completion
- * API, ask() will POST there first and fall back to the local brain on any
- * error. That's the "soon-to-work" hook the rest of the UI is already built
- * around — drop in an endpoint and the same page becomes a full chat.
- */
+/* Campus AI (Beta) — the built-in assistant. */
 (function () {
   "use strict";
 

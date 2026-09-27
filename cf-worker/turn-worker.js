@@ -26,9 +26,41 @@ const STUN = {
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+const SUPABASE_URL = "https://qopjzxrjkkljpumyirtb.supabase.co";
+// The project's public anon key (the same one the site ships); not a secret.
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcGp6eHJqa2tsanB1bXlpcnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTE0NzYsImV4cCI6MjA5MTc2NzQ3Nn0.wHLn-q1OpO0HP87yiDGnNmHfnI0J_AUDEXT09HpKUNg";
+
+// Relay credentials cost bandwidth on our account, so they are only minted
+// for a signed-in hub user: the site POSTs its Supabase access token and we
+// ask Supabase who it belongs to. ALLOWED_ORIGINS (comma separated) can
+// additionally pin which sites may ask.
+async function signedIn(request, env) {
+  if (request.method !== "POST") return false;
+  const token = (await request.text()).trim();
+  if (!token || token.length > 4096 || token.split(".").length !== 3) return false;
+  const url = (env.SUPABASE_URL || SUPABASE_URL).replace(/\/+$/, "");
+  const anon = env.SUPABASE_ANON_KEY || SUPABASE_ANON;
+  try {
+    const r = await fetch(url + "/auth/v1/user", {
+      headers: { apikey: anon, Authorization: "Bearer " + token },
+    });
+    if (!r.ok) return false;
+    const user = await r.json();
+    return !!(user && user.id);
+  } catch (e) {
+    return false;
+  }
+}
+
+function originAllowed(request, env) {
+  if (!env.ALLOWED_ORIGINS) return true;
+  const origin = request.headers.get("Origin") || "";
+  return env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).includes(origin);
+}
 
 export default {
   async fetch(request, env) {
@@ -41,6 +73,11 @@ export default {
         status: code,
         headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...CORS },
       });
+
+    // Anyone else still gets public STUN, which costs nothing.
+    if (!originAllowed(request, env) || !(await signedIn(request, env))) {
+      return json(200, { iceServers: [STUN], turn: false, reason: "sign_in_required" });
+    }
 
     // 1) Cloudflare Realtime TURN, minted server-side.
     if (env.CF_TURN_KEY_ID && env.CF_TURN_API_TOKEN) {
@@ -55,7 +92,7 @@ export default {
               Authorization: "Bearer " + env.CF_TURN_API_TOKEN,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ ttl: 86400 }),
+            body: JSON.stringify({ ttl: 14400 }),
           }
         );
         if (r.ok) {

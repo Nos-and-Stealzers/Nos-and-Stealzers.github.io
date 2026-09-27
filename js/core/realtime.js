@@ -1,22 +1,4 @@
-/* Realtime transport — dependency-free Supabase Realtime (Phoenix) client.
- *
- * WHY: calling and messaging were HTTP-polling only (6s to even ring, 1.5s per
- * signalling round-trip, 5s per message refresh). That made call setup slow and
- * often *fail*, because ICE candidates dribbled across at one-per-1.5s. This
- * opens a single websocket to Supabase Realtime and lets features subscribe to
- * broadcast channels for INSTANT pokes. It is purely additive: every feature
- * keeps its polling as a fallback, so if the socket can't connect (blocked
- * network, signed out, older browser) nothing breaks — it just falls back to
- * the old speed.
- *
- * Protocol (verified against qopjzxrjkkljpumyirtb):
- *   join:      {topic, event:"phx_join", payload:{config:{broadcast:{self,ack}}}, ref}
- *   heartbeat: {topic:"phoenix", event:"heartbeat", payload:{}, ref}
- *   broadcast: {topic, event:"broadcast", payload:{type:"broadcast",event,payload}, ref}
- *
- * No supabase-js: the official client is ~120KB from a CDN that the restrictive
- * networks this site targets often block. This is ~200 lines of fetch/WebSocket.
- */
+/* Realtime transport — dependency-free Supabase Realtime (Phoenix) client. */
 (function () {
   "use strict";
 
@@ -62,11 +44,7 @@
     this.ws.addEventListener("open", function () {
       self.connected = true;
       self.reconnectDelay = RECONNECT_MIN;
-      /* (Re)join every channel a feature asked for — exactly once. Channel
-         intent is tracked in self.channels; _joinChannel is a no-op while the
-         socket is still opening, so the initial subscribe() does NOT also queue
-         a duplicate join frame (which the server answered with phx_close,dead
-         channel, and silently-broken instant ring). */
+      /* (Re)join every channel a feature asked for — exactly once. */
       Object.keys(self.channels).forEach(function (topic) {
         self.channels[topic].joined = false;
         self._joinChannel(topic);

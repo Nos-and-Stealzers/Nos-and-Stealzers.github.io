@@ -1,17 +1,4 @@
-/* Mandatory consent gate.
- *
- * Everyone must accept the Terms of Use and Privacy Notice before using the
- * site. This shows a blocking, non-dismissible overlay on the first visit and
- * again whenever the policy version changes, records the acceptance (locally
- * always, and against the account when signed in), and only then lets the page
- * be used.
- *
- * It is deliberately dependency-free and injects its own styles, so it works
- * on every page regardless of load order and even if something else is broken.
- * It runs as early as possible and, crucially, does NOT gate the two policy
- * pages themselves or the auth pages — you have to be able to read what you're
- * agreeing to, and an already-signed-in flow shouldn't deadlock.
- */
+/* Mandatory consent gate. */
 (function () {
   "use strict";
 

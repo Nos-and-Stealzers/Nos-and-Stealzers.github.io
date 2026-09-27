@@ -361,10 +361,7 @@
 
   /* ------------------------------------------------------- quick settings */
 
-  /* The gear used to open the same modal as the full Settings page, which was
-     both redundant and slower than just going there. It is now an inline
-     panel with the three things people actually change often — skin, text
-     size, motion — and a link to the rest. */
+  /* The gear used to open the same modal as the full Settings page, which was both redundant and slower than just… */
   function toggleQuick(gear) {
     var panel = document.getElementById("rail-quick");
     if (!panel) return;
@@ -715,14 +712,7 @@
         return;
       }
 
-      /* Staff jump to the console with Ctrl/Cmd + a key, so it works even
-         while a game is running — the single-key shortcuts deliberately do
-         not. The letter is configurable in Settings, for admins and above.
-         Shift is accepted but not required, so a stored letter still matches
-         whether or not it was typed shifted.
-
-         event.key carries the shifted form, so lowercasing it is what makes
-         "L" match a stored "l". */
+      /* Staff jump to the console with Ctrl/Cmd + a key, so it works even while a game is running — the single-key… */
       if ((event.ctrlKey || event.metaKey) && !event.altKey) {
         var combo = (window.Store.settings().adminKey || "l").toLowerCase();
         if (combo && event.key.toLowerCase() === combo &&

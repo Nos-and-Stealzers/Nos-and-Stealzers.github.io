@@ -12,12 +12,7 @@
     domain: "arcadecampushub.online",
     build: "v2",
 
-    /* Where the games are served from.
-       Each catalog entry names its `host`; this maps that to an origin.
-       The four repos are separate GitHub Pages sites — enable Pages on each
-       (Settings → Pages → Deploy from branch → main → /root) and these URLs
-       start working. Swap any of them for Vercel/Netlify/your own host and
-       only this table changes. */
+    /* Where the games are served from. */
     gameHosts: {
       /* Whichever domain the hub is being served from. Pinning this to the
          main domain broke the mirrors: its X-Frame-Options blocks framing. */
@@ -38,33 +33,10 @@
        paths are still root-relative. Empty means "same origin as this site". */
     gameBase: "",
 
-    /* ---------------------------------------------------------------
-       Accounts backend. Pick ONE, or neither.
-
-       "supabase" — hosted Postgres + Auth. Talks straight from the
-                    browser, so the whole thing runs on Vercel with no
-                    second server. Fill in `supabase` below and run
-                    supabase/SETUP-ALL-IN-ONE.sql once in the SQL editor.
-
-       "node"     — the Express + SQLite server in server/. Needs a host
-                    that runs a real process with a persistent disk.
-                    Set `apiBase` to its URL (or leave empty when the
-                    same server is also serving this site).
-
-       "none"     — no accounts at all. Every account feature hides
-                    itself and the arcade works exactly as it does now.
-
-       "auto"     — (default) probe this origin for a node backend. Right
-                    for local development; on static hosting it finds
-                    nothing and quietly settles on "none".
-       --------------------------------------------------------------- */
+    /* --------------------------------------------------------------- Accounts backend. */
     backend: "supabase",
 
-    /* Used when backend === "supabase".
-       The anon key is MEANT to be public — row-level security is what
-       protects the data. NEVER put a `sb_secret_…` / service-role key
-       here; it bypasses RLS and would hand every visitor full database
-       access. If one has ever been pasted anywhere public, rotate it. */
+    /* Used when backend === "supabase". */
     supabase: {
       url: "https://qopjzxrjkkljpumyirtb.supabase.co",
       anonKey:
@@ -78,21 +50,7 @@
        Cloudflare Worker that mints TURN credentials server-side. */
     apiBase: "https://arcade-turn.stealzers-com.workers.dev",
 
-    /* ---------------------------------------------------------------
-       TURN relay for voice/video calls.
-
-       Calls now get their TURN relay from the /api/turn serverless
-       function (Cloudflare Realtime TURN — free, 1,000 GB/mo, credentials
-       minted server-side so no secret ships to the browser). That is the
-       primary and recommended path; see api/turn.js.
-
-       This block is only a STATIC FALLBACK used when /api/turn is
-       unreachable or not configured. It is disabled by default because
-       there is no reliable free no-signup TURN server to hard-code — the
-       old public ones (OpenRelay etc.) now reject with allocate errors.
-       To use your own relay without the serverless function, set
-       enabled:true and fill `servers` with { urls, username, credential }.
-       --------------------------------------------------------------- */
+    /* --------------------------------------------------------------- TURN relay for voice/video calls. */
     turn: {
       enabled: false,
       servers: []

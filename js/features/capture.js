@@ -71,10 +71,7 @@
     });
   }
 
-  /* The browser will not let a page silently screenshot itself, and a
-     cross-origin game frame can never be read into a canvas. getDisplayMedia
-     is the only route: the user picks what to share, which is also the only
-     honest way to do it. */
+  /* The browser will not let a page silently screenshot itself, and a cross-origin game frame can never be read… */
   function screenshot() {
     if (!supported().screen) {
       return Promise.reject(new Error("This browser can't capture the screen."));

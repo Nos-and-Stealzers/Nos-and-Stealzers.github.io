@@ -1,11 +1,4 @@
-/* Floating chat, bottom-right on every page — including while a game runs.
-
-   Collapsed: a round launcher with an unread badge.
-   Open: a panel with your conversations; pick one to chat without leaving
-   the page. The conversation itself is ChatCore's, shared with the full
-   Messages page, so the two always behave the same way.
-
-   Remembers open/closed and the open conversation per device. Esc closes. */
+/* Floating chat, bottom-right on every page — including while a game runs. */
 (function () {
   "use strict";
 

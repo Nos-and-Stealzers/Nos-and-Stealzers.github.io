@@ -1,16 +1,4 @@
-/* Supabase adapter.
- *
- * Implements the same surface as js/api.js against Supabase Auth (GoTrue) and
- * PostgREST, so session.js and every page work unchanged — only SITE.backend
- * decides which one is live.
- *
- * Deliberately dependency-free: no supabase-js from a CDN. The official client
- * is ~120 KB and, more to the point, a blocked CDN would take accounts down on
- * exactly the networks this site exists for. Everything here is fetch.
- *
- * The anon key is public by design; row-level security is what protects the
- * data. Nothing here should ever hold a service-role key.
- */
+/* Supabase adapter. */
 (function () {
   "use strict";
 
@@ -21,15 +9,7 @@
   var URL_BASE = String(conf.url || "").replace(/\/+$/, "");
   var ANON = String(conf.anonKey || "");
 
-  /* ICE servers for calls. Preference order:
-       1. GET /api/turn — Cloudflare Realtime TURN with fresh, short-lived
-          credentials minted server-side (token stays off the public client).
-          This is the relay that makes calls connect through mobile data,
-          school/work firewalls and symmetric NAT.
-       2. Static SITE.turn servers from config.js (if any are set).
-       3. Google STUN only (works on open networks).
-     The result is cached briefly so the three call entry points don't each
-     fire their own request within one call setup. */
+  /* ICE servers for calls. */
   var _iceCache = null;
   var _iceCacheAt = 0;
 
@@ -65,7 +45,13 @@
       _iceCache = iceStatic(); _iceCacheAt = Date.now();
       return Promise.resolve(_iceCache);
     }
-    return window.fetch(base + "/api/turn", { credentials: "omit" })
+    /* The relay only mints credentials for signed-in hub accounts. The token
+       goes in a text/plain body so the request stays CORS-simple. */
+    var tok = (session && session.access_token) || "";
+    return window.fetch(base + "/api/turn", {
+      method: "POST", credentials: "omit",
+      headers: { "Content-Type": "text/plain" }, body: tok
+    })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (d && Array.isArray(d.iceServers) && d.iceServers.length) {
@@ -106,11 +92,6 @@
 
   var TOKEN_KEY = "ach:sb-session";
 
-  /* Login accepts either a username or a real email in one box (email_for_login
-     resolves a username to the account's real address server-side, since the
-     client has no way to read auth.users directly). Signup now collects a real
-     email — Confirm Email is ON, so a placeholder address nobody can receive
-     mail at would leave every new account stuck unconfirmed forever. */
 
   /* ------------------------------------------------------------- session */
 
@@ -281,11 +262,7 @@
   }
   var PROFILE_COLS = PROFILE_COLS_BASE;   // legacy alias; call sites migrated to profileCols()
 
-  /* The signed-in account's own profile row.
-     `session.user.user_metadata` is NOT a substitute: it is whatever was set
-     at sign-up, so it goes stale the moment someone edits their display name,
-     and a session restored from an older token may not carry it at all —
-     which is how sending a message could throw on `.username` of undefined. */
+  /* The signed-in account's own profile row. */
   var selfProfile = null;
   var healingAvatar = false;
 
@@ -319,16 +296,7 @@
     if (dataUrl.length > 160000) {
       return Promise.reject(fail("That image is too large — try a smaller one.", 413));
     }
-    /* This fallback fires whenever the storage bucket upload path fails (most
-       commonly: the "avatars" storage bucket itself was never created — see
-       supabase/SETUP-ALL-IN-ONE.sql — even though profiles.avatar_url has
-       existed in the schema from the start). The bucket only matters for
-       *storage*; the profiles.avatar_url TEXT column has no such dependency
-       and is exactly what thread_list()/friends()/user() already read to show
-       avatars to OTHER people. So: write the data URL there directly first.
-       Only fall back further to auth user_metadata (visible to nobody but the
-       owner) if that PATCH genuinely fails, meaning the column itself is
-       missing on a database that never ran ANY of the avatar migrations. */
+    /* This fallback fires whenever the storage bucket upload path fails (most commonly: the "avatars" storage… */
     return avatarReady().then(function (ready) {
       if (ready) {
         return API.updateProfile({ avatarUrl: dataUrl }).then(function (res) {
@@ -428,10 +396,7 @@
     return row.requester === me ? "pending-out" : "pending-in";
   }
 
-  /* Every people-shaped response carries the edge id as well as the relation.
-     Without it, the Accept / Cancel / Remove / Unblock buttons that the
-     friends page builds from `relation` had nothing to address, and fired a
-     DELETE at `/friendships?id=eq.undefined`. */
+  /* Every people-shaped response carries the edge id as well as the relation. */
   function withRelation(rows, row) {
     var edge = edgeOf(rows, row.id);
     return shapeUser(row, {
@@ -499,13 +464,7 @@
         }
       }).then(function (body) {
         if (!body || !body.access_token) {
-          /* Supabase Auth deliberately never says "that email is already
-             registered" outright (it would let anyone probe which emails
-             have accounts) — a re-signup on an existing address comes back
-             200 OK with a fake user object, an EMPTY identities array, and
-             NO email actually sent. Telling the caller "check your inbox"
-             here is a dead end: nothing arrives, ever. identities.length
-             is the one field that tells the two cases apart, so use it. */
+          /* Supabase Auth deliberately never says "that email is already registered" outright (it would let anyone probe… */
           var alreadyRegistered = body && Array.isArray(body.identities) && body.identities.length === 0;
           if (alreadyRegistered) {
             throw fail("An account already uses that email. Try signing in instead, " +
@@ -522,11 +481,7 @@
           return { user: shapeSelf(row), firstAccount: row && row.role === "admin" };
         });
       }).catch(function (err) {
-        /* The trigger that creates the profiles row surfaces Postgres'
-           raw constraint-violation text ("duplicate key value violates
-           unique constraint \"profiles_username_key\"") which means nothing
-           to someone filling in a form. Translate the one case that's
-           actually reachable from here — a username someone else has. */
+        /* The trigger that creates the profiles row surfaces Postgres' raw constraint-violation text ("duplicate key… */
         if (err && /profiles_username_key/i.test(err.message || "")) {
           throw fail("That username is already taken.", 409);
         }
@@ -535,39 +490,33 @@
     },
 
     login: function (identifier, password) {
-      /* The box takes a username or an email — resolve it server-side to
-         the real address before the password grant, since Supabase Auth's
-         token endpoint only ever accepts an email. */
-      return rpc("email_for_login", { identifier: identifier }).then(function (email) {
-        return call("/auth/v1/token?grant_type=password", {
-          method: "POST",
-          body: { email: email || identifier, password: password }
+      /* Supabase's password grant only takes an email, and the box accepts a
+         username too. email_for_login only resolves the address when the
+         password is right, so it can't be used to look up someone's email. */
+      return rpc("email_for_login", { identifier: String(identifier || "").trim(), pw: password || "" })
+        .then(function (email) {
+          if (!email) throw fail("Wrong username/email or password.", 401);
+          return call("/auth/v1/token?grant_type=password", {
+            method: "POST",
+            body: { email: email, password: password }
+          });
+        })
+        .then(function (body) {
+          if (!body || !body.access_token) throw fail("Wrong username/email or password.", 401);
+          keepSession(body);
+          edgesCache = null;
+          rpc("record_login", { agent: String(navigator.userAgent || "").slice(0, 200) })
+            .catch(function () {});
+          return me().then(function (row) { return { user: shapeSelf(row) }; });
+        })
+        .catch(function (err) {
+          var msg = (err && err.message) || "";
+          if (/^Banned:|Too many sign-in attempts/i.test(msg)) throw fail(msg, 403);
+          if (err && (err.status === 400 || err.status === 401 || err.status === 403)) {
+            throw fail("Wrong username/email or password.", 401);
+          }
+          throw err;
         });
-      }).then(function (body) {
-        if (!body || !body.access_token) throw fail("Wrong username/email or password.", 401);
-        keepSession(body);
-        edgesCache = null;
-        /* Record the sign-in for the staff log. Best-effort — a failure here
-           must never turn a good login into a bad one. */
-        rpc("record_login", { agent: String(navigator.userAgent || "").slice(0, 200) })
-          .catch(function () {});
-        return me().then(function (row) { return { user: shapeSelf(row) }; });
-      }).catch(function (err) {
-        /* A banned account gets a clear message (with the staff-set reason)
-           instead of the generic wrong-password error. */
-        var bannedSignal = err && (err.code === "user_banned" ||
-          /banned/i.test(err.message || ""));
-        if (bannedSignal || err.status === 400 || err.status === 401 || err.status === 403) {
-          return rpc("login_ban_reason", { identifier: identifier })
-            .then(function (reason) {
-              if (reason) throw fail("Banned: " + reason, 403);
-              throw fail("Wrong username/email or password.", 401);
-            }, function () {
-              throw fail("Wrong username/email or password.", 401);
-            });
-        }
-        throw err;
-      });
     },
 
     logout: function () {
@@ -594,11 +543,7 @@
       }).then(function () { return { ok: true }; });
     },
 
-    /* Forgot-password flow. GoTrue emails a link back to `redirectTo` with a
-       recovery token in the URL fragment; reset-password.html reads that
-       fragment, turns it into a session, then calls resetPassword to set the
-       new password on it. Always resolves ok — whether or not the address
-       has an account is never revealed. */
+    /* Forgot-password flow. */
     requestPasswordReset: function (email) {
       var redirectTo = encodeURIComponent(window.location.origin + "/reset-password.html");
       return call("/auth/v1/recover?redirect_to=" + redirectTo, {
@@ -669,16 +614,7 @@
       });
     },
 
-    /* Upload a profile picture. Two paths, tried in order:
-         1. If the avatar migration has been run (bucket policy + profiles.
-            avatar_url), upload the blob to the public "avatars" bucket and save
-            its URL on the profile — visible to everyone.
-         2. Otherwise fall back to storing the (small, downscaled) image as a
-            data-URL in the account's auth metadata. This needs NO database
-            changes and works immediately; it shows your own picture everywhere
-            you're signed in. Other people see it once the migration is run.
-       `dataUrl` is the encoded image string; `blob`/`mime` are optional (used by
-       the storage path). Either is accepted. */
+    /* Upload a profile picture. */
     uploadAvatar: function (blob, mime, dataUrl) {
       if (!session) return Promise.reject(fail("Signed out.", 401));
       return avatarReady().then(function (ready) {
@@ -698,10 +634,7 @@
             if (!r.ok) return uploadAvatarMeta(dataUrl);   // fall back on any storage error
             var publicUrl = URL_BASE + "/storage/v1/object/public/avatars/" + path;
             return API.updateProfile({ avatarUrl: publicUrl }).then(function (res) {
-              /* Keep one deterministic object per account. Old timestamped
-                 uploads otherwise accumulated forever and could reappear from
-                 stale profile caches. Cleanup is best-effort: a successful new
-                 picture must not be rolled back by a housekeeping failure. */
+              /* Keep one deterministic object per account. */
               return listAvatarObjects(session.user.id).then(function (paths) {
                 return deleteAvatarObjects(paths.filter(function (item) { return item !== path; }));
               }).catch(function () {}).then(function () {
@@ -880,10 +813,7 @@
       });
     },
 
-    /* Through an RPC rather than a PATCH: the update policy grants the row to
-       both sides of an edge, so a direct PATCH let the person who SENT a
-       request accept it themselves, and aiming at the wrong edge came back
-       200-with-zero-rows, which looked like success. */
+    /* Through an RPC rather than a PATCH: the update policy grants the row to both sides of an edge, so a direct… */
     acceptFriend: function (id) {
       return rpc("accept_request", { edge: Number(id) })
         .then(function () { edgesCache = null; return { state: "friends" }; });
@@ -914,11 +844,7 @@
 
     /* --- messages --- */
 
-    /* One RPC.
-       The old version pulled the newest 400 messages across every thread at
-       once and worked the previews and unread counts out in the browser, so
-       on a busy account everything past the first few conversations came back
-       with no preview and an unread count of zero. */
+    /* One RPC. */
     threads: function () {
       if (!session) return Promise.reject(fail("Signed out.", 401));
 
@@ -961,11 +887,7 @@
       });
     },
 
-    /* `after` means "the caller already has the conversation open and only
-       wants what is new". That is a 5-second poll, so it fetches messages
-       alone: the thread row, the member list and the can-I-post check do not
-       change between two ticks, and asking for them anyway was four requests
-       every five seconds for three unchanging answers. */
+    /* `after` means "the caller already has the conversation open and only wants what is new". */
     thread: function (id, after) {
       if (!session) return Promise.reject(fail("Signed out.", 401));
       var mine = session.user.id;
@@ -989,10 +911,7 @@
       ]).then(function (out) {
         var messages = out[2] || [];
 
-        /* Mark anything of theirs we just read. Through an RPC, because the
-           blanket "any member may update any message" policy this used to
-           rely on also let one group member retract another's. Only worth a
-           round trip when something actually arrived. */
+        /* Mark anything of theirs we just read. */
         if (!incremental || messages.length) {
           rpc("mark_thread_read", { t: Number(id) }).catch(function () {});
         }
@@ -1055,11 +974,7 @@
       });
     },
 
-    /* The echoed message needs a name on it. It used to read that out of
-       `session.user.user_metadata`, which is a snapshot taken at sign-up: it
-       goes stale when someone renames themselves, and a session restored from
-       an older token may not carry it at all — in which case sending threw a
-       TypeError instead of posting. */
+    /* The echoed message needs a name on it. */
     send: function (id, body, image) {
       return me().then(function (self) {
         return rpc("send_message", { t: Number(id), body: body || "", image: image || null })
@@ -1084,6 +999,11 @@
             };
           });
       });
+    },
+
+    /* Calls made in a conversation, oldest first, for the chat history. */
+    threadCalls: function (id) {
+      return rpc("thread_calls", { t: Number(id) }).then(function (rows) { return rows || []; });
     },
 
     openThread: function (username) {
@@ -1306,10 +1226,7 @@
       return rpc("admin_live");
     },
 
-    /* On this backend the password check happens inside Supabase Auth, in a
-       schema the anon key cannot read — so only successful sign-ins appear
-       here. Failed attempts are in the Supabase dashboard under
-       Authentication → Logs. The Node backend records both. */
+    /* On this backend the password check happens inside Supabase Auth, in a schema the anon key cannot read — so… */
     adminLogins: function () {
       return rpc("admin_logins").then(function (rows) {
         return { logins: rows || [], failuresVisible: false };
@@ -1318,11 +1235,7 @@
 
     /* --- support tickets --- */
 
-    /* Reads go straight to the tables — RLS already limits them to your own
-       tickets, or everything if you're staff. Writes go through RPCs, because
-       RLS grants rows and not columns: an update policy would let anyone set
-       their own ticket to high priority, or flip from_staff on their own
-       messages and impersonate support. */
+    /* Reads go straight to the tables — RLS already limits them to your own tickets, or everything if you're staff. */
 
     openTicket: function (payload) {
       return rpc("open_ticket", {
@@ -1525,10 +1438,7 @@
 
     /* --- admin --- */
 
-    /* Both go through RPCs that check is_staff() server-side. Assembling these
-       from table reads would have handed account totals to any signed-in user,
-       because `profiles` is readable by all of them and RLS answers with an
-       empty set rather than an error — so it would have looked like it worked. */
+    /* Both go through RPCs that check is_staff() server-side. */
     adminOverview: function () {
       return rpc("admin_overview");
     },
@@ -1554,12 +1464,7 @@
       });
     },
 
-    /* Every one of these used to be a direct table write, which meant none of
-       the rank rules existed on this backend: an admin could promote anyone to
-       admin, demote another admin, and — because the guard trigger reverts a
-       refused change silently — get a 200 back with the row unchanged, which
-       reads exactly like it worked. The RPC enforces the ladder, refuses out
-       loud, and writes the audit row that was never being written. */
+    /* Every one of these used to be a direct table write, which meant none of the rank rules existed on this… */
     adminUpdateUser: function (id, patch) {
       return rpc("admin_set_user", {
         target: id,
@@ -1568,12 +1473,7 @@
       }).then(function (user) { return { user: user }; });
     },
 
-    /* Staff-issued password reset — the account-recovery answer to "I lost
-       access". A real password can never be shown to staff (Supabase Auth
-       only ever stores a one-way hash, on this or any platform), so this
-       sets a NEW one instead and immediately invalidates every existing
-       session/refresh token, exactly like Discord/every real platform's
-       support-side recovery flow. */
+    /* Staff-issued password reset — the account-recovery answer to "I lost access". */
     adminSetPassword: function (id, newPassword) {
       return rpc("admin_set_password", { target: id, new_password: newPassword });
     },
@@ -1760,10 +1660,7 @@
     });
   }
 
-  /* Realtime (websocket) transport config, consumed by js/core/realtime.js.
-     Exposes the live access token so the socket authenticates as this user for
-     RLS-scoped changes; falls back to the anon key when signed out. Broadcast
-     channels (used for call signalling + message pokes) work with either. */
+  /* Realtime (websocket) transport config, consumed by js/core/realtime.js. */
   API.realtime = {
     url: URL_BASE.replace(/^http/, "ws") + "/realtime/v1/websocket",
     anonKey: ANON,

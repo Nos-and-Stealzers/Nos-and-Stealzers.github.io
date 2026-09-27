@@ -6,9 +6,18 @@
 
   var el = window.UI.el;
 
+  /* Only our own storage or an inline image; never an arbitrary URL that
+     could log whoever looks at the picture. */
+  function safeAvatar(url) {
+    var u = String(url || "");
+    if (/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(u)) return true;
+    var base = window.SITE && window.SITE.supabase && window.SITE.supabase.url;
+    return !!base && u.indexOf(base.replace(/\/+$/, "") + "/storage/v1/object/public/avatars/") === 0;
+  }
+
   function avatar(user, size) {
     var wrap = el("span", "avatar" + (size ? " avatar-" + size : ""));
-    if (user && user.avatarUrl) {
+    if (user && safeAvatar(user.avatarUrl)) {
       var img = document.createElement("img");
       img.className = "avatar-img";
       img.src = user.avatarUrl;

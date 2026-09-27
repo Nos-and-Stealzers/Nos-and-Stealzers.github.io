@@ -1,23 +1,4 @@
-/* Which saved keys belong to which game.
- *
- * There is no way to know this in advance. A host serves up to 145 games into
- * one shared localStorage, the games are third-party, and there are 219 of
- * them with no common convention — so a hand-written list per game would be
- * both enormous and wrong within a week.
- *
- * So it is learned instead, two ways:
- *
- *   1. By name. Most games namespace their keys with something close to their
- *      own folder or title. That is a guess, so it is labelled as one.
- *
- *   2. By watching. The player takes a snapshot of the host's storage when a
- *      game loads and again after you have played. Whatever appeared or
- *      changed in between belongs to that game. That is not a guess, and it
- *      is what turns the shared key soup into a per-game view.
- *
- * Attribution lives on the device, next to the settings. It describes what
- * this browser has seen, so it is never wrong about someone else's install.
- */
+/* Which saved keys belong to which game. */
 (function () {
   "use strict";
 

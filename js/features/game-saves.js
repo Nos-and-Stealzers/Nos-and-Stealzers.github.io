@@ -1,17 +1,4 @@
-/* Cross-device game progress.
- *
- * Games keep their progress in localStorage belonging to the origin that
- * serves them — not to this site. The same-origin policy means the hub simply
- * cannot read it, and no amount of cleverness changes that.
- *
- * The way through is a page on that origin: save-bridge.html sits at the root
- * of each game repo. The hub loads it in a hidden iframe and asks it, over
- * postMessage, to hand back a snapshot or put one back. That snapshot is what
- * syncs to the account.
- *
- * Restores merge rather than overwrite, so pulling a save onto a device that
- * has newer progress can't wipe it.
- */
+/* Cross-device game progress. */
 (function () {
   "use strict";
 
@@ -22,16 +9,7 @@
   var seq = 0;
   var waiting = {};     // id -> { resolve, reject, timer }
 
-  /* GitHub Pages serves every repo from ONE origin (arcadecampushub.github.io)
-     — the path (/hd_fnaf, /eaglercraft, /games-huge …) does NOT create a
-     separate storage bucket. localStorage and IndexedDB are scoped to the
-     ORIGIN, so all of those games physically share the same storage. Backing
-     them up under path-derived keys therefore made SEVEN rows that each held a
-     full copy of the same shared bucket and clobbered one another on restore —
-     which is exactly why big-save games (FNAF World, every Eaglercraft build)
-     "only worked locally". The correct unit is the origin: dedupe hosts to one
-     representative base URL per real origin, and key the cloud row by the
-     origin host alone. */
+  /* GitHub Pages serves every repo from ONE origin (arcadecampushub.github.io) — the path (/hd_fnaf… */
   function hostsFromConfig() {
     var out = [];
     var seen = {};
@@ -48,11 +26,7 @@
     return out;
   }
 
-  /* The config key a catalog entry's `host` field actually uses (e.g.
-     "games-huge"), as opposed to keyFor()'s storage key derived from the
-     origin's URL. The admin game-data editor filters the catalog by
-     `game.host === <config key>`, so it needs this — not keyFor() — or every
-     host-scoped game list comes back empty. */
+  /* The config key a catalog entry's `host` field actually uses (e.g. "games-huge"), as opposed to keyFor()'s… */
   function configKeyFor(origin) {
     var map = (window.SITE && window.SITE.gameHosts) || {};
     var hit = Object.keys(map).filter(function (key) {
@@ -68,11 +42,7 @@
     return origin.replace(/\/+$/, "") + "/save-bridge.html";
   }
 
-  /* The cloud-row key for an origin. Because storage is per-ORIGIN (see
-     hostsFromConfig), this is the origin host alone — NOT the repo path.
-     Every game served from the same origin therefore shares one save row,
-     which matches the single storage bucket they actually share. The result
-     still satisfies the server's host validator ([A-Za-z0-9._-]{1,64}). */
+  /* The cloud-row key for an origin. */
   function keyFor(origin) {
     var host;
     try { host = new URL(origin).host; } catch (e) { host = String(origin); }
@@ -87,11 +57,7 @@
     var msg = event.data;
     if (!msg || msg.channel !== CHANNEL) return;
 
-    /* The reply can only be trusted if it actually came from one of the
-       iframes this module opened at the origin it was opened for — otherwise
-       any page that can reach this window (or a compromised/rogue frame)
-       could forge a "ready" or a save-bridge reply and inject fake save data
-       or resolve a pending request early. */
+    /* The reply can only be trusted if it actually came from one of the iframes this module opened at the origin it… */
     var known = Object.keys(frames).some(function (origin) {
       return frames[origin].iframe.contentWindow === event.source &&
         event.origin === targetOriginOf(origin);
@@ -150,11 +116,7 @@
       window.setTimeout(function () {
         if (settled) return;
         settled = true;
-        /* Without this the iframe (and its message listeners inside the
-           bridge document) stayed attached forever after a timeout — a
-           silent per-attempt leak on every host that lacks a bridge, since
-           frameFor() is retried from scratch (frames[origin] was never set)
-           on every subsequent backup/restore/probe call. */
+        /* Without this the iframe (and its message listeners inside the bridge document) stayed attached forever after… */
         iframe.remove();
         reject(new Error("Save bridge on " + origin + " did not load"));
       }, TIMEOUT);
@@ -165,12 +127,7 @@
     return pending;
   }
 
-  /* postMessage's targetOrigin must be a pure web origin (scheme://host[:port])
-     — never a path. Several hosts here are path-based (jsDelivr:
-     https://cdn.jsdelivr.net/gh/<user>/<repo>@main/games, and GitHub Pages
-     project sites), and passing the full base URL as targetOrigin makes the
-     browser SILENTLY DROP the message, so those games' saves never reached
-     their bridge. Reduce any base URL to its real origin for targeting. */
+  /* postMessage's targetOrigin must be a pure web origin (scheme://host[:port]) — never a path. */
   function targetOriginOf(base) {
     try { return new URL(base).origin; } catch (e) { return base; }
   }
@@ -198,14 +155,7 @@
 
   /* ------------------------------------------------------------- public */
 
-  /* Per account + host, this device remembers what the cloud row looked like
-     at the last sync: its timestamp, a digest of each entry, and a digest of
-     local storage at that moment. That's enough for a per-key three-way merge:
-       - entry unchanged here since the sync -> take the cloud's version
-       - entry changed here                  -> keep it, it goes up next
-     so two devices playing different games on one shared origin never
-     overwrite each other, and a newer save from another device replaces an
-     older one here. */
+  /* Per account + host, this device remembers what the cloud row looked like at the last sync: its timestamp, a… */
   var SYNC_PREFIX = "ach:gs-sync:";
 
   function uid() { return window.Session && window.Session.user ? String(window.Session.user.id) : ""; }
@@ -503,10 +453,7 @@
         data: res.data || {},
         cookies: res.cookies || {},
         idb: res.idb || {},
-        /* The bridge sits at the origin root, so it only sees path=/ cookies.
-           A game that sets one with no path scopes it to its own folder, out
-           of reach from there — the editor says so rather than showing an
-           empty list and letting it read as broken. */
+        /* The bridge sits at the origin root, so it only sees path=/ cookies. */
         cookiePath: res.cookiePath || "/",
         idbUnsupported: !!res.idbUnsupported,
         idbDropped: res.idbDropped || [],

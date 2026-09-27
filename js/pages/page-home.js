@@ -42,10 +42,7 @@
     host.appendChild(body);
   }
 
-  /* A short count-up on the three numeric readouts. It reads as the index
-     tallying itself on arrival rather than a static figure dropped in. Skipped
-     entirely under lite mode or a reduced-motion preference, where the final
-     value is written straight away. */
+  /* A short count-up on the three numeric readouts. */
   function countUp(node, target) {
     var reduce = document.documentElement.dataset.lite === "on" ||
       (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);

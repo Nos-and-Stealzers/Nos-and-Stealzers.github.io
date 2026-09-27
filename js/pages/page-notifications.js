@@ -2,10 +2,7 @@
 (function () {
   "use strict";
 
-  /* Every kind the backends actually emit. The list used to stop at six, so
-     group invites, calls, feedback replies, support replies and closed
-     reports — five of the eleven — all arrived as an anonymous bullet with
-     no colour, which made the feed unreadable at a glance. */
+  /* Every kind the backends actually emit. */
   var GLYPH = {
     "friend-request": "◆",
     "friend-accept": "✓",
@@ -109,10 +106,7 @@
         if (n.link) {
           var go = UI.el("a", "btn btn-sm btn-cta", "Open");
           go.href = n.link;
-          /* Marking read used to be fired off during the navigation the click
-             had already started, so the browser was free to cancel it and
-             frequently did — you opened the thing and the bell stayed lit.
-             Hold the navigation for the round trip instead. */
+          /* Marking read used to be fired off during the navigation the click had already started, so the browser was… */
           go.addEventListener("click", function (event) {
             if (n.read || event.metaKey || event.ctrlKey || event.shiftKey) return;
             event.preventDefault();

@@ -66,15 +66,7 @@
     adminKey: [""].concat("abcdefghijklmnopqrstuvwxyz0123456789".split(""))
   };
 
-  /* Defaults that have moved, per key, oldest first.
-   *
-   * A saved value matching one of these was almost certainly not chosen by
-   * anyone: until the picker shipped there was no way to set adminKey at all,
-   * and the old setSetting wrote every default into storage the moment you
-   * changed anything else. Dropping those lets the current default apply.
-   *
-   * Runs once, marked by `_pruned`, so a deliberate choice made afterwards is
-   * never second-guessed — someone who really wants Ctrl+P can have it. */
+  /* Defaults that have moved, per key, oldest first. */
   var PRUNE_VERSION = 1;
   var SUPERSEDED = { adminKey: ["p", "k"] };
 
@@ -101,18 +93,7 @@
 
     /* ---------------- settings ---------------- */
 
-    /* Resolved settings: every key in SITE.defaults, always.
-     *
-     * Derived from the defaults rather than hand-listed. The hand-listed
-     * version had a real failure mode — add a key to defaults, forget to add
-     * it here, and it reads as `undefined` everywhere. An earlier version was
-     * worse: it fell back to `false`, which would switch a newly added feature
-     * off for every existing user, because their saved blob predates the key.
-     *
-     * A saved value is honoured only if it still makes sense: right type, and
-     * for enumerated settings a value that is actually offered. That stops a
-     * stale or hand-edited blob putting the interface into a state the CSS has
-     * no rules for. */
+    /* Resolved settings: every key in SITE.defaults, always. */
     settings: function () {
       var d = window.SITE.defaults;
       var saved = prune(read("settings", {}) || {});
@@ -146,17 +127,7 @@
        one place instead of restating them. */
     allowed: function () { return ALLOWED; },
 
-    /* Stores only what you actually changed.
-     *
-     * This used to write the whole resolved blob — every key, defaults
-     * included. Changing one setting therefore froze all the others at
-     * whatever the defaults happened to be that day, and a later change to a
-     * default could never reach anyone who had ever touched the page. That is
-     * exactly how the console shortcut stayed on its first default long after
-     * it had moved twice.
-     *
-     * Setting something back to its default removes the key rather than
-     * pinning it, so it starts tracking the default again. */
+    /* Stores only what you actually changed. */
     setSetting: function (key, value) {
       var d = window.SITE.defaults;
       var saved = read("settings", {}) || {};

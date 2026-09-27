@@ -1,8 +1,4 @@
-/* ==========================================================================
-   ARCADE CAMPUS HUB — v2 interface
-   A welcoming game library: quiet navy surfaces, blue wayfinding,
-   generous card shelves and native system typography.
-   ========================================================================== */
+/* ========================================================================== ARCADE CAMPUS HUB — v2 interface A… */
 
 /* --------------------------------------------------------------------------
    01 · TOKENS
@@ -227,11 +223,7 @@ html[data-text="large"] .tile-desc { -webkit-line-clamp: 3; }
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* Global hidden reset with !important. Several components set display via a
-   class (e.g. .dm-open{display:flex}) which, at equal specificity, beats the
-   UA [hidden]{display:none} rule by source order — so toggling the `hidden`
-   attribute silently did nothing and empty panels stayed on screen. This one
-   line makes the attribute authoritative everywhere. */
+/* Global hidden reset with !important. */
 [hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -252,10 +244,7 @@ body {
 
 ::selection { background: var(--accent); color: var(--accent-ink); }
 
-/* Page-in transition: fade + a hair of upward drift on each navigation, so
-   moving between pages feels composed instead of flashing content in. Driven
-   by data-loading on <html> (set in theme-boot before first paint, cleared on
-   DOMContentLoaded). Respects reduced-motion / lite mode, which never set it. */
+/* Page-in transition: fade + a hair of upward drift on each navigation, so moving between pages feels composed… */
 html[data-loading] body { opacity: 0; }
 body {
   opacity: 1;
@@ -633,11 +622,7 @@ select { cursor: pointer; }
   overflow: hidden;
   isolation: isolate;
 }
-/* Cards settle in with a short fade + upward drift, staggered by their grid
-   position (--i, set at render time). fill-mode backwards holds the start
-   frame during the delay so there is no flash of finished cards first. Under
-   lite mode animation is force-disabled and cards simply appear — the final
-   frame is the natural style, so nothing is ever left invisible. */
+/* Cards settle in with a short fade + upward drift, staggered by their grid position (--i, set at render time). */
 @keyframes tile-in { from { opacity: 0; transform: translateY(9px); } }
 .grid .tile, .grid-sm .tile, .strip .tile {
   animation: tile-in 0.34s ease backwards;
@@ -676,12 +661,7 @@ select { cursor: pointer; }
 .tile:focus-within .tile-art > img.badge { transform: scale(1.09); }
 
 /* --- 3D pointer tilt (motion-fx.js) -------------------------------------- */
-/* The card becomes a 3D stage while the pointer is over it; children can sit
-   on nearer planes. transform-style must be preserved for the art lift to
-   read as depth rather than a flat scale. A soft light tracks the cursor via
-   --mx/--my. Everything here is transform/opacity only, so it composites on
-   the GPU. When motion is off / lite / reduced, motion-fx.js never adds the
-   class, so none of this engages. */
+/* The card becomes a 3D stage while the pointer is over it; children can sit on nearer planes. */
 .tile.fx-tilt {
   transform-style: preserve-3d;
   transition: transform 0.08s ease-out;
@@ -1559,10 +1539,7 @@ kbd {
    20 · ADMIN
    -------------------------------------------------------------------------- */
 
-/* A second-level shell inside .main: the site's own .rail already claims the
-   left edge, so the console gets its own slim nav rather than fighting it
-   for that space. Collapses to a horizontal scroller on narrow screens,
-   independent of the site-wide 900px rail breakpoint. */
+/* A second-level shell inside .main: the site's own .rail already claims the left edge, so the console gets its… */
 .admin-shell {
   display: grid;
   grid-template-columns: 13rem minmax(0, 1fr);
@@ -1940,12 +1917,7 @@ kbd {
 .two-col > .block { margin: 0; }
 @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
 
-/* The admin users tab needs the OPPOSITE ratio from the default two-col:
-   the list itself now carries five columns of real data (account, email,
-   rank, state, activity) and was being squeezed into a narrow 340px lane
-   while the detail pane sat in all the leftover space — that's what made
-   the row content overlap/truncate illegibly. Give the list the room and
-   pin the detail pane to a fixed, comfortable width instead. */
+/* The admin users tab needs the OPPOSITE ratio from the default two-col: the list itself now carries five… */
 .two-col-list-wide {
   display: grid; gap: 1.4rem;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 22rem);
@@ -2124,11 +2096,7 @@ kbd {
   .gd-field-key { grid-column: 1 / -1; }
 }
 
-/* ==========================================================================
-   30 · SVG ICON SYSTEM — legible, human buttons
-   Replaces cryptic Unicode glyphs with crisp inline SVGs. Icons inherit color
-   and sit inline with their labels so every button reads at a glance.
-   ========================================================================== */
+/* ========================================================================== 30 · SVG ICON SYSTEM — legible… */
 
 .svg-ico {
   display: inline-flex; align-items: center; justify-content: center;
@@ -2146,11 +2114,7 @@ kbd {
 }
 .btn-call:hover { background: var(--good); color: #fff; border-color: var(--good); }
 
-/* ==========================================================================
-   31 · CAMPUS AI (BETA)
-   Built-in assistant page + the nav "Beta" tag. Uses existing tokens so it
-   themes with every skin.
-   ========================================================================== */
+/* ========================================================================== 31 · CAMPUS AI (BETA) Built-in… */
 
 .nav-tag {
   margin-left: auto; font-family: var(--mono);
@@ -3080,11 +3044,7 @@ a.msgs-who:hover { background: var(--surface-2); text-decoration: none; }
   .cp-item-n { display: none; }
 }
 
-/* ==========================================================================
-   42 · CONSISTENCY PASS — one corner radius for every surface
-   Panels, lists, empty states and dialogs were a mix of square (the old
-   hairline system) and rounded (v2). Everything now uses the v2 radius.
-   ========================================================================== */
+/* ========================================================================== 42 · CONSISTENCY PASS — one corner… */
 .panel, .void, .people, .rows, .sheet-card, .code-card, .opt-group { border-radius: var(--r); }
 .people, .rows { overflow: hidden; }
 .sheet-card { box-shadow: 0 30px 80px -24px rgba(0,0,0,0.6); }
@@ -3498,3 +3458,24 @@ html[data-skin="paper"] .utag.is-admin, html[data-skin="linen"] .utag.is-admin {
 }
 #console .report, #console .panel, #console .ticket, #console .fb { border-radius: 14px; }
 #console .report .btn, #console .panel .btn { border-radius: 999px; }
+
+/* Call entries in a conversation's history. */
+.chat-call {
+  align-self: center; display: inline-flex; align-items: center; gap: 0.5rem;
+  margin: 0.7rem 0 0.3rem; padding: 0.4rem 0.8rem 0.4rem 0.45rem; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); font-size: 0.8rem; color: var(--ink-2);
+  max-width: 100%;
+}
+.chat-call-ico {
+  width: 1.7rem; height: 1.7rem; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good);
+}
+.chat-call-text { font-weight: 650; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-call-time { font-size: 0.7rem; color: var(--ink-3); }
+.chat-call.is-missed .chat-call-ico { background: color-mix(in srgb, var(--bad) 16%, transparent); color: var(--bad); }
+.chat-call.is-missed .chat-call-text { color: var(--bad); }
+.chat-call.is-none .chat-call-ico { background: var(--surface-3); color: var(--ink-3); }
+.chat-call.is-live { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.chat-call.is-live .chat-call-ico { animation: chat-call-pulse 1.6s ease-in-out infinite; }
+@keyframes chat-call-pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--good) 20%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .chat-call.is-live .chat-call-ico { animation: none; } }

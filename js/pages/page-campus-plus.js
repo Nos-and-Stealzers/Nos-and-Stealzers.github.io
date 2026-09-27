@@ -1,11 +1,4 @@
-/* Campus+: paste a YouTube link and it plays inline; save videos into
-   playlists (private or shared), queue a playlist and let it run.
-
-   It's an embed, with the limits every embed has: a video whose owner turned
-   off embedding refuses to play, and that is YouTube's call, not a bug here.
-
-   Auto-advance uses the embed's own postMessage channel (enablejsapi=1), so
-   no YouTube script is loaded into this page. */
+/* Campus+: paste a YouTube link and it plays inline; save videos into playlists (private or shared), queue a… */
 (function () {
   "use strict";
 
@@ -492,6 +485,7 @@
         }
         lists.forEach(function (p) {
           var cd = card({
+            videoId: p.cover || "",
             title: p.title,
             sub: (p.itemCount || 0) + (p.itemCount === 1 ? " video" : " videos") +
                  (tab === "mine" ? " · " + (p.isPublic ? "Shared" : "Private") : " · @" + p.ownerUsername),
@@ -500,7 +494,7 @@
           });
           library.appendChild(cd.el);
           /* Cover art: the playlist's first video. */
-          if (p.itemCount) {
+          if (p.itemCount && p.cover === undefined) {
             API.playlistDetail(p.id).then(function (d) {
               var first = d && d.items && d.items[0];
               if (!first) return;

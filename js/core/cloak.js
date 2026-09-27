@@ -1,20 +1,4 @@
-/* about:blank cloak launcher.
- *
- * Opens a game inside a blank, URL-less tab so nothing in the browser's
- * address bar or history ever shows a game or arcade domain — the single
- * most reliable way past a school/work content filter that watches URLs and
- * history. The blank tab holds one full-window iframe pointed at the game;
- * to the filter it is just "about:blank".
- *
- * Public API (window.Cloak):
- *   Cloak.supported()            -> boolean
- *   Cloak.open(url, opts)        -> the opened Window (or null if popup blocked)
- *       opts.title  favicon/title to disguise the tab (default "Google")
- *       opts.icon   favicon href (default a Google favicon)
- *
- * This is deliberately dependency-free and self-contained so it works on the
- * play page, the index, and inside the about:blank child itself.
- */
+/* about:blank cloak launcher. */
 (function () {
   "use strict";
 

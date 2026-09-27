@@ -1,18 +1,4 @@
-/* Admin game-data editor.
- *
- * Games store progress in localStorage on the origin that serves them. The
- * save bridge already gives the hub read/write access to that, so this is a
- * viewer and editor over it.
- *
- * Two things worth being clear about:
- *   * it edits *this browser's* copy, not a server record — there is no
- *     server-side game state to change, so this cheats only for you;
- *   * save formats are the games' own, and there are 216 of them. Rather
- *     than pretend to know each one, this reads whatever is there, decodes
- *     JSON where it finds it, and surfaces every number as an editable
- *     field. data/game-cheats.json adds friendly labels for keys as you
- *     identify them.
- */
+/* Admin game-data editor. */
 (function () {
   "use strict";
 
@@ -63,11 +49,7 @@
       hostSel.appendChild(opt);
     });
 
-    /* The per-game view. A host's storage is shared by every game it serves —
-       up to 145 of them — so "all keys on games-huge" is not a mod menu for
-       anything. Picking a game narrows it to what that game actually wrote,
-       which js/game-keys.js learns by watching the storage change while you
-       play, and guesses from key names in the meantime. */
+    /* The per-game view. */
     buildGameList();
 
     function buildGameList() {
@@ -364,14 +346,7 @@
       return wrap;
     }
 
-    /* Clickteam Fusion keeps its INI object in one localStorage value, lines
-       joined by a literal "{@24}". Every FNAF title here is built with it, so
-       without this their whole save is a single unreadable line in a
-       textarea. Split into sections and fields it is an actual mod menu.
-
-       Writes go through SaveFormats.set and stringify, which rebuild the
-       exact original shape — separator or newlines — so a game that expects
-       one is not handed the other. */
+    /* Clickteam Fusion keeps its INI object in one localStorage value, lines joined by a literal "{@24}". */
     function iniEditor(key, raw) {
       var SF = window.SaveFormats;
       var model = SF.parse(raw);

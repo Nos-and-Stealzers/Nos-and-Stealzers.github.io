@@ -1,7 +1,4 @@
-/* Landing page for the "reset password" email link.
-   Supabase's recovery link redirects here with the session in the URL
-   fragment (#access_token=...&type=recovery&...) — never as a query
-   string, so it's never sent to the server or logged anywhere. */
+/* Landing page for the "reset password" email link. */
 (function () {
   "use strict";
 

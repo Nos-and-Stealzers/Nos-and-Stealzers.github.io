@@ -709,12 +709,7 @@
 
   /* ------------------------------------------------------------- staff */
 
-  /* Admin and above only. A moderator can reach the console, but changing how
-     it opens is an owner/admin concern and there is no point showing everyone
-     else a control that would do nothing for them.
-
-     This is presentation, not protection — the console checks rank on the
-     server. All this setting decides is which key *you* press. */
+  /* Admin and above only. */
   function staffSection(user) {
     var Store = window.Store;
     var UI = window.UI;
@@ -728,11 +723,7 @@
     var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
     document.getElementById("combo-mod").textContent = mac ? "⌘" : "Ctrl";
 
-    /* Keys the browser wants for itself. The split that matters is not "is it
-       used" but "can a page take it": most of these the hub overrides fine,
-       but a few are browser chrome and never reach the page at all, so there
-       is nothing for preventDefault to stop. Those say so plainly rather than
-       letting someone pick a combo that silently does nothing. */
+    /* Keys the browser wants for itself. */
     var UNAVAILABLE = {
       l: "focuses the address bar, and browsers do not let a page take that",
       n: "opens a new window",
@@ -828,15 +819,7 @@
         return;
       }
       nav.signIn();
-      /* Each section is built independently, so one throwing cannot take the
-         rest of the page down with it. They used to run as four bare calls in
-         a row: anything that threw — and the two backends do not fail
-         identically — silently skipped everything after it, as an unhandled
-         rejection with nothing shown on screen. The staff section was last,
-         so it was the one that vanished.
-
-         Staff goes first now: it is local, cheap, and cannot fail on a
-         backend quirk the way the others can. */
+      /* Each section is built independently, so one throwing cannot take the rest of the page down with it. */
       section("staff", function () { staffSection(state.user); });
       section("data", function () { dataSection(state.user); });
       section("account", function () { accountSection(state.user); });

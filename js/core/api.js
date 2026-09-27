@@ -1,7 +1,4 @@
-/* Thin API client.
-   The site is still a static site: if no backend answers, `API.available`
-   settles to false and every account feature quietly hides itself rather than
-   erroring. Nothing here is required for browsing or playing. */
+/* Thin API client. */
 (function () {
   "use strict";
 
@@ -189,6 +186,8 @@
     getGameSave: function (host) {
       return request("GET", "/game-saves/" + encodeURIComponent(host));
     },
+    threadCalls: function () { return Promise.resolve([]); },
+
     gameSaveStamp: function (host) {
       return request("GET", "/game-saves/" + encodeURIComponent(host))
         .then(function (res) { return (res && res.updatedAt) || 0; });

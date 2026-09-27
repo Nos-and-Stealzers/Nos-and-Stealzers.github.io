@@ -240,11 +240,7 @@
     var played = Object.keys(stats);
     if (!played.length) return daily(count);
 
-    /* played.indexOf(id) inside the filter below used to make this an
-       O(catalog x played) scan — fine for a few dozen games played, but the
-       catalog itself runs past 1,100 titles and a long play history made
-       this the single slowest thing computed for the homepage. A Set turns
-       each lookup into O(1). */
+    /* played.indexOf(id) inside the filter below used to make this an O(catalog x played) scan — fine for a few… */
     var playedSet = new Set(played);
 
     var weight = {};

@@ -1,22 +1,4 @@
-/* Admin console.
- *
- * Rebuilt. What was here before had the right tabs and the wrong plumbing:
- *
- *   · The audit tab read a table that nothing on the Supabase backend ever
- *     wrote to, so it was permanently empty — an audit trail that recorded
- *     nothing while claiming to record everything.
- *   · Role and state changes went straight at the users table, so none of the
- *     rank rules were enforced, and a change the database quietly refused came
- *     back looking exactly like one it had accepted.
- *   · The rank picker only listed ranks below yours, so a row for someone at
- *     or above your rank displayed "user" as their current rank. Touching it
- *     then demoted them.
- *   · Every tab reloaded from scratch on every visit, and the overview polled
- *     every thirty seconds whether or not you were looking at it.
- *
- * The permissions themselves are enforced on the server, in one RPC per
- * action. Hiding a control here is convenience; it is not the lock.
- */
+/* Admin console. */
 (function () {
   "use strict";
 
@@ -103,10 +85,7 @@
 
       /* The tab lives in the URL, so a refresh — or a link someone pastes to
          a colleague — lands where it was rather than back on Overview. */
-      /* Hiding the nav button is convenience, not a lock — the data behind
-         every other tab is re-checked on the server. Workbench has no server
-         call to fall back on (it's just a link), so it gets an explicit
-         client-side gate here rather than relying on the button being hidden. */
+      /* Hiding the nav button is convenience, not a lock — the data behind every other tab is re-checked on the… */
       var OWNER_ONLY_TABS = { workbench: true };
 
       function show(name, force) {
@@ -436,10 +415,7 @@
         });
       }
 
-      /* Clicking a row selects it and fills the pane beside the list — a
-         master-detail layout rather than a sheet stacked over the list you
-         were just scanning. Deleting an account is still not one stray
-         click away: it lives behind a typed confirmation either way. */
+      /* Clicking a row selects it and fills the pane beside the list — a master-detail layout rather than a sheet… */
       function selectUser(u, row, manageable) {
         selectedUserId = u.id;
         document.querySelectorAll("#user-rows .user-row").forEach(function (r) {
@@ -490,12 +466,7 @@
           selectedUserId = null;
         }
 
-        /* Rank.
-           Only the ranks you are allowed to hand out are listed — and because
-           you can only be here at all when you outrank them, their current
-           rank is always one of those. The old picker listed the same subset
-           but rendered it for everyone, so a row it could not represent
-           showed the first option instead and quietly proposed a demotion. */
+        /* Rank. */
         var rankField = UI.el("div", "field");
         var rankLabel = UI.el("label", null, "Rank");
         rankLabel.setAttribute("for", "detail-rank");
@@ -598,10 +569,7 @@
 
         body.appendChild(UI.el("hr", "sheet-rule"));
 
-        /* Mute — refused at the database (a trigger on messages), same way
-           `suspended` already blocks the whole account. Lets staff quiet
-           someone mid-incident without the heavier step of suspending them
-           entirely. */
+        /* Mute — refused at the database (a trigger on messages), same way `suspended` already blocks the whole account. */
         var muted = !!(u.mutedUntil && new Date(u.mutedUntil).getTime() > Date.now());
         var muteNote = UI.el("p", "tiny dimmer");
         muteNote.style.margin = "0 0 0.5rem";
@@ -744,13 +712,7 @@
 
         body.appendChild(UI.el("hr", "sheet-rule"));
 
-        /* Password reset — the real answer to "I've forgotten mine" / "I
-           got locked out" / "this got reported, get the account back".
-           A real password is never stored anywhere retrievable (Supabase
-           Auth only ever keeps a one-way hash) — this sets a NEW one and
-           immediately kills every existing session on the account, same
-           as Discord/every real platform's support-side recovery. Admin
-           rank or higher only, matching the server-side guard. */
+        /* Password reset — the real answer to "I've forgotten mine" / "I got locked out" / "this got reported, get the… */
         if (isAdmin) {
           var pwNote = UI.el("p", "tiny dimmer");
           pwNote.style.margin = "0 0 0.5rem";
@@ -1118,10 +1080,7 @@
           host.innerHTML = "";
 
           var note = document.getElementById("login-note");
-          /* The Supabase backend cannot see failed attempts — the password
-             check happens inside Supabase Auth. Say so, or the list reads as
-             "nobody has ever failed a sign-in", which is a dangerous thing to
-             believe about a security log. */
+          /* The Supabase backend cannot see failed attempts — the password check happens inside Supabase Auth. */
           note.hidden = res.failuresVisible !== false;
 
           var cols = "1fr 5rem 1fr 7rem";
@@ -1163,11 +1122,7 @@
 
       /* ------------------------------------------------------- playlists */
 
-      /* Campus+ moderation. Staff can see every shared playlist (private ones
-         stay private even from here — the RPC only returns what's public,
-         plus anything staff already own) and pull down anything that
-         shouldn't be there. There is no edit here on purpose: the fix for a
-         bad playlist is removing it, not staff curating someone else's. */
+      /* Campus+ moderation. */
       var plQ = document.getElementById("pl-q");
       function loadPlaylists() {
         return API.adminListPlaylists(plQ ? plQ.value.trim() : "").then(function (rows) {
@@ -1520,11 +1475,7 @@
 
       /* ------------------------------------------------- catalogue (owner) */
 
-      /* Was a hand-maintained list that drifted from SITE.categories every
-         time a new category was added elsewhere — new games could only ever
-         be filed under whatever existed when this array was last edited.
-         Deriving it from config means adding a category in one place is
-         enough. */
+      /* Was a hand-maintained list that drifted from SITE.categories every time a new category was added elsewhere … */
       var CATEGORIES = Object.keys((window.SITE && window.SITE.categories) || {});
       if (!CATEGORIES.length) {
         CATEGORIES = [
@@ -1825,10 +1776,7 @@
         return row;
       }
 
-      /* A change to the overlay changes what Catalog.all should hold, and that
-         is built once at page load. Re-reading the overlay keeps the counts
-         and badges here honest; the catalogue itself picks it up on the next
-         navigation. */
+      /* A change to the overlay changes what Catalog.all should hold, and that is built once at page load. */
       function reloadCatalog() {
         return API.customCatalog().then(function (res) {
           overlay = { added: res.added || [], removed: res.removed || [] };

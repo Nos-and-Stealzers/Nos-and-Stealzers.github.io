@@ -4993,6 +4993,193 @@ create policy "avatars owner delete" on storage.objects
   );
 
 -- #####################################################################
+-- ## Security hardening + call history (2026-09-27)
+-- #####################################################################
+
+-- ---- Sign-in lookup no longer leaks email addresses -------------------
+-- The old email_for_login(identifier) handed anyone the real email address
+-- behind a username, no password needed. It now answers only when the
+-- password is right, and repeated failures for one name are throttled.
+create table if not exists public.login_throttle (
+  key text not null,
+  at  timestamptz not null default now()
+);
+create index if not exists login_throttle_key_idx on public.login_throttle (key, at desc);
+alter table public.login_throttle enable row level security;
+revoke all on public.login_throttle from anon, authenticated;
+
+drop function if exists public.email_for_login(text);
+drop function if exists public.login_ban_reason(text);
+
+create or replace function public.email_for_login(identifier text, pw text)
+returns text
+language plpgsql volatile security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  k       text := lower(trim(coalesce(identifier, '')));
+  v_email text;
+  v_hash  text;
+  v_ban   boolean;
+  v_why   text;
+begin
+  if k = '' or coalesce(pw, '') = '' then return null; end if;
+
+  delete from public.login_throttle where at < now() - interval '1 day';
+  if (select count(*) from public.login_throttle t
+       where t.key = k and t.at > now() - interval '15 minutes') >= 10 then
+    raise exception 'Too many sign-in attempts. Wait a few minutes and try again.';
+  end if;
+
+  if k like '%@%' then
+    select u.email, u.encrypted_password, coalesce(p.banned, false), p.ban_reason
+      into v_email, v_hash, v_ban, v_why
+      from auth.users u left join public.profiles p on p.id = u.id
+     where lower(u.email) = k limit 1;
+  else
+    select u.email, u.encrypted_password, p.banned, p.ban_reason
+      into v_email, v_hash, v_ban, v_why
+      from public.profiles p join auth.users u on u.id = p.id
+     where p.username = trim(identifier)::citext limit 1;
+  end if;
+
+  if v_hash is null or extensions.crypt(pw, v_hash) <> v_hash then
+    insert into public.login_throttle (key) values (k);
+    return null;
+  end if;
+
+  if v_ban then
+    raise exception 'Banned: %', coalesce(nullif(trim(v_why), ''), 'This account has been banned.');
+  end if;
+  return v_email;
+end;
+$$;
+revoke all on function public.email_for_login(text, text) from public;
+grant execute on function public.email_for_login(text, text) to anon, authenticated;
+
+-- ---- Helper predicates are for policies, not for strangers ------------
+-- These take arbitrary user ids; signed-out visitors have no reason to
+-- probe friendships, blocks or mutes with them.
+do $$
+declare f text;
+begin
+  foreach f in array array[
+    'public.are_friends(uuid, uuid)', 'public.blocked_between(uuid, uuid)',
+    'public.is_muted(uuid)', 'public.is_plus_member(uuid)', 'public.plus_limits(uuid)'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('revoke execute on function %s from public, anon', f);
+      execute format('grant execute on function %s to authenticated', f);
+    end if;
+  end loop;
+end $$;
+
+-- ---- Call history inside a conversation -------------------------------
+create index if not exists calls_thread_idx on public.calls (thread_id, created_at desc);
+
+create or replace function public.thread_calls(t bigint)
+returns jsonb
+language sql stable security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(x order by (x->>'at')::bigint), '[]'::jsonb)
+  from (
+    select jsonb_build_object(
+      'id', c.id,
+      'kind', c.kind,
+      'at', (extract(epoch from c.created_at) * 1000)::bigint,
+      'mine', c.started_by = auth.uid(),
+      'by', coalesce(nullif(p.display_name, ''), p.username::text),
+      'live', c.state <> 'ended',
+      'answered', a.first_join is not null,
+      'seconds', case
+        when c.ended_at is null or a.first_join is null then null
+        else greatest(0, extract(epoch from c.ended_at - a.first_join))::int
+      end
+    ) as x
+    from public.calls c
+    join public.profiles p on p.id = c.started_by
+    left join lateral (
+      select min(cp.joined_at) as first_join
+        from public.call_peers cp
+       where cp.call_id = c.id and cp.user_id <> c.started_by and cp.joined_at is not null
+    ) a on true
+    where c.thread_id = t and public.in_thread(t)
+    order by c.created_at desc
+    limit 50
+  ) recent;
+$$;
+revoke all on function public.thread_calls(bigint) from public, anon;
+grant execute on function public.thread_calls(bigint) to authenticated;
+
+-- ---- Playlist lists carry their cover video ---------------------------
+-- Saves the page one extra request per playlist card just to draw a thumbnail.
+create or replace function public.my_playlists()
+returns jsonb
+language sql stable security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', p.id, 'title', p.title, 'description', p.description,
+    'isPublic', p.is_public, 'createdAt', p.created_at, 'updatedAt', p.updated_at,
+    'itemCount', (select count(*) from public.playlist_items i where i.playlist_id = p.id),
+    'cover', (select i.video_id from public.playlist_items i where i.playlist_id = p.id order by i.position limit 1)
+  ) order by p.updated_at desc), '[]'::jsonb)
+  from public.playlists p
+  where p.owner_id = auth.uid();
+$$;
+
+-- Shared playlists: the old "limit 60" sat after the aggregate, so it never
+-- limited anything. Page inside a subquery instead.
+create or replace function public.public_playlists(q text default null)
+returns jsonb
+language sql stable security definer
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(row_json order by updated desc), '[]'::jsonb)
+  from (
+    select p.updated_at as updated, jsonb_build_object(
+      'id', p.id, 'title', p.title, 'description', p.description,
+      'ownerId', p.owner_id, 'ownerUsername', pr.username,
+      'createdAt', p.created_at, 'updatedAt', p.updated_at,
+      'itemCount', (select count(*) from public.playlist_items i where i.playlist_id = p.id),
+      'cover', (select i.video_id from public.playlist_items i where i.playlist_id = p.id order by i.position limit 1)
+    ) as row_json
+    from public.playlists p
+    join public.profiles pr on pr.id = p.owner_id
+    where p.is_public
+      and (q is null or q = '' or p.title ilike '%' || q || '%')
+    order by p.updated_at desc
+    limit 60
+  ) page;
+$$;
+
+-- ---- Profile fields are bounded in the database, not just the form ----
+-- A profile picture may only be one of our own uploads or a small inline
+-- image, so nobody can point their avatar at a server that logs viewers.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_avatar_url_safe') then
+    update public.profiles set avatar_url = null
+     where avatar_url is not null and avatar_url <> ''
+       and not ((avatar_url like 'data:image/%' and char_length(avatar_url) <= 200000)
+             or avatar_url like 'https://qopjzxrjkkljpumyirtb.supabase.co/storage/v1/object/public/avatars/%');
+    alter table public.profiles add constraint profiles_avatar_url_safe check (
+      avatar_url is null or avatar_url = ''
+      or (avatar_url like 'data:image/%' and char_length(avatar_url) <= 200000)
+      or avatar_url like 'https://qopjzxrjkkljpumyirtb.supabase.co/storage/v1/object/public/avatars/%'
+    ) not valid;
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'profiles_text_lengths') then
+    update public.profiles set display_name = left(display_name, 40) where char_length(display_name) > 40;
+    update public.profiles set bio = left(bio, 300) where char_length(bio) > 300;
+    alter table public.profiles add constraint profiles_text_lengths check (
+      char_length(display_name) <= 40 and char_length(bio) <= 300
+    ) not valid;
+  end if;
+end $$;
+
+-- #####################################################################
 -- ## Final grants (cover tables created by the later sections too)
 -- #####################################################################
 grant usage on schema public to anon, authenticated;
@@ -5001,6 +5188,7 @@ grant usage, select on all sequences in schema public to anon, authenticated;
 -- app_secrets must stay unreadable from the browser, even after the blanket grant above.
 revoke all on public.app_secrets from anon, authenticated;
 revoke all on public.email_verifications from anon, authenticated;
+revoke all on public.login_throttle from anon, authenticated;
 
 commit;
 

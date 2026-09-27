@@ -8,13 +8,7 @@
       var S = window.SocialUI;
       var API = window.API;
 
-      /* A person can arrive here from three places — the friend lists, a
-         search result, or a friend-code lookup — and only the first of those
-         used to carry the edge id. Every accept / decline / cancel / unblock
-         button on a search result was therefore firing at
-         `/friendships?id=eq.undefined`. The backends now return `edgeId`
-         everywhere, and this resolves it from the friend graph as a fallback
-         so a stale row on screen still does the right thing. */
+      /* A person can arrive here from three places — the friend lists, a search result, or a friend-code lookup — and… */
       function edgeFor(u) {
         if (u.edgeId != null) return Promise.resolve(u.edgeId);
         return API.friends().then(function (d) {
@@ -65,10 +59,7 @@
             return load();
           });
         },
-        /* Open it in the dock rather than navigating away — you can keep
-           browsing, or keep playing, with the conversation alongside. The
-           dock returns null when it isn't mounted (switched off in settings),
-           in which case nothing at all used to happen. */
+        /* Open it in the dock rather than navigating away — you can keep browsing, or keep playing, with the… */
         message: function (u) {
           if (!window.ChatDock) return goToThread(u.username);
           return window.ChatDock.openWith(u.username).then(function (opened) {

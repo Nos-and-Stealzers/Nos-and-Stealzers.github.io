@@ -44,11 +44,7 @@
   root.setAttribute("data-motion", motion ? "on" : "off");
   root.setAttribute("data-text", textSize);
 
-  /* Smooth page-in, so navigating between pages fades instead of flashing a
-     jarring content pop (the "lags out for a sec" feel). Only when motion is
-     allowed. We mark the document not-ready now (before first paint) and clear
-     it once the DOM is in, letting CSS fade the body up. A hard timeout makes
-     sure content is never stuck hidden if something goes wrong. */
+  /* Smooth page-in, so navigating between pages fades instead of flashing a jarring content pop (the "lags out… */
   if (motion && !lite) {
     root.setAttribute("data-loading", "");
     var reveal = function () { root.removeAttribute("data-loading"); };

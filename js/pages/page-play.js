@@ -135,13 +135,7 @@
 
   /* ----------------------------------------------------------------- stage */
 
-  /* Auto-restore, then play. Before the game frame ever loads, pull this
-     account's cloud save for this host down into the host's storage (merge,
-     never overwrite newer local progress). That way a game started on another
-     device already has its progress present the moment it reads storage — the
-     user never presses a "load" button. If there's no save, nothing to do; if
-     the bridge is slow or absent, we don't block play — a short timeout falls
-     through to embedding regardless. */
+  /* Auto-restore, then play. */
   var didRestore = false;
   function restoreThenEmbed() {
     if (didRestore) { embed(); return; }
@@ -269,14 +263,7 @@
   function newTab() {
     var url = game.directUrl || game.sourceUrl;
     if (!url) { window.UI.toast("No launch URL on file"); return; }
-    /* Open the arcade's OWN play wrapper (same origin as this page), not the
-       raw game URL. This keeps the game running under the SAME top-level
-       origin — and therefore the SAME browser storage partition — whether you
-       play it embedded here or in a separate tab, so progress that a game
-       writes to its own localStorage/IndexedDB is shared between the two
-       instead of splitting into two partitions that never see each other.
-       (That split is exactly why Mario/Sonic/flash saves "didn't carry over".)
-       For genuinely un-embeddable games we still fall back to the raw URL. */
+    /* Open the arcade's OWN play wrapper (same origin as this page), not the raw game URL. */
     var wrapper = "play.html?id=" + encodeURIComponent(game.id) + "&auto=1";
     var target = game.embeddable ? wrapper : url;
     /* With "noopener" window.open always returns null, which read as a
@@ -323,10 +310,7 @@
     return out && out.catch ? out : Promise.resolve(out);
   }
 
-  /* Fullscreen only renders descendants of the fullscreen element. Move the
-     live call surface into the game stage while it is fullscreen, otherwise a
-     call appears to vanish the moment someone starts playing. Restore it to
-     its exact previous position on exit. */
+  /* Fullscreen only renders descendants of the fullscreen element. */
   function syncFullscreenUI() {
     var node = stage();
     var active = fullscreenElement() === node || node.classList.contains("is-pseudo-fullscreen");
@@ -380,11 +364,7 @@
     box.hidden = !on;
   }
 
-  /* If a framed game never loads at all, offer the new-tab route.
-     This used to read frame.contentDocument, which silently stopped working
-     the moment games moved to their own origin — cross-origin access always
-     throws, and the catch treated that as success, so the fallback could
-     never fire. The load event crosses origins; the document does not. */
+  /* If a framed game never loads at all, offer the new-tab route. */
   function watchdog() {
     window.setTimeout(function () {
       if (!frame || loaded) return;
@@ -415,10 +395,7 @@
 
   /* ------------------------------------------------------- progress backup */
 
-  /* The game writes its own progress into its origin's storage as you play.
-     That gets checked every 20 seconds while the game is open and again on
-     tab-hide / leaving; GameSaves.syncUp only uploads when something actually
-     changed, so frequent checks are cheap. */
+  /* The game writes its own progress into its origin's storage as you play. */
   var backupTimer = null;
   var lastBackup = 0;
   var backingUp = null;
@@ -599,11 +576,7 @@
       }
     });
 
-    /* Single-key shortcuts are off while a game is actually running.
-       An iframe only receives keys while it has focus, and focus is lost by
-       clicking anywhere outside it — at which point P (a pause key in plenty
-       of games) reached this handler and reloaded the game, throwing away
-       whatever the player had got to. The buttons still work. */
+    /* Single-key shortcuts are off while a game is actually running. */
     document.addEventListener("keydown", function (event) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (!window.Store.settings().shortcuts) return;

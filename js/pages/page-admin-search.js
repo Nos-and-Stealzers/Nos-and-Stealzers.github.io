@@ -1,7 +1,4 @@
-/* Admin-only embedded search. A plain iframe pointed at DuckDuckGo's
-   HTML-only endpoint, which — unlike the JS-heavy main site — reliably
-   allows itself to be framed. Nothing searched here touches this site's
-   own backend; it's a lookup tool, not a feature with data of its own. */
+/* Admin-only embedded search. */
 (function () {
   "use strict";
 

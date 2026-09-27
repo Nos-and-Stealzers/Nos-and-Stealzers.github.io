@@ -1,17 +1,4 @@
-/* Chat engine shared by the floating dock and the full Messages page.
-
-   Both surfaces used to carry their own copy of "render a conversation,
-   poll it, send into it" and the two drifted apart (different bugs in each).
-   Everything conversation-shaped now lives here once:
-
-     ChatCore.conversation(opts)  — a live conversation view: message log,
-                                    typing indicator, composer, attachments.
-     ChatCore.threadList(host, …) — the conversation list rows.
-     ChatCore.newChat()           — "start a conversation" friend picker.
-     ChatCore.ask / .confirm      — small in-page dialogs (no window.prompt).
-
-   Every value that came from another user is written with textContent or as
-   a text node — never innerHTML — so names and messages can't inject markup. */
+/* Chat engine shared by the floating dock and the full Messages page. */
 (function () {
   "use strict";
 
@@ -466,14 +453,7 @@
 
   /* ----------------------------------------------------- conversation */
 
-  /* A live conversation view.
-     opts: {
-       compact: bool             — dock styling (smaller)
-       onMeta(meta)              — thread details loaded (title, members, canSend…)
-       onGone(err)               — thread not found / no access
-       onActivity()              — something arrived or was sent (refresh lists)
-     }
-     Returns { el, open(id), close(), focus(), id() } */
+  /* A live conversation view. */
   function conversation(opts) {
     opts = opts || {};
 
@@ -578,6 +558,7 @@
     var lastId = 0;
     var lastMsg = null;         // { senderKey, at } of the newest rendered message
     var rendered = {};          // server id -> row
+    var callRows = {};          // call id -> row
     var optimistic = [];        // { row, body, hasImage, image, id|null }
     var pending = null;         // staged image
     var seq = 0;
@@ -606,13 +587,15 @@
 
     function senderKey(m) { return m.mine ? "__me" : ((m.from && m.from.username) || "?"); }
 
+    var lastDayAt = null;
     function addDayIfNeeded(at) {
-      if (!lastMsg || !sameDay(lastMsg.at, at)) {
+      if (lastDayAt == null || !sameDay(lastDayAt, at)) {
         var d = el("div", "chat-day");
         d.appendChild(el("span", null, dayLabel(at)));
         scroller.appendChild(d);
         lastMsg = null;          // a new day always starts a new group
       }
+      lastDayAt = at;
     }
 
     function buildRow(m) {
@@ -699,6 +682,74 @@
       bubble.appendChild(t);
     }
 
+    function callText(c) {
+      var kind = c.kind === "video" ? "Video call" : c.kind === "screen" ? "Screen share" : "Voice call";
+      var who = c.mine ? "" : (state && state.isGroup && c.by ? c.by + " · " : "");
+      if (c.live) return { text: who + kind + " in progress", tone: "live" };
+      if (c.answered) {
+        var s = c.seconds || 0;
+        var len = s >= 3600 ? Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m"
+          : s >= 60 ? Math.floor(s / 60) + "m " + (s % 60) + "s" : s + "s";
+        return { text: who + kind + " · " + len, tone: "ok" };
+      }
+      return c.mine ? { text: kind + " · no answer", tone: "none" }
+                    : { text: "Missed " + kind.toLowerCase() + (who ? " from " + c.by : ""), tone: "missed" };
+    }
+
+    function fillCall(row, c) {
+      var t = callText(c);
+      row.className = "chat-call is-" + t.tone + (c.mine ? " is-mine" : "");
+      row.innerHTML = "";
+      var ico = el("span", "chat-call-ico");
+      ico.appendChild(icon(c.kind === "video" ? "video" : c.kind === "screen" ? "screen" : "phone"));
+      row.appendChild(ico);
+      row.appendChild(el("span", "chat-call-text", t.text));
+      var when = el("span", "chat-call-time", clock(c.at));
+      when.title = new Date(c.at).toLocaleString();
+      row.appendChild(when);
+    }
+
+    function addCall(c) {
+      if (callRows[c.id]) { fillCall(callRows[c.id], c); return; }
+      addDayIfNeeded(c.at);
+      var row = el("div");
+      fillCall(row, c);
+      callRows[c.id] = row;
+      scroller.appendChild(row);
+      lastMsg = null;              // a call breaks a run of bubbles
+    }
+
+    /* Messages and calls, in time order, for the first paint. */
+    function addTimeline(messages, calls) {
+      var items = messages.map(function (m) { return { at: m.at, m: m }; })
+        .concat((calls || []).map(function (c) { return { at: c.at, c: c }; }))
+        .sort(function (a, b) { return a.at - b.at; });
+      var run = [];
+      items.forEach(function (it) {
+        if (it.m) { run.push(it.m); return; }
+        if (run.length) { addServerMessages(run, { initial: true }); run = []; }
+        addCall(it.c);
+      });
+      if (run.length) addServerMessages(run, { initial: true });
+      toBottom(false);
+    }
+
+    var callsBusy = false;
+    function refreshCalls() {
+      if (!state || !state.id || callsBusy || !window.API.threadCalls) return;
+      var my = seq;
+      callsBusy = true;
+      window.API.threadCalls(state.id).then(function (calls) {
+        if (my !== seq) return;
+        var atBottom = nearBottom();
+        (calls || []).forEach(addCall);
+        if (atBottom) toBottom(false);
+      }).catch(function () {}).then(function () { callsBusy = false; });
+    }
+    document.addEventListener("call:change", function () {
+      if (state) window.setTimeout(refreshCalls, 600);
+    });
+
     function addServerMessages(list, opts2) {
       var atBottom = nearBottom();
       var fresh = 0;
@@ -774,7 +825,11 @@
       form.hidden = false;
       locked.hidden = true;
 
-      return window.API.thread(state.id).then(function (res) {
+      var callsP = window.API.threadCalls
+        ? window.API.threadCalls(state.id).catch(function () { return []; })
+        : Promise.resolve([]);
+      return Promise.all([window.API.thread(state.id), callsP]).then(function (both) {
+        var res = both[0];
         if (my !== seq) return null;
         state = {
           id: res.threadId, isGroup: res.isGroup, members: res.members || [],
@@ -787,7 +842,7 @@
           canSend: res.canSend !== false, lockedReason: res.lockedReason || ""
         };
         if (res.messages.length < 200) scroller.appendChild(intro(meta));
-        addServerMessages(res.messages, { initial: true });
+        addTimeline(res.messages, both[1]);
 
         form.hidden = !meta.canSend;
         locked.hidden = meta.canSend;
@@ -819,6 +874,8 @@
       lastId = 0;
       lastMsg = null;
       rendered = {};
+      callRows = {};
+      lastDayAt = null;
       optimistic = [];
       pending = null;
       drawPending();
@@ -837,8 +894,10 @@
       timer = window.setInterval(tick, socketUp() ? POLL_SOCKET : POLL_LIVE);
     }
 
+    var tickCount = 0;
     function tick() {
       if (!state || !state.id || ticking || document.hidden) return;
+      if (++tickCount % 4 === 0) refreshCalls();
       var my = seq;
       ticking = true;
       window.API.thread(state.id, lastId).then(function (res) {

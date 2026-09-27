@@ -1,19 +1,4 @@
-/* Voice, video and screen sharing.
- *
- * The audio and video go straight from one browser to the other over WebRTC.
- * The hub's server only carries the setup handshake, and the addresses come
- * from Google's public STUN servers, which are free. Nothing here costs
- * anything to run and nothing here needs an external service.
- *
- * Everyone connects to everyone else — a mesh — so each extra person costs
- * every participant another upload stream. That's fine up to about four, and
- * the server enforces the same ceiling. Past that you need a relay server
- * that forwards video, and that is the part nobody gives away.
- *
- * One honest limitation: a peer connection belongs to the page that opened
- * it, so navigating away ends your call. Playing a game doesn't — the game
- * runs in an iframe inside the same page — which is the case that matters.
- */
+/* Voice, video and screen sharing. */
 (function () {
   "use strict";
 
@@ -37,10 +22,7 @@
   };
 
   var root, bar, tiles, statusEl, timerEl, ringEl;
-  /* Realtime pokes and the fallback interval can fire together. `take_signals`
-     consumes rows, so overlapping calls from one tab used to hammer Postgres
-     with concurrent DELETEs and trigger 40P01 deadlocks. Keep exactly one poll
-     in flight; remember one follow-up instead of launching another request. */
+  /* Realtime pokes and the fallback interval can fire together. */
   var pumpBusy = false;
   var pumpQueued = false;
 
@@ -198,10 +180,7 @@
     var peer = state.peers[userId];
     if (peer && peer.el && peer.el.isConnected) return peer.el;
 
-    /* Self isn't tracked in state.peers, and a reconnecting peer may have lost
-       its entry, so also reuse any tile already in the DOM for this id. Without
-       this, toggling camera / screen share (which each call tileFor again) kept
-       stamping out a fresh duplicate tile for the same person. */
+    /* Self isn't tracked in state.peers, and a reconnecting peer may have lost its entry, so also reuse any tile… */
     var existing = tiles.querySelector('[data-peer="' + String(userId) + '"]');
     if (existing) {
       if (peer) peer.el = existing;
@@ -219,12 +198,7 @@
     video.muted = userId === state.self;    // never hear yourself
     tile.appendChild(video);
 
-    /* Dedicated audio sink for REMOTE peers. The video tile is display:none
-       whenever there's no live video (every voice call, and video calls with
-       the camera off), and browsers won't autoplay a hidden <video> — so the
-       audio rode on an element that never started and you heard nothing. A
-       separate always-present <audio autoplay> guarantees the voice comes
-       through regardless of whether the video tile is shown. */
+    /* Dedicated audio sink for REMOTE peers. */
     if (userId !== state.self) {
       var audio = document.createElement("audio");
       audio.autoplay = true;
@@ -245,10 +219,7 @@
     return tile;
   }
 
-  /* Start playback and swallow the autoplay-policy rejection. Browsers block
-     autoplay of media that isn't muted until a user gesture; the Call/Answer
-     click IS that gesture, but media often arrives a beat later, so we also
-     retry on the next pointer/keydown as a safety net. */
+  /* Start playback and swallow the autoplay-policy rejection. */
   var _pendingPlays = [];
   function playMedia(elm) {
     if (!elm) return;
@@ -276,13 +247,7 @@
     document.addEventListener("keydown", retry, true);
   }
 
-  /* A tile shows the video element only when a live video track exists;
-     otherwise it falls back to the avatar.
-
-     A remote track arrives `muted` and stays that way until the first frame
-     decodes, which is well after the `track` event. Checking once meant every
-     remote camera showed an avatar over a perfectly good video element, so
-     the track is watched as well as read. */
+  /* A tile shows the video element only when a live video track exists; otherwise it falls back to the avatar. */
   function refreshTile(tile, stream) {
     if (!tile) return;
     var tracks = stream ? stream.getVideoTracks() : [];
@@ -505,13 +470,7 @@
       var pc = state.peers[id].pc;
       if (!pc) return;
 
-      /* Find the video sender via TRANSCEIVERS, not by current track. On an
-         audio-only call the pre-negotiated video sender has track === null, so
-         filtering senders by "s.track.kind === video" found nothing and we fell
-         through to addTrack() — which creates a SECOND video m-line and forces a
-         renegotiation this simple signaller doesn't do, leaving remote video
-         permanently black. Reusing the existing sender is a plain replaceTrack,
-         no renegotiation, and the frames flow. */
+      /* Find the video sender via TRANSCEIVERS, not by current track. */
       var sender = null;
       var chosen = null;
       var txs = pc.getTransceivers ? pc.getTransceivers() : [];
@@ -595,52 +554,30 @@
       if (s) pc.addTrack(s, state.screen);
     }
 
-    /* Guarantee exactly one bidirectional video channel up front, even on an
-       audio-only call. Two payoffs:
-        - a camera or screen turned on later is a plain replaceTrack (no
-          renegotiation, which this simple signaller doesn't do reliably), and
-        - the OTHER side's camera, added the same way, arrives over an
-          already-negotiated receive channel — which is why remote video had
-          stopped showing up. */
+    /* Guarantee exactly one bidirectional video channel up front, even on an audio-only call. */
     var hasVideoSender = pc.getSenders().some(function (s2) {
       return s2.track && s2.track.kind === "video";
     });
-    /* Only the deterministic OFFERER creates the empty video m-line. If the
-       answerer creates one too, Chrome does not pair it with the remote offer:
-       it leaves one unnegotiated send transceiver plus a second recv-only one.
-       Camera replaceTrack() then targets the dead transceiver and the other
-       person sees no video. The answerer receives the offerer's m-line during
-       setRemoteDescription and can promote it when their camera starts. */
+    /* Only the deterministic OFFERER creates the empty video m-line. */
     if (!hasVideoSender && shouldOffer(userId)) {
       try { pc.addTransceiver("video", { direction: "sendrecv" }); } catch (e) {}
     }
 
-    /* Offers are started deterministically by pump() after both peers are joined.
-       Do NOT also offer from `negotiationneeded`: adding the initial tracks and
-       video transceiver fires that event during connect(), racing pump's own
-       offerTo(). The loser closed the shared peer connection, so the next poll
-       created another one and calls looped through offers forever. Camera and
-       screen changes use replaceTrack(), so they do not require renegotiation. */
+    /* Offers are started deterministically by pump() after both peers are joined. */
 
     pc.addEventListener("icecandidate", function (e) {
       if (e.candidate) send(userId, "ice", e.candidate.toJSON());
     });
 
     pc.addEventListener("track", function (e) {
-      /* addTransceiver("video") can fire `track` with an EMPTY `streams` array.
-         Reading e.streams[0] unconditionally made `stream.addEventListener`
-         throw and stopped signalling on both sides. Build a stream around the
-         track when the sender did not associate one. */
+      /* addTransceiver("video") can fire `track` with an EMPTY `streams` array. */
       var stream = e.streams && e.streams[0];
       if (!stream) {
         stream = entry.stream || new window.MediaStream();
         if (e.track && stream.getTracks().indexOf(e.track) === -1) stream.addTrack(e.track);
       }
       entry.stream = stream;
-      /* Route audio to the dedicated <audio> sink and video to the <video>
-         tile. Both get an explicit play() because autoplay of unmuted remote
-         media is otherwise blocked — which is what caused black video and
-         silent audio even when the connection was fine. */
+      /* Route audio to the dedicated <audio> sink and video to the <video> tile. */
       entry.el._video.srcObject = stream;
       playMedia(entry.el._video);
       if (entry.el._audio) {
@@ -667,15 +604,7 @@
         }
       }
       if (pc.connectionState === "failed") {
-        /* A direct P2P path often fails on strict NATs / school-firewall
-           networks even though the TURN relay (see api-supabase.js iceFetch)
-           can still carry the call. restartIce() re-gathers candidates
-           against the same iceServers and, for the OFFERER, needs one more
-           offer/answer round — pump()'s next tick doesn't know to do that on
-           its own, so trigger it here. Only the deterministic offerer restarts
-           to avoid both sides re-negotiating at once; one retry only, so a
-           genuinely dead network still lands on the "couldn't connect" message
-           instead of retrying forever. */
+        /* A direct P2P path often fails on strict NATs / school-firewall networks even though the TURN relay (see… */
         if (!entry.restarted && shouldOffer(userId)) {
           entry.restarted = true;
           try { pc.restartIce(); } catch (e) {}
@@ -788,13 +717,7 @@
     }
 
     if (sig.kind === "bye") {
-      /* A "bye" can mean two very different things:
-           - the peer left the call for good, or
-           - the peer navigated to another page and is re-establishing.
-         We can't tell from the signal alone, so tear the stale pc down WITHOUT
-         hanging up. pump()'s roster check is the source of truth: if the peer is
-         really gone it flips to "left" and dropPeer() ends the call; if they're
-         still "joined" (a rejoin), pump() simply re-offers to their fresh pc. */
+      /* A "bye" can mean two very different things: - the peer left the call for good, or - the peer navigated to… */
       dropPeer(sig.from, true);
     }
     return Promise.resolve();
@@ -915,19 +838,14 @@
     status(call && call.state === "ringing" ? "Ringing…" : "Connecting…");
     if (timerEl) timerEl.textContent = "";
     drawWho();
+    announce(call);
 
     return getLocal(wantVideo).then(function () {
       /* Only after the media actually arrives — getLocal falls back to audio
          when there is no camera, and marking the button on beforehand claimed
          a camera that isn't running. */
       mark("cam", !state.camOff);
-      /* Ring every invited peer instantly over their personal channel, so the
-         incoming-call card pops right away instead of on their next 6s poll.
-         Also send a "bye" to every ALREADY-JOINED peer: if this begin() is a
-         rejoin after navigating, the other side is still holding a peer
-         connection to our dead previous page. bye makes them drop it at once so
-         their next pump re-offers to our fresh connection — otherwise both
-         sides sit on a stale pc and the reconnect stalls at "Connecting…". */
+      /* Ring every invited peer instantly over their personal channel, so the incoming-call card pops right away… */
       if (call && call.peers) {
         call.peers.forEach(function (p) {
           if (p.id === state.self) return;
@@ -990,7 +908,17 @@
     if (id) window.API.leaveCall(id).catch(function () {});
   }
 
+  /* Lets the chat show the call in its conversation history. */
+  function announce(call) {
+    try {
+      document.dispatchEvent(new CustomEvent("call:change", {
+        detail: { callId: call && call.id, threadId: call && (call.threadId || call.thread_id) }
+      }));
+    } catch (e) { /* very old browsers */ }
+  }
+
   function teardown(message) {
+    var ending = state.call;
     window.clearInterval(state.timer);
     state.timer = null;
     pumpBusy = false;
@@ -1025,6 +953,7 @@
       root.classList.remove("is-big");
       root.hidden = !ringEl || ringEl.hidden;    // keep it up if something's ringing
     }
+    if (ending) window.setTimeout(function () { announce(ending); }, 800);
     if (message) window.UI.toast(message);
   }
 
@@ -1101,10 +1030,7 @@
     window.API.pendingCalls().then(function (res) {
       var calls = res.calls || [];
 
-      /* Auto-rejoin: if I'm already a *joined* peer in a live call but this
-         page isn't in it (because I navigated here and the previous page's
-         WebRTC died with it), quietly rejoin so the call survives moving
-         around the site instead of ending on every click. */
+      /* Auto-rejoin: if I'm already a *joined* peer in a live call but this page isn't in it (because I navigated… */
       if (!state.call) {
         var ongoing = calls.filter(function (c) {
           if (c.state === "ended") return false;
@@ -1141,10 +1067,7 @@
     }).catch(function () { /* offline; try again next tick */ });
   }
 
-  /* A call is "sticky" across navigation only if the user didn't explicitly
-     hang up. We remember the active call id in sessionStorage; leaving via the
-     hang-up button clears it, so we don't silently rejoin a call the user
-     meant to end. */
+  /* A call is "sticky" across navigation only if the user didn't explicitly hang up. */
   var REJOIN_KEY = "ach:activeCall";
   function markActiveCall(id) {
     try { window.sessionStorage.setItem(REJOIN_KEY, String(id)); } catch (e) {}
@@ -1198,17 +1121,7 @@
   }
 
   function installNavGuards() {
-      /* Keeping a call alive across the site.
-         A WebRTC connection belongs to the page that opened it, so any real
-         navigation ends it and the NEXT page rejoins from sessionStorage. The
-         job here is to tell three very different events apart:
-           - a same-site link/redirect  → keep the seat, rejoin next page
-           - the tab being frozen (bfcache) or just backgrounded → do NOTHING,
-             the same page and its live connection are still there
-           - a genuine tab/window close or navigation OFF the site → leave, so
-             the other person isn't stuck talking to a dead tile.
-         The previous version leaked "leave" on tab-switch because it never
-         checked event.persisted (a bfcache freeze fires pagehide too). */
+      /* Keeping a call alive across the site. */
       var internalNav = false;
       document.addEventListener("click", function (e) {
         var a = e.target && e.target.closest && e.target.closest("a[href]");

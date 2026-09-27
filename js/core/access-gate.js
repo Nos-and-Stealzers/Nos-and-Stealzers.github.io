@@ -1,28 +1,4 @@
-/* Access gate ("cloak") — cloak domains only.
- *
- * Runs as the first <head> script on every page, but only does anything on the
- * cloak domains (securlyfex.online / securlyfex.site and their www forms). On
- * the real domain (arcadecampushub.online) or localhost it does nothing, so the
- * arcade behaves normally there.
- *
- * On a cloak domain it does two things:
- *
- *  1. DISGUISE (always, every page): sets the tab title + favicon to look like
- *     Securly, so anyone scrolling the browser history sees a string of Securly
- *     entries on a "securly…" URL — never "Arcade Campus Hub". The actual page
- *     content underneath is the normal arcade; the games still look and play
- *     like the games. The disguise is only skin-deep (tab + history).
- *
- *  2. GATE (until unlocked this tab session): hides the page behind a
- *     convincing "redirecting to your content filter" screen and actually
- *     sends a passive visitor on to securly.com. The ONLY way in is holding
- *     one of these combos for 6 seconds:
- *
- *         Ctrl+L  Shift+L  Ctrl+P  Shift+P  Ctrl+Z  Shift+Z
- *
- *     Once unlocked, the tab session is marked so navigating between pages
- *     doesn't re-gate (but each page is still disguised). A new tab re-gates.
- */
+/* Access gate ("cloak") — cloak domains only. */
 (function () {
   "use strict";
 
@@ -79,10 +55,7 @@
     doc.addEventListener("DOMContentLoaded", function () { applyFavicon(); guardTitle(); });
   }
 
-  /* Already unlocked this tab session? Show the real arcade content, keep the
-     Securly disguise on the tab/history, and stop here — no overlay, no
-     redirect. This is the "on the games" state: games work, history stays
-     Securly. */
+  /* Already unlocked this tab session? */
   var unlocked = false;
   try { unlocked = window.sessionStorage.getItem(SS_KEY) === SS_VALUE; } catch (e) {}
   if (unlocked) return;

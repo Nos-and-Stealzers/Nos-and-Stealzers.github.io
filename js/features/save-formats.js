@@ -1,19 +1,4 @@
-/* Save formats the editor can take apart.
- *
- * A saved value is just a string until something recognises it. JSON was
- * already handled; this adds the other format that actually matters here.
- *
- * Clickteam Fusion — which is what every FNAF title in the catalogue is built
- * with, and a good share of the other compiled games — stores its INI object
- * in localStorage as the INI file's lines joined by the literal separator
- * "{@24}". So a save looks like:
- *
- *   [Game]{@24}Night=3{@24}Stars=2{@24}[Options]{@24}Volume=10
- *
- * which is a wall of text in a textarea unless you split it, and a per-field
- * mod menu the moment you do. The separator is not a guess: it is
- * CIni.separator in the runtime those games ship.
- */
+/* Save formats the editor can take apart. */
 (function () {
   "use strict";
 
@@ -46,12 +31,7 @@
     return text.indexOf(CT_SEP) !== -1 ? text.split(CT_SEP) : text.split(/\r?\n/);
   }
 
-  /* [{ section, entries: [{ key, value }] }].
-   *
-   * Anything before the first [Section] goes into one unnamed group rather
-   * than being dropped — a value you cannot see is worse than an ugly
-   * heading. Comments and blank lines are kept in order so writing the file
-   * back does not quietly rewrite it. */
+  /* [{ section, entries: [{ key, value }] }]. */
   function parse(raw) {
     var out = [];
     var current = { section: "", entries: [] };

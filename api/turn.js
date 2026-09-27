@@ -25,6 +25,37 @@ const STUN = {
   urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"],
 };
 
+const SUPABASE_URL = "https://qopjzxrjkkljpumyirtb.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvcGp6eHJqa2tsanB1bXlpcnRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTE0NzYsImV4cCI6MjA5MTc2NzQ3Nn0.wHLn-q1OpO0HP87yiDGnNmHfnI0J_AUDEXT09HpKUNg"; // public anon key, same as the site ships
+
+// Only signed-in hub users get relay credentials (they cost bandwidth).
+// The site POSTs its Supabase access token as a text/plain body.
+function readBody(req) {
+  if (typeof req.body === "string") return Promise.resolve(req.body);
+  return new Promise((resolve) => {
+    let data = "";
+    req.on("data", (c) => { data += c; if (data.length > 8192) req.destroy(); });
+    req.on("end", () => resolve(data));
+    req.on("error", () => resolve(""));
+  });
+}
+
+async function signedIn(req) {
+  if (req.method !== "POST") return false;
+  const token = String(await readBody(req)).trim();
+  if (!token || token.length > 4096 || token.split(".").length !== 3) return false;
+  try {
+    const r = await fetch(SUPABASE_URL + "/auth/v1/user", {
+      headers: { apikey: process.env.SUPABASE_ANON_KEY || SUPABASE_ANON, Authorization: "Bearer " + token },
+    });
+    if (!r.ok) return false;
+    const user = await r.json();
+    return !!(user && user.id);
+  } catch (e) {
+    return false;
+  }
+}
+
 module.exports = async (req, res) => {
   // Never cache: TURN credentials are short-lived and per-request.
   res.setHeader("Cache-Control", "no-store");
@@ -36,6 +67,11 @@ module.exports = async (req, res) => {
     res.statusCode = code;
     res.end(JSON.stringify(obj));
   };
+
+  if (!(await signedIn(req))) {
+    send(200, { iceServers: [STUN], turn: false, reason: "sign_in_required" });
+    return;
+  }
 
   const keyId = process.env.CLOUDFLARE_TURN_KEY_ID;
   const token = process.env.CLOUDFLARE_TURN_API_TOKEN;
@@ -59,7 +95,7 @@ module.exports = async (req, res) => {
           "Content-Type": "application/json",
         },
         // 24h TTL: comfortably longer than any call, refreshed on each page load.
-        body: JSON.stringify({ ttl: 86400 }),
+        body: JSON.stringify({ ttl: 14400 }),
       }
     );
 

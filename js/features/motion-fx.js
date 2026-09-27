@@ -1,21 +1,4 @@
-/* motion-fx.js — pointer-reactive 3D depth for game cards and the hero.
- *
- * The site's signature interaction: cards tilt toward the cursor in real 3D
- * (CSS perspective + rotateX/Y) with a soft light that tracks the pointer, and
- * the cover art lifts on a nearer plane than the label — so a wall of games
- * reads like physical cards under glass instead of flat rectangles.
- *
- * Rules that keep it from being the "AI-generated motion" trap:
- *  - Pure transforms + opacity, GPU-composited, rAF-throttled: no layout, no
- *    paint on move. Fine on a school Chromebook.
- *  - Fully gated. If Settings has motion off or lite on, or the OS asks for
- *    reduced motion, or the device has no fine pointer (touch), it does
- *    nothing at all — the cards stay exactly as they were.
- *  - Event-delegated: one set of listeners for the whole page, and it keeps
- *    working for cards added later (search-as-you-type, load-more).
- *
- * Dependency-free; safe to load on every page.
- */
+/* motion-fx.js — pointer-reactive 3D depth for game cards and the hero. */
 (function () {
   "use strict";
 

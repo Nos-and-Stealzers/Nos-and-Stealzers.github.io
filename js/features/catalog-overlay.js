@@ -1,19 +1,4 @@
-/* Runtime catalogue changes, layered over data/games.js.
- *
- * The shipped list is a static file, which is what makes the site fast and
- * lets it work with no backend at all. Anything the owner adds through the
- * admin console lives on the server instead — so this reads a cached copy of
- * those changes *synchronously* and folds them into window.GAME_CATALOG
- * before catalog.js indexes it, then refreshes the cache in the background
- * for the next page load.
- *
- * That means an edit shows up on your next navigation rather than instantly.
- * The alternative — blocking every page on a network round-trip, or forcing a
- * reload mid-game — is a far worse trade for something that changes maybe
- * once a week.
- *
- * Must be loaded after data/games.js and before js/catalog.js.
- */
+/* Runtime catalogue changes, layered over data/games.js. */
 (function () {
   "use strict";
 

@@ -49,7 +49,21 @@
     /* The hub's own origin changes with whichever mirror domain is open, but
        it's the same games — keep them on one row so saves follow you across. */
     if (host === location.host && SELF_KEY) return SELF_KEY;
+    /* play.<domain> serves the same github.io games, so it shares their row. */
+    var px = window.SITE && window.SITE.gameProxy;
+    if (px && host === hostOf(px.to)) return hostOf(px.from);
     return host.slice(0, 64);
+  }
+  function hostOf(url) {
+    try { return new URL(url).host; } catch (e) { return String(url); }
+  }
+
+  /* The sync record belongs to the storage it describes, so two origins that
+     share a cloud row (github.io and play.<domain>) each keep their own. */
+  function recordIdFor(origin) {
+    var key = keyFor(origin);
+    var host = hostOf(origin);
+    return host === key || key === SELF_KEY ? key : key + "@" + host;
   }
   var SELF_KEY = window.SITE && window.SITE.domain ? "www." + window.SITE.domain : "";
 
@@ -316,17 +330,18 @@
     var origin = originFor(hostOrOrigin);
     if (!origin) return Promise.reject(new Error("Unknown game host."));
     var host = keyFor(origin);
+    var recId = recordIdFor(origin);
 
-    return once(host, function () {
+    return once(recId, function () {
       return window.API.getGameSave(host).then(function (cloud) {
         var stored = normalise(cloud.payload);
         if (isEmpty(stored)) return { host: host, written: 0, empty: true };
-        var rec = syncRecord(host);
+        var rec = syncRecord(recId);
         return reconcile(origin, stored, rec, force).then(function (r) {
           var cloudE = entries(stored);
           var local = payloadOf(r.after);
           var same = digest(entries(local)) === digest(cloudE);
-          setSyncRecord(host, {
+          setSyncRecord(recId, {
             at: cloud.updatedAt || 0,
             /* Only "in sync" if this device holds exactly the cloud copy;
                otherwise what's here still needs to go up. */
@@ -347,26 +362,27 @@
   function syncUp(origin, res) {
     if (!uid()) return Promise.reject(new Error("Sign in to sync game progress."));
     var host = keyFor(origin);
+    var recId = recordIdFor(origin);
     var startUser = uid();
-    var rec = syncRecord(host);
+    var rec = syncRecord(recId);
     if (rec && rec.hash && rec.hash === digest(payloadOf(res))) {
       /* "Same as last upload" is a local belief. Confirm now and then that the
          cloud still holds that upload; if the row is gone or older, send it. */
-      var checked = verifiedAt[host] || 0;
+      var checked = verifiedAt[recId] || 0;
       if (Date.now() - checked < VERIFY_EVERY) {
         return Promise.resolve({ host: host, unchanged: true });
       }
       return window.API.gameSaveStamp(host).then(function (stamp) {
         if (stamp && stamp >= (rec.at || 0)) {
-          verifiedAt[host] = Date.now();
+          verifiedAt[recId] = Date.now();
           return { host: host, unchanged: true };
         }
-        setSyncRecord(host, { at: 0, hash: null, keys: rec.keys || {} });
+        setSyncRecord(recId, { at: 0, hash: null, keys: rec.keys || {} });
         return syncUp(origin, res);
       });
     }
 
-    return once(host, function () {
+    return once(recId, function () {
       var cloudCopy = null;
       return window.API.gameSaveStamp(host).then(function (stamp) {
         if (!stamp || (rec && stamp <= rec.at)) return res;
@@ -391,8 +407,8 @@
           return window.API.putGameSave(host, payload).then(function () {
             return window.API.gameSaveStamp(host);
           }).then(function (at) {
-            verifiedAt[host] = Date.now();
-            setSyncRecord(host, {
+            verifiedAt[recId] = Date.now();
+            setSyncRecord(recId, {
               at: at,
               hash: dropped.length ? null : digest(payloadOf(latest)),
               keys: hashes(entries(payload))
@@ -517,6 +533,21 @@
     });
   }
 
+  /* Carry this device's storage from one origin into another, filling only
+     what's missing there. Used once when games move to a new address.
+     Resolves true when the old copy could be read (so it needn't be again). */
+  function copyOrigin(from, to) {
+    from = from.replace(/\/+$/, "");
+    to = to.replace(/\/+$/, "");
+    return ask(from, { action: "read" }).then(function (res) {
+      var p = payloadOf(res);
+      if (isEmpty(p)) return { read: true, written: 0 };
+      return reconcile(to, p, null, false).then(function (r) {
+        return { read: true, written: r.written };
+      });
+    });
+  }
+
   window.GameSaves = {
     hosts: hostsFromConfig,
     hostKey: keyFor,
@@ -526,7 +557,13 @@
     syncUp: syncUp,
     /* After the cloud row is deleted, so the next sync uploads again. */
     forget: function (host) {
-      try { window.localStorage.removeItem(recordKey(host)); } catch (e) {}
+      try {
+        var base = recordKey(host);
+        for (var i = window.localStorage.length - 1; i >= 0; i--) {
+          var k = window.localStorage.key(i);
+          if (k === base || (k && k.indexOf(base + "@") === 0)) window.localStorage.removeItem(k);
+        }
+      } catch (e) {}
     },
     restore: restore,
     restoreHost: restoreHost,
@@ -534,6 +571,7 @@
     readAll: readAll,
     writeKeys: writeKeys,
     writeCookies: writeCookies,
-    removeKeys: removeKeys
+    removeKeys: removeKeys,
+    copyOrigin: copyOrigin
   };
 })();

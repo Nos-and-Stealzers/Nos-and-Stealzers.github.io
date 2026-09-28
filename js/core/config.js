@@ -29,6 +29,16 @@
       "polytrack":  "https://arcadecampushub.github.io/polytrack"
     },
 
+    /* Games on arcadecampushub.github.io are also served through
+       play.<domain> (a Vercel rewrite). From the main domain that host is
+       same-site, so a game's storage counts as first-party and survives
+       private windows. Mirrors keep loading github.io directly. */
+    gameProxy: {
+      enabled: false,
+      from: "https://arcadecampushub.github.io",
+      to: "https://play.arcadecampushub.online"
+    },
+
     /* Fallback for any entry without a `host`, and for legacy catalogs whose
        paths are still root-relative. Empty means "same origin as this site". */
     gameBase: "",
@@ -125,4 +135,20 @@
       arcade: "terminal"
     }
   };
+
+  /* Switch the proxied hosts over when the page is on the main domain. The
+     original github.io bases stay in `direct` so old saves can be found. */
+  var px = window.SITE.gameProxy;
+  var onMain = location.hostname === window.SITE.domain ||
+    location.hostname.slice(-(window.SITE.domain.length + 1)) === "." + window.SITE.domain;
+  px.active = !!(px.enabled && onMain);
+  px.direct = {};
+  if (px.active) {
+    var hosts = window.SITE.gameHosts;
+    Object.keys(hosts).forEach(function (k) {
+      if (hosts[k].indexOf(px.from + "/") !== 0) return;
+      px.direct[k] = hosts[k];
+      hosts[k] = px.to + hosts[k].slice(px.from.length);
+    });
+  }
 })();

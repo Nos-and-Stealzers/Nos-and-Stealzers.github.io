@@ -82,7 +82,65 @@
           "key": "X-Permitted-Cross-Domain-Policies",
           "value": "none"
         }
+      ],
+      "missing": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
       ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/((?!(?:games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://www.arcadecampushub.online/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path*"
     }
   ]
 }

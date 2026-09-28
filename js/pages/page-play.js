@@ -156,13 +156,39 @@
        server, which is after this runs on a fresh page load. Checking
        straight away meant the restore never happened at all. */
     showLoading(true);
-    var waited = false;
-    var wait = window.setTimeout(function () { waited = true; embed(); }, 3000);
-    window.Session.ready.then(function () {
-      if (waited) return;
-      window.clearTimeout(wait);
-      migrateOldSave().then(pullThenEmbed);
+    moveToPlayHost().then(function () {
+      var waited = false;
+      var wait = window.setTimeout(function () { waited = true; embed(); }, 3000);
+      window.Session.ready.then(function () {
+        if (waited) return;
+        window.clearTimeout(wait);
+        migrateOldSave().then(pullThenEmbed);
+      });
     });
+  }
+
+  /* Games that used to load from github.io now load from play.<domain>.
+     Before the first game there starts, copy this device's github.io
+     storage across so nobody starts from scratch. Needs no account. */
+  function moveToPlayHost() {
+    var px = window.SITE.gameProxy;
+    var h = effectiveHost();
+    var from = px && px.active && h && px.direct[h];
+    var to = from && hostOrigin();
+    if (!to || !window.GameSaves || !window.GameSaves.copyOrigin) return Promise.resolve();
+    var doneKey = "ach:moved:" + px.to;
+    try { if (window.localStorage.getItem(doneKey) === "1") return Promise.resolve(); } catch (e) {}
+
+    markSaved("moving your saves over…", "");
+    var job = window.GameSaves.copyOrigin(from, to).then(function (r) {
+      try { window.localStorage.setItem(doneKey, "1"); } catch (e) {}
+      markSaved(r.written ? "saves moved over" : "progress saves automatically", r.written ? "ok" : "");
+    }).catch(function () {
+      /* The old copy couldn't be read (private window, blocked storage):
+         nothing on this device to move. Try again next time. */
+      markSaved("progress saves automatically", "");
+    });
+    return Promise.race([job, new Promise(function (r) { window.setTimeout(r, 9000); })]);
   }
 
   /* A game that moved onto this site brings its save from where it used to
@@ -174,7 +200,9 @@
     var missing = m.keys.filter(function (k) {
       try { return window.localStorage.getItem(k) == null; } catch (e) { return false; }
     });
-    var base = (window.SITE.gameHosts || {})[m.from];
+    var px = window.SITE.gameProxy;
+    /* Old saves live where the game used to load from, before any proxying. */
+    var base = (px && px.direct && px.direct[m.from]) || (window.SITE.gameHosts || {})[m.from];
     var doneKey = "ach:migrated:" + game.id;
     var done = false;
     try { done = window.localStorage.getItem(doneKey) === "1"; } catch (e) {}

@@ -27,7 +27,11 @@
 
   function resolveUrl(path, host) {
     if (!path) return "";
-    if (/^(https?:)?\/\//i.test(path)) return path;
+    if (/^(https?:)?\/\//i.test(path)) {
+      var px = SITE.gameProxy;
+      if (px && px.active && path.indexOf(px.from + "/") === 0) return px.to + path.slice(px.from.length);
+      return path;
+    }
     var base = originFor(host);
     if (path.charAt(0) === "/") return base + path;
     return base ? base + "/" + path : path;

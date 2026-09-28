@@ -62,7 +62,7 @@
 
     /* --------------------------------------------------------------- TURN relay for voice/video calls. */
     turn: {
-      enabled: true,
+      enabled: false,
       servers: []
     },
 

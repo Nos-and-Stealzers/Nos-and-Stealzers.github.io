@@ -36,6 +36,7 @@ function withSaved(savedBlob) {
   };
   sandbox.document = { dispatchEvent() {}, addEventListener() {}, readyState: "complete" };
   sandbox.CustomEvent = class {};
+  sandbox.location = { protocol: "https:", origin: "https://www.arcadecampushub.online", hostname: "www.arcadecampushub.online" };
   vm.createContext(sandbox);
 
   for (const f of ["js/core/config.js", "js/core/store.js"]) {

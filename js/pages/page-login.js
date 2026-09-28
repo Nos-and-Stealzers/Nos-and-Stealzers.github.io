@@ -24,7 +24,11 @@
     var onMirror = hub && (window.SITE.domains || []).indexOf(location.origin) !== -1 &&
       location.hostname.replace(/^www\./, "") !== hubHost;
     if (onMirror) {
-      document.getElementById("sso-box").hidden = false;
+      /* Only offer it once the server side is switched on (api/sso.js). */
+      fetch("/api/sso", { cache: "no-store", credentials: "omit" })
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .then(function (s) { if (s && s.ready) document.getElementById("sso-box").hidden = false; })
+        .catch(function () {});
       document.getElementById("sso-hub").textContent = hubHost;
       document.getElementById("sso-go").addEventListener("click", function () {
         var bytes = new Uint8Array(24);

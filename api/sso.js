@@ -71,6 +71,9 @@ function send(res, status, body) {
 }
 
 module.exports = async function handler(req, res) {
+  /* GET: is cross-site sign-in switched on? Lets the sign-in page hide the
+     button until the service key is configured. Reveals nothing else. */
+  if (req.method === "GET") return send(res, 200, { ready: !!process.env.SUPABASE_SERVICE_ROLE_KEY });
   if (req.method !== "POST") return send(res, 405, { error: "POST only." });
 
   /* Only the hub's own pages may ask. A browser always sends Origin on a

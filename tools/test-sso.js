@@ -90,8 +90,10 @@ test('refuses banned or missing accounts', async () => {
   assert.equal((await run('POST', HUB, { token: 'good', target: MIRROR })).status, 403);
 });
 
-test('POST only, and off until the service key is set', async () => {
+test('GET only says whether it is set up; off until the service key is set', async () => {
   supabase();
-  assert.equal((await run('GET', HUB)).status, 405);
+  assert.deepEqual((await run('GET', HUB)).body, { ready: true });
+  assert.deepEqual((await run('GET', HUB, undefined, null)).body, { ready: false });
+  assert.equal((await run('PUT', HUB)).status, 405);
   assert.equal((await run('POST', HUB, { token: 'good', target: MIRROR }, null)).status, 503);
 });

@@ -585,6 +585,49 @@
       });
     },
 
+    /* Cross-site sign-in (sso.html, api/sso.js). ssoIssue runs on a domain
+       where you're signed in and returns a one-time code for `target`;
+       ssoRedeem runs on the target and trades it for its own session. */
+    ssoIssue: function (target) {
+      if (!session) return Promise.reject(fail("Sign in first.", 401));
+      var soon = session.expires_at && session.expires_at * 1000 < Date.now() + 60000;
+      return (soon ? refresh() : Promise.resolve()).then(function () {
+        return fetch("/api/sso", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ token: session.access_token, target: target }),
+          credentials: "omit",
+          cache: "no-store"
+        });
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) {
+          if (!res.ok || !body.code) throw fail(body.error || "Couldn't sign you in there.", res.status);
+          return body.code;
+        });
+      });
+    },
+
+    ssoRedeem: function (code) {
+      if (!/^[A-Za-z0-9_-]{16,200}$/.test(String(code || ""))) {
+        return Promise.reject(fail("That sign-in link isn't valid.", 400));
+      }
+      return call("/auth/v1/verify", { method: "POST", body: { type: "magiclink", token_hash: code } })
+        .then(function (body) {
+          if (!body || !body.access_token) throw fail("That sign-in link expired. Try again.", 401);
+          keepSession(body);
+          edgesCache = null;
+          rpc("record_login", { agent: String(navigator.userAgent || "").slice(0, 200) })
+            .catch(function () {});
+          return me().then(function (row) { return { user: shapeSelf(row) }; });
+        })
+        .catch(function (err) {
+          if (err && (err.status === 400 || err.status === 401 || err.status === 403 || err.status === 422)) {
+            throw fail("That sign-in link expired or was already used. Try again.", 401);
+          }
+          throw err;
+        });
+    },
+
     signOutEverywhere: function () {
       return call("/auth/v1/logout?scope=others", { method: "POST" })
         .then(function () { return { ok: true }; });

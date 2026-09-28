@@ -17,6 +17,31 @@
       return "index.html";
     }
 
+    /* On a mirror domain, borrow the sign-in from the main site instead of
+       typing a password again (see sso.html). */
+    var hub = window.SITE.ssoHub;
+    var hubHost = hub ? new URL(hub).hostname.replace(/^www\./, "") : "";
+    var onMirror = hub && (window.SITE.domains || []).indexOf(location.origin) !== -1 &&
+      location.hostname.replace(/^www\./, "") !== hubHost;
+    if (onMirror) {
+      document.getElementById("sso-box").hidden = false;
+      document.getElementById("sso-hub").textContent = hubHost;
+      document.getElementById("sso-go").addEventListener("click", function () {
+        var bytes = new Uint8Array(24);
+        window.crypto.getRandomValues(bytes);
+        var state = btoa(String.fromCharCode.apply(null, bytes))
+          .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        try {
+          sessionStorage.setItem("ach:sso", JSON.stringify({ state: state, next: nextPage(), at: Date.now() }));
+        } catch (e) {
+          fail("This browser is blocking storage, so that shortcut can't work here. Sign in below.");
+          return;
+        }
+        window.location.href = hub + "/sso.html?to=" + encodeURIComponent(location.origin) +
+          "&state=" + encodeURIComponent(state);
+      });
+    }
+
     window.Session.ready.then(function (state) {
       if (!state.backend) { offline.hidden = false; return; }
       if (state.user) { window.location.replace(nextPage()); return; }

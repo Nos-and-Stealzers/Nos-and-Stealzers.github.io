@@ -3625,3 +3625,13 @@ body:not(.is-plus-member) .plus-try { display: none; }
 .plus-modgame:hover { text-decoration: none; color: var(--ink); border-color: var(--accent); }
 .plus-modlist-foot { margin-top: 1rem; max-width: 70ch; }
 @media (max-width: 520px) { #modlist { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   51. Sign in with the main site's account (mirror domains)
+   ============================================================ */
+.sso-box { margin-bottom: 1.1rem; }
+.sso-btn { width: 100%; justify-content: center; flex-wrap: wrap; gap: 0.3ch; }
+.sso-btn b { color: var(--accent); }
+.sso-or { display: flex; align-items: center; gap: 0.7rem; margin: 1rem 0 0; }
+.sso-or::before, .sso-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+#sso-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }

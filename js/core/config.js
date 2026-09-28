@@ -29,6 +29,23 @@
       "polytrack":  "https://arcadecampushub.github.io/polytrack"
     },
 
+    /* Every domain the hub is served on. One account signs in on all of
+       them: a signed-out domain can borrow the sign-in from `ssoHub` (see
+       sso.html). Keep in step with HUB_ORIGINS in api/sso.js. */
+    ssoHub: "https://www.arcadecampushub.online",
+    domains: [
+      "https://arcadecampushub.online", "https://www.arcadecampushub.online",
+      "https://arcadecampushub.space", "https://www.arcadecampushub.space",
+      "https://arcadecampushub.fun", "https://www.arcadecampushub.fun",
+      "https://poppersarcade.online", "https://www.poppersarcade.online",
+      "https://geniussis.online", "https://www.geniussis.online",
+      "https://geniussis.space", "https://www.geniussis.space",
+      "https://securlyfex.online", "https://www.securlyfex.online",
+      "https://securlyfex.site", "https://www.securlyfex.site",
+      "https://securly.site", "https://www.securly.site",
+      "https://websitegames-topaz.vercel.app"
+    ],
+
     /* Games on arcadecampushub.github.io are also served through
        play.<domain> (a Vercel rewrite). From the main domain that host is
        same-site, so a game's storage counts as first-party and survives

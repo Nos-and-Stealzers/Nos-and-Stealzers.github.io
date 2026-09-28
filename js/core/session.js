@@ -220,13 +220,21 @@
   }
 
   function login(username, password) {
-    return window.API.login(username, password).then(function (res) {
-      setUser(res.user);
-      pullPrefs();
-      return pushSave().then(function () {
-        refreshBadges();
-        return res.user;
-      });
+    return window.API.login(username, password).then(finishLogin);
+  }
+
+  /* A sign-in handed over from another of the hub's domains (sso.html). */
+  function ssoLogin(code) {
+    if (!window.API.ssoRedeem) return Promise.reject(new Error("Not available."));
+    return window.API.ssoRedeem(code).then(finishLogin);
+  }
+
+  function finishLogin(res) {
+    setUser(res.user);
+    pullPrefs();
+    return pushSave().then(function () {
+      refreshBadges();
+      return res.user;
     });
   }
 
@@ -281,6 +289,7 @@
     isOwner: function () { return Session.rank() >= RANK.owner; },
     outranks: function (role) { return Session.rank() > (RANK[role] || 0); },
     login: login,
+    ssoLogin: ssoLogin,
     signup: signup,
     logout: logout,
     setUser: setUser,

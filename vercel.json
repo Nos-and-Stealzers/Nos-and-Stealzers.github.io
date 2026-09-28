@@ -132,14 +132,24 @@
   ],
   "rewrites": [
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path*",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
           "value": "play.arcadecampushub.online"
         }
       ],
-      "destination": "https://arcadecampushub.github.io/:repo/:path*"
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
     }
   ]
 }

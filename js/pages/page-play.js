@@ -35,6 +35,9 @@
 
     details();
     actions();
+    if (window.ModMenu && $("a-aspect")) {
+      mods = window.ModMenu.attach({ frame: function () { return frame; }, stage: stage(), anchor: $("a-aspect") });
+    }
     stars();
     window.UI.render($("g-related"), window.Catalog.related(game, 12), { desc: false });
 
@@ -137,6 +140,7 @@
 
   /* Auto-restore, then play. */
   var didRestore = false;
+  var mods = null;
   function restoreThenEmbed() {
     if (didRestore) { embed(); return; }
     didRestore = true;
@@ -209,6 +213,7 @@
       window.setTimeout(function () { try { frame.focus(); } catch (e) {} }, 60);
     });
     stage().insertBefore(frame, curtain());
+    if (mods) mods.frameReady();
 
     /* Tells the shell to stand down its single-key shortcuts — R would
        navigate away from a game in progress, K would cover it. */

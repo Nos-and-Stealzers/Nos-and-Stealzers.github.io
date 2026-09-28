@@ -143,7 +143,7 @@
           reject: reject,
           timer: window.setTimeout(function () {
             delete waiting[id];
-            reject(new Error("Save bridge timed out"));
+            reject(new Error("this window is blocking game storage (private window or third-party cookies off). Use a normal window to keep progress"));
           }, TIMEOUT)
         };
         entry.iframe.contentWindow.postMessage(
@@ -159,6 +159,9 @@
   var SYNC_PREFIX = "ach:gs-sync:";
 
   function uid() { return window.Session && window.Session.user ? String(window.Session.user.id) : ""; }
+  var VERIFY_EVERY = 5 * 60 * 1000;
+  var verifiedAt = {};
+
   function recordKey(host) { return SYNC_PREFIX + uid() + ":" + host; }
   function syncRecord(host) {
     try { return JSON.parse(window.localStorage.getItem(recordKey(host)) || "null"); }
@@ -347,7 +350,20 @@
     var startUser = uid();
     var rec = syncRecord(host);
     if (rec && rec.hash && rec.hash === digest(payloadOf(res))) {
-      return Promise.resolve({ host: host, unchanged: true });
+      /* "Same as last upload" is a local belief. Confirm now and then that the
+         cloud still holds that upload; if the row is gone or older, send it. */
+      var checked = verifiedAt[host] || 0;
+      if (Date.now() - checked < VERIFY_EVERY) {
+        return Promise.resolve({ host: host, unchanged: true });
+      }
+      return window.API.gameSaveStamp(host).then(function (stamp) {
+        if (stamp && stamp >= (rec.at || 0)) {
+          verifiedAt[host] = Date.now();
+          return { host: host, unchanged: true };
+        }
+        setSyncRecord(host, { at: 0, hash: null, keys: rec.keys || {} });
+        return syncUp(origin, res);
+      });
     }
 
     return once(host, function () {
@@ -375,6 +391,7 @@
           return window.API.putGameSave(host, payload).then(function () {
             return window.API.gameSaveStamp(host);
           }).then(function (at) {
+            verifiedAt[host] = Date.now();
             setSyncRecord(host, {
               at: at,
               hash: dropped.length ? null : digest(payloadOf(latest)),

@@ -86,6 +86,38 @@
         {
           "type": "host",
           "value": "play.arcadecampushub.online"
+        },
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        },
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        },
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        },
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        },
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        },
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        },
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        },
+        {
+          "type": "host",
+          "value": "play.securly.site"
         }
       ]
     },
@@ -108,7 +140,223 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -128,6 +376,94 @@
       ],
       "destination": "https://www.arcadecampushub.online/",
       "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "https://www.arcadecampushub.space/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "https://www.arcadecampushub.fun/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "https://www.poppersarcade.online/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "https://www.geniussis.online/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "https://www.geniussis.space/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "https://www.securlyfex.online/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "https://www.securlyfex.site/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
+        }
+      ],
+      "destination": "https://www.securly.site/",
+      "permanent": false
     }
   ],
   "rewrites": [
@@ -137,6 +473,86 @@
         {
           "type": "host",
           "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
         }
       ],
       "destination": "/js/features/game-cheats.js"
@@ -152,11 +568,171 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
       "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
           "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
         }
       ],
       "destination": "https://arcadecampushub.github.io/:repo/"
@@ -172,11 +748,171 @@
       "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
     },
     {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
       "source": "/sonic-hedgehog-game",
       "has": [
         {
           "type": "host",
           "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.fun"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.poppersarcade.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geniussis.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyfex.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securly.site"
         }
       ],
       "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"

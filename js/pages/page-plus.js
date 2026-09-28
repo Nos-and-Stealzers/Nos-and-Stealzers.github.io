@@ -89,6 +89,18 @@
     document.querySelectorAll("[data-side]").forEach(function (b) {
       b.addEventListener("click", function () { setting("side", b.dataset.side); });
     });
+    var resetBtn = document.getElementById("cfg-reset");
+    if (resetBtn) resetBtn.addEventListener("click", function () {
+      var go = window.Dialogs && window.Dialogs.confirm
+        ? window.Dialogs.confirm({ title: "Reset the mod menu?", body: "Clears presets, hidden effects and the current look. Doesn't touch cheats already applied to a save.", confirmLabel: "Reset" })
+        : Promise.resolve(window.confirm("Reset the mod menu? This clears presets, hidden effects and the current look."));
+      go.then(function (ok) {
+        if (!ok) return;
+        Mods.reset();
+        drawEditor();
+        UI.toast("Mod menu reset");
+      });
+    });
 
     function paint() {
       var member = Mods.member();

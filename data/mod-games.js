@@ -16,7 +16,6 @@ window.MOD_GAMES = {
   "fnaf-world": "clickteam",
   "huge-among-us": "construct",
   "huge-craftmine": "construct",
-  "huge-death-soul": "construct",
   "huge-doctor-acorn-2": "construct",
   "huge-geodash-2": "construct",
   "huge-gravity-soccer": "construct",

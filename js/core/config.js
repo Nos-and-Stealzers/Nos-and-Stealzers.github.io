@@ -53,7 +53,9 @@
     gameProxy: {
       enabled: true,
       from: "https://arcadecampushub.github.io",
-      to: "https://play.arcadecampushub.online",
+      /* Each mirror has its own play.<domain> so the game frame stays
+         same-site no matter which domain the hub is loaded from. */
+      to: "https://play." + (location.hostname || "arcadecampushub.online").replace(/^www\./, ""),
       /* Other game sites the play host also serves, at these paths. */
       extra: {
         "https://rzencoder.github.io/sonic-hedgehog-game": "/sonic-hedgehog-game"
@@ -157,12 +159,18 @@
     }
   };
 
-  /* Switch the proxied hosts over when the page is on the main domain. The
-     original github.io bases stay in `direct` so old saves can be found. */
+  /* Switch the proxied hosts over on any of the hub's own domains — every
+     mirror has its own play.<domain> (see vercel.json), so this isn't
+     limited to the main domain anymore. The original github.io bases stay
+     in `direct` so old saves can be found. */
   var px = window.SITE.gameProxy;
-  var onMain = location.hostname === window.SITE.domain ||
-    location.hostname.slice(-(window.SITE.domain.length + 1)) === "." + window.SITE.domain;
-  px.active = !!(px.enabled && onMain);
+  var onHub = window.SITE.domains.some(function (d) {
+    try {
+      var h = new URL(d).hostname;
+      return location.hostname === h || location.hostname.slice(-(h.length + 1)) === "." + h;
+    } catch (e) { return false; }
+  });
+  px.active = !!(px.enabled && onHub);
   px.direct = {};
   if (px.active) {
     var hosts = window.SITE.gameHosts;

@@ -770,6 +770,13 @@
     config: config,
     saveConfig: saveConfig,
     member: member,
-    maxPresets: MAX_PRESETS
+    maxPresets: MAX_PRESETS,
+    /* Wipe presets, hidden-effects list and the current game's look —
+       used by the "Reset the mod menu" button on Campus+. Cheats already
+       written into a save are a game's own data, so this leaves those alone. */
+    reset: function () {
+      try { window.localStorage.removeItem(KEY); } catch (e) {}
+      try { window.localStorage.removeItem(CONFIG_KEY); } catch (e) {}
+    }
   };
 })();

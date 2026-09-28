@@ -2,7 +2,7 @@
    The site's own pages and assets are cached; game folders never are, so a
    game always fetches its current build. Bump SHELL_VERSION after a deploy. */
 
-var SHELL_VERSION = "ach-shell-v33";
+var SHELL_VERSION = "ach-shell-v34";
 
 var SHELL = [
   "index.html",
@@ -40,6 +40,7 @@ var SHELL = [
   "js/features/capture.js",
   "js/features/chat-core.js",
   "js/features/chat-dock.js",
+  "js/features/game-cheats.js",
   "js/features/mod-menu.js",
   "js/pages/page-plus.js",
   "js/features/call.js",

@@ -7595,15 +7595,15 @@ window.GAME_CATALOG = [
     "id": "huge-sonic-the-hedgehog",
     "title": "Sonic the Hedgehog",
     "category": "platformer",
-    "description": "Run and spin-jump through classic loop-filled levels as Sonic collecting rings.",
+    "description": "A fan-made Sonic platformer: run, jump and grab rings across three levels, dodging spikes, lava and enemies.",
     "gradient": "linear-gradient(135deg, #2563eb, #1e3a8a)",
-    "source": "sonic-the-hedgehog/index.html",
-    "direct": "sonic-the-hedgehog/index.html",
+    "source": "https://rzencoder.github.io/sonic-hedgehog-game/",
+    "direct": "https://rzencoder.github.io/sonic-hedgehog-game/",
     "platform": "local",
     "embed": "allowed",
     "schoolRisk": "low",
     "icon": "",
-    "host": "games-huge",
+    "host": "external",
     "dateAdded": "2026-09-10"
   },
   {
@@ -26991,10 +26991,10 @@ window.GAME_CATALOG = [
     "id": "huge-sonic-hedgehog",
     "title": "Sonic the Hedgehog",
     "category": "platformer",
-    "description": "The blue blur is back — dash through loops and rings at top speed in this browser Sonic. Classic Genesis-style platforming.",
-    "host": "games-huge",
-    "source": "sonic-the-hedgehog/index.html",
-    "direct": "sonic-the-hedgehog/index.html"
+    "description": "A fan-made Sonic platformer: run, jump and grab rings across three levels, dodging spikes, lava and enemies.",
+    "host": "external",
+    "source": "https://rzencoder.github.io/sonic-hedgehog-game/",
+    "direct": "https://rzencoder.github.io/sonic-hedgehog-game/"
   },
   {
     "gradient": "linear-gradient(135deg,#0a6cff,#111)",

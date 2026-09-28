@@ -119,7 +119,7 @@
   ],
   "redirects": [
     {
-      "source": "/((?!(?:games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -131,6 +131,16 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
     {
       "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
@@ -150,6 +160,26 @@
         }
       ],
       "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.arcadecampushub.online"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
     }
   ]
 }

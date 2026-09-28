@@ -3598,3 +3598,15 @@ iframe.mod-rainbow.mod-spin { animation: mod-hue 3s linear infinite, mod-spin 40
 .plus-perks b { color: var(--accent); }
 .plus-try { border-radius: 999px; margin: 0 0 1.1rem; display: inline-flex; }
 body:not(.is-plus-member) .plus-try { display: none; }
+
+/* ============================================================
+   49. Mod menu — live game cheats
+   ============================================================ */
+.mod-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.mod-chips .mod-chip { flex: 0 1 auto; }
+.mod-chip.is-action { border-style: dashed; }
+.mod-chip.is-action:active { background: var(--sel); }
+.mod-sub { font-size: 0.72rem; font-weight: 700; color: var(--ink-2); margin: 0.1rem 0 -0.25rem; }
+.mod-cheat.is-text { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr) auto; }
+/* A long cheat list scrolls the panel; nothing in it gets squashed. */
+.mod-body > * { flex-shrink: 0; }

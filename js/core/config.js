@@ -36,7 +36,11 @@
     gameProxy: {
       enabled: true,
       from: "https://arcadecampushub.github.io",
-      to: "https://play.arcadecampushub.online"
+      to: "https://play.arcadecampushub.online",
+      /* Other game sites the play host also serves, at these paths. */
+      extra: {
+        "https://rzencoder.github.io/sonic-hedgehog-game": "/sonic-hedgehog-game"
+      }
     },
 
     /* Fallback for any entry without a `host`, and for legacy catalogs whose

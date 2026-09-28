@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mod agent</title>
+<meta name="robots" content="noindex">
+<!-- Loaded by the mod menu next to a game served from play.<domain>. Same
+     origin as the game, so it can reach inside it; it only ever runs the
+     named cheats in game-cheats.js, and only for the hub's own pages. -->
+<script src="/_mods/game-cheats.js"></script>
+</head>
+<body>
+<script>
+(function () {
+  "use strict";
+  var CHANNEL = "ach-mods";
+  var TRUSTED = /^https:\/\/([a-z0-9-]+\.)?arcadecampushub\.online$/;
+
+  /* The game is the other frame on this origin in the same page. */
+  function game() {
+    var p = window.parent;
+    for (var i = 0; i < p.frames.length; i++) {
+      var w = p.frames[i];
+      if (w === window) continue;
+      try {
+        if (/save-bridge\.html|\/_mods\//.test(w.location.href)) continue;
+        if (w.document) return w;
+      } catch (e) { /* another origin */ }
+    }
+    return null;
+  }
+
+  var hooked = null;
+  function hook(w, origin) {
+    if (!w || hooked === w) return;
+    hooked = w;
+    /* Alt+M from inside the game still opens the menu. */
+    try {
+      w.addEventListener("keydown", function (e) {
+        if (e.altKey && (e.key === "m" || e.key === "M" || e.code === "KeyM")) {
+          window.parent.postMessage({ channel: CHANNEL, hotkey: true }, origin);
+        }
+      });
+    } catch (e) {}
+  }
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== window.parent || !TRUSTED.test(e.origin)) return;
+    var m = e.data;
+    if (!m || m.channel !== CHANNEL || typeof m.id !== "number") return;
+    var w = game(), out;
+    try {
+      if (!w) out = { error: "The game isn't loaded yet." };
+      else {
+        hook(w, e.origin);
+        out = m.action === "run" ? window.GameCheats.run(w, String(m.cheat), m.arg) : window.GameCheats.inspect(w);
+      }
+    } catch (err) {
+      out = { error: String((err && err.message) || err) };
+    }
+    e.source.postMessage({ channel: CHANNEL, reply: m.id, data: out }, e.origin);
+  });
+})();
+</script>
+</body>
+</html>

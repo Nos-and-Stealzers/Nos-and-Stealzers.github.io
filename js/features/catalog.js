@@ -29,7 +29,13 @@
     if (!path) return "";
     if (/^(https?:)?\/\//i.test(path)) {
       var px = SITE.gameProxy;
-      if (px && px.active && path.indexOf(px.from + "/") === 0) return px.to + path.slice(px.from.length);
+      if (px && px.active) {
+        if (path.indexOf(px.from + "/") === 0) return px.to + path.slice(px.from.length);
+        var hit = Object.keys(px.extra || {}).filter(function (from) {
+          return path === from || path.indexOf(from + "/") === 0;
+        })[0];
+        if (hit) return px.to + px.extra[hit] + path.slice(hit.length);
+      }
       return path;
     }
     var base = originFor(host);

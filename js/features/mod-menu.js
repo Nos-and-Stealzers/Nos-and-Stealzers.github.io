@@ -1,13 +1,13 @@
 /* Campus+ mod menu for the player.
 
-   Works on every game: looks (rainbow, invert, retro, mirror, wobble, zoom…)
-   are applied to the game frame from outside, so they need nothing from the
-   game itself.
+   Looks (rainbow, invert, retro, mirror, wobble, zoom…) work on every game:
+   they're applied to the game frame from outside.
 
-   Arcade originals (served from this site) also get game-speed control and
-   pause, by retiming the game's clock from inside its frame. Games loaded
-   from other sites can't be reached that way: the browser keeps their
-   insides off-limits, so those controls say so instead of pretending. */
+   Games served from this site, or through play.<domain>, can also be reached
+   from the inside: speed and pause, and the live cheats in game-cheats.js
+   (Mario 64, Clickteam/FNAF, Construct, Phaser, Eaglercraft, and any game
+   that keeps its numbers in plain variables). Anything else still gets the
+   save editor, which changes the numbers a game stored on this device. */
 (function () {
   "use strict";
 
@@ -69,59 +69,7 @@
     } catch (e) { return false; }
   }
 
-  function timeControl(w) {
-    if (w.__achClock) return w.__achClock;
-    var perf = w.performance;
-    var realNow = perf.now.bind(perf);
-    var realDate = w.Date.now.bind(w.Date);
-    var raf = w.requestAnimationFrame.bind(w);
-    var caf = w.cancelAnimationFrame.bind(w);
-    var st = w.setTimeout.bind(w);
-    var si = w.setInterval.bind(w);
-    var state = { speed: 1, paused: false };
-    var last = realNow();
-    var virt = last;
-    var dateOffset = realDate() - last;
-
-    function tick() {
-      var t = realNow();
-      if (!state.paused) virt += (t - last) * state.speed;
-      last = t;
-      return virt;
-    }
-
-    perf.now = function () { return tick(); };
-    w.Date.now = function () { return Math.round(dateOffset + tick()); };
-
-    /* While paused, frames are held back rather than delivered. */
-    var live = {};
-    var seq = 0;
-    w.requestAnimationFrame = function (cb) {
-      var id = ++seq;
-      function run() {
-        if (!live[id]) return;
-        if (state.paused) { live[id] = raf(run); return; }
-        delete live[id];
-        cb(tick());
-      }
-      live[id] = raf(run);
-      return id;
-    };
-    w.cancelAnimationFrame = function (id) {
-      if (live[id]) { caf(live[id]); delete live[id]; }
-    };
-    w.setTimeout = function (fn, ms) {
-      var args = Array.prototype.slice.call(arguments, 2);
-      return st.apply(w, [fn, Math.max(0, (Number(ms) || 0) / state.speed)].concat(args));
-    };
-    w.setInterval = function (fn, ms) {
-      var args = Array.prototype.slice.call(arguments, 2);
-      return si.apply(w, [fn, Math.max(4, (Number(ms) || 0) / state.speed)].concat(args));
-    };
-
-    w.__achClock = state;
-    return state;
-  }
+  function timeControl(w) { return window.GameCheats.timeControl(w); }
 
   /* ---- the menu ---- */
 
@@ -174,15 +122,96 @@
     }
 
     function applySpeed() {
-      var f = frame();
-      if (!f || !sameOrigin(f)) return false;
-      try {
-        var clock = timeControl(f.contentWindow);
-        clock.speed = settings.speed;
-        clock.paused = !!settings.paused;
-        return true;
-      } catch (e) { return false; }
+      var l = link();
+      if (!l) return false;
+      /* Leave a game's clock alone until someone actually changes it. */
+      if (settings.speed === 1 && !settings.paused && !l.touched) return true;
+      l.touched = true;
+      l.ask("run", "clock", { speed: settings.speed, paused: !!settings.paused }).catch(function () {});
+      return true;
     }
+
+    /* ---- reaching inside the game ----
+       Games served from this site are reached directly. Games served from
+       play.<domain> are reached through _mods/agent.html, loaded from that
+       same origin in a hidden frame. Anywhere else is off-limits. */
+    var agent = { frame: null, origin: "", seq: 0, waiting: {} };
+    var links = { direct: null, agent: null };
+
+    function playOrigin() {
+      var px = window.SITE && window.SITE.gameProxy;
+      if (!px || !px.active) return "";
+      try { return new URL(px.to).origin; } catch (e) { return ""; }
+    }
+
+    function link() {
+      var f = frame();
+      if (!f || !window.GameCheats) return null;
+      if (sameOrigin(f)) {
+        var w = f.contentWindow;
+        if (!links.direct || links.direct.win !== w) {
+          links.direct = {
+            win: w,
+            ask: function (action, id, arg) {
+              try {
+                return Promise.resolve(action === "run"
+                  ? window.GameCheats.run(w, id, arg) : window.GameCheats.inspect(w));
+              } catch (e) { return Promise.reject(e); }
+            }
+          };
+        }
+        return links.direct;
+      }
+      var origin = playOrigin(), src = "";
+      try { src = new URL(f.src, location.href).origin; } catch (e) {}
+      if (!origin || src !== origin) return null;
+      if (!links.agent || links.agent.frame !== f) {
+        links.agent = { frame: f, ask: function (action, id, arg) { return askAgent(origin, action, id, arg); } };
+      }
+      return links.agent;
+    }
+
+    function askAgent(origin, action, id, arg) {
+      if (!agent.frame || !agent.frame.isConnected || agent.origin !== origin) {
+        if (agent.frame) agent.frame.remove();
+        var fr = document.createElement("iframe");
+        fr.src = origin + "/_mods/agent.html";
+        fr.hidden = true;
+        fr.tabIndex = -1;
+        fr.title = "Mod menu helper";
+        fr.setAttribute("aria-hidden", "true");
+        agent.ready = new Promise(function (resolve) { fr.addEventListener("load", resolve); });
+        agent.frame = fr;
+        agent.origin = origin;
+        document.body.appendChild(fr);
+      }
+      var target = agent.frame;
+      return agent.ready.then(function () {
+        return new Promise(function (resolve, reject) {
+          var n = ++agent.seq;
+          var timer = window.setTimeout(function () {
+            delete agent.waiting[n];
+            reject(new Error("The game didn't answer. Try again once it has loaded."));
+          }, 5000);
+          agent.waiting[n] = function (data) {
+            window.clearTimeout(timer);
+            if (data && data.error) reject(new Error(data.error));
+            else resolve(data);
+          };
+          target.contentWindow.postMessage(
+            { channel: "ach-mods", id: n, action: action, cheat: id, arg: arg }, origin);
+        });
+      });
+    }
+
+    window.addEventListener("message", function (e) {
+      if (!agent.frame || e.source !== agent.frame.contentWindow || e.origin !== agent.origin) return;
+      var m = e.data;
+      if (!m || m.channel !== "ach-mods") return;
+      if (m.hotkey) { if (config().hotkey) toggle(panel.hidden); return; }
+      var done = agent.waiting[m.reply];
+      if (done) { delete agent.waiting[m.reply]; done(m.data); }
+    });
 
     function applyAll() { applyLooks(); applySpeed(); }
 
@@ -309,7 +338,7 @@
     }
 
     function drawGame(body) {
-      var reach = sameOrigin(frame());
+      var reach = !!link();
       body.appendChild(el("span", "mod-label", "Speed & pause"));
       if (reach) {
         body.appendChild(slider("Game speed", 0.25, 3, 0.25, settings.speed, function (v) {
@@ -339,7 +368,7 @@
         body.appendChild(row);
       } else {
         body.appendChild(el("p", "mod-note",
-          "Speed and pause work on games hosted on this site. This one loads from another site, " +
+          "Speed and pause work on games served from this site. This one loads from another site, " +
           "which browsers keep off-limits."));
       }
     }
@@ -447,10 +476,126 @@
       });
     }
 
+    /* ---- live cheats: switches inside the running game ---- */
+
+    var live = { loading: false, data: null, error: "" };
+
+    function liveRun(id, arg) {
+      var l = link();
+      if (!l) return;
+      l.ask("run", id, arg).then(function (d) {
+        live.data = d;
+        live.error = "";
+      }).catch(function (err) {
+        window.UI.toast(err.message || "That didn't work.", 3000);
+      }).then(function () { if (tab === "cheats" && !panel.hidden) draw(); });
+    }
+
+    function drawLive(body) {
+      var l = link();
+      if (!l) return false;
+      if (!live.data && !live.loading && !live.error) {
+        live.loading = true;
+        l.ask("inspect").then(function (d) { live.data = d; })
+          .catch(function (err) { live.error = err.message; })
+          .then(function () {
+            live.loading = false;
+            if (tab === "cheats" && !panel.hidden) draw();
+          });
+      }
+      if (live.loading) { body.appendChild(el("p", "mod-note", "Looking inside the game…")); return true; }
+      if (live.error) { body.appendChild(el("p", "mod-note", live.error)); return true; }
+      var d = live.data;
+      if (!d || !d.engine) return false;
+
+      body.appendChild(el("span", "mod-label", d.engine));
+      if (d.note) body.appendChild(el("p", "mod-note", d.note));
+      var groups = [];
+      var byGroup = {};
+      d.items.forEach(function (it) {
+        var g = it.group || "";
+        if (!byGroup[g]) { byGroup[g] = []; groups.push(g); }
+        byGroup[g].push(it);
+      });
+      groups.forEach(function (g) {
+        if (g && groups.length > 1) body.appendChild(el("span", "mod-sub", g));
+        var chips = null;
+        var list = null;
+        byGroup[g].forEach(function (it) {
+          if (it.type === "toggle" || it.type === "button") {
+            if (!chips) { chips = el("div", "mod-chips"); body.appendChild(chips); }
+            var b = el("button", "mod-chip" + (it.type === "button" ? " is-action" : ""), it.label);
+            b.type = "button";
+            if (it.hint) b.title = it.hint;
+            if (it.type === "toggle") b.setAttribute("aria-pressed", it.on ? "true" : "false");
+            b.addEventListener("click", function () {
+              liveRun(it.id, it.type === "toggle" ? { on: !it.on } : null);
+              if (it.type === "button") window.UI.toast(it.label + " ✓", 1600);
+            });
+            chips.appendChild(b);
+            return;
+          }
+          if (!list) { list = el("div", "mod-cheats"); body.appendChild(list); }
+          var row = el("div", "mod-cheat" + (it.locked ? " is-key" : ""));
+          row.appendChild(el("span", "mod-cheat-name", it.label));
+          var input = document.createElement("input");
+          input.setAttribute("aria-label", it.label);
+          if (it.type === "text") {
+            input.type = "text";
+            input.placeholder = it.placeholder || "";
+            input.maxLength = 200;
+            row.classList.add("is-text");
+            row.appendChild(input);
+            var go = el("button", "btn btn-sm", "Run");
+            go.type = "button";
+            var send = function () {
+              if (!input.value.trim()) return;
+              liveRun(it.id, { value: input.value.trim() });
+            };
+            go.addEventListener("click", send);
+            input.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
+            row.appendChild(go);
+            list.appendChild(row);
+            return;
+          }
+          input.type = "number";
+          input.value = it.value;
+          row.appendChild(input);
+          var set = el("button", "btn btn-sm", "Set");
+          set.type = "button";
+          set.addEventListener("click", function () {
+            var v = Number(input.value);
+            if (isFinite(v)) liveRun(it.id, { value: v, lock: !!it.locked });
+          });
+          row.appendChild(set);
+          var lock = el("button", "btn btn-sm btn-flat", it.locked ? "Unlock" : "Lock");
+          lock.type = "button";
+          lock.title = "Keep it at this number";
+          lock.addEventListener("click", function () {
+            var v = Number(input.value);
+            liveRun(it.id, it.locked ? { unlock: true } : { value: isFinite(v) ? v : it.value, lock: true });
+          });
+          row.appendChild(lock);
+          list.appendChild(row);
+        });
+      });
+      var foot = el("div", "mod-foot");
+      var again = el("button", "btn btn-sm btn-flat", "Refresh");
+      again.type = "button";
+      again.addEventListener("click", function () { live.data = null; live.error = ""; draw(); });
+      foot.appendChild(again);
+      body.appendChild(foot);
+      return true;
+    }
+
     function drawCheats(body) {
-      if (multiplayer()) {
+      var isMc = live.data && /eaglercraft/i.test(live.data.engine || "");
+      if (multiplayer() && !isMc && !/eaglercraft|minecraft/i.test((opts.game || {}).title || "")) {
         body.appendChild(el("p", "mod-note", "Cheats are off for multiplayer games. Looks still work."));
         return;
+      }
+      if (drawLive(body)) {
+        if (live.loading || (live.data && /eaglercraft/i.test(live.data.engine))) return;
       }
       if (!cheat.data && !cheat.loading && !cheat.error) {
         body.appendChild(el("p", "mod-note", "Reading this game's save…"));
@@ -458,8 +603,13 @@
         return;
       }
       if (cheat.loading) { body.appendChild(el("p", "mod-note", "Reading this game's save…")); return; }
-      if (cheat.error) { body.appendChild(el("p", "mod-note", cheat.error)); return; }
+      if (cheat.error) {
+        if (!(live.data && live.data.engine)) body.appendChild(el("p", "mod-note", cheat.error));
+        return;
+      }
 
+      /* Games with live cheats and no readable save: the live list is enough. */
+      if (!cheat.fields.length && live.data && live.data.engine) return;
       if (!cheat.fields.length) {
         body.appendChild(el("p", "mod-note",
           "No editable numbers found yet. Play a bit (earn some coins, finish a level), " +
@@ -594,6 +744,7 @@
     return {
       /* Call whenever a new game frame is created. */
       frameReady: function () {
+        live = { loading: false, data: null, error: "" };
         if (member()) applyLooks();
         var f = frame();
         if (f) f.addEventListener("load", function () {

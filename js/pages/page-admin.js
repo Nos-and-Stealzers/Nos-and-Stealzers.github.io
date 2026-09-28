@@ -92,10 +92,10 @@
         if (!TABS[name] || (OWNER_ONLY_TABS[name] && !isOwner)) name = "overview";
         active = name;
 
-        tabs.querySelectorAll(".admin-nav-link[role='tab']").forEach(function (t) {
+        tabs.querySelectorAll(".admin-nav-link[data-tab]").forEach(function (t) {
           var on = t.dataset.tab === name;
           t.classList.toggle("on", on);
-          t.setAttribute("aria-selected", on ? "true" : "false");
+          if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current");
         });
         document.querySelectorAll("[data-panel]").forEach(function (p) {
           p.hidden = p.dataset.panel !== name;

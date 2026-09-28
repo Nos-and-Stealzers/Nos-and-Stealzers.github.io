@@ -85,7 +85,7 @@
       t.title = r.label + " of Arcade Campus Hub";
       t.appendChild(icon(r.icon));
       if (!opts.compact) t.appendChild(el("span", "utag-l", r.label));
-      else t.setAttribute("aria-label", r.label);
+      else { t.setAttribute("role", "img"); t.setAttribute("aria-label", r.label); }
       frag.appendChild(t);
     }
     if (user.isPlus && !opts.noPlus) {
@@ -93,7 +93,7 @@
       pl.title = "Campus+ member";
       pl.appendChild(icon("star"));
       if (!opts.compact) pl.appendChild(el("span", "utag-l", "Campus+"));
-      else pl.setAttribute("aria-label", "Campus+ member");
+      else { pl.setAttribute("role", "img"); pl.setAttribute("aria-label", "Campus+ member"); }
       frag.appendChild(pl);
     }
     if (user.state === "suspended" && opts.showState) {

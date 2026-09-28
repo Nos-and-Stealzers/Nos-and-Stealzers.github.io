@@ -32,26 +32,26 @@
 
     <div id="console" class="admin-shell" hidden>
 
-      <nav class="admin-nav" id="tabs" role="tablist" aria-label="Admin sections">
+      <nav class="admin-nav" id="tabs" aria-label="Admin sections">
         <span class="admin-nav-label">Monitor</span>
-        <button class="admin-nav-link on" type="button" role="tab" data-tab="overview" aria-selected="true" data-icon="grid"><span class="lbl">Overview</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="live" aria-selected="false" data-icon="pulse"><span class="lbl">Live</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="audit" aria-selected="false" data-icon="list"><span class="lbl">Audit log</span></button>
+        <button class="admin-nav-link on" type="button" data-tab="overview" aria-current="page" data-icon="grid"><span class="lbl">Overview</span></button>
+        <button class="admin-nav-link" type="button" data-tab="live" data-icon="pulse"><span class="lbl">Live</span></button>
+        <button class="admin-nav-link" type="button" data-tab="audit" data-icon="list"><span class="lbl">Audit log</span></button>
         <span class="admin-nav-label">Inbox</span>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="reports" aria-selected="false" data-icon="flag"><span class="lbl">Reports</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="support" aria-selected="false" data-icon="chat"><span class="lbl">Support</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="feedback" aria-selected="false" data-icon="star"><span class="lbl">Feedback</span></button>
+        <button class="admin-nav-link" type="button" data-tab="reports" data-icon="flag"><span class="lbl">Reports</span></button>
+        <button class="admin-nav-link" type="button" data-tab="support" data-icon="chat"><span class="lbl">Support</span></button>
+        <button class="admin-nav-link" type="button" data-tab="feedback" data-icon="star"><span class="lbl">Feedback</span></button>
         <span class="admin-nav-label">People</span>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="users" aria-selected="false" data-icon="group"><span class="lbl">Users</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="logins" aria-selected="false" data-icon="key"><span class="lbl">Sign-ins</span></button>
+        <button class="admin-nav-link" type="button" data-tab="users" data-icon="group"><span class="lbl">Users</span></button>
+        <button class="admin-nav-link" type="button" data-tab="logins" data-icon="key"><span class="lbl">Sign-ins</span></button>
         <span class="admin-nav-label">Content</span>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="playlists" aria-selected="false" data-icon="video"><span class="lbl">Playlists</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="games" aria-selected="false" data-icon="gamepad" data-owner hidden><span class="lbl">Games</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="gamedata" aria-selected="false" data-icon="database"><span class="lbl">Game data</span></button>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="workbench" aria-selected="false" data-icon="code" data-owner hidden><span class="lbl">Workbench</span></button>
+        <button class="admin-nav-link" type="button" data-tab="playlists" data-icon="video"><span class="lbl">Playlists</span></button>
+        <button class="admin-nav-link" type="button" data-tab="games" data-icon="gamepad" data-owner hidden><span class="lbl">Games</span></button>
+        <button class="admin-nav-link" type="button" data-tab="gamedata" data-icon="database"><span class="lbl">Game data</span></button>
+        <button class="admin-nav-link" type="button" data-tab="workbench" data-icon="code" data-owner hidden><span class="lbl">Workbench</span></button>
         <span class="admin-nav-label">More</span>
         <a class="admin-nav-link" href="admin-search.html" data-icon="search" data-owner-or-admin hidden><span class="lbl">Tools</span></a>
-        <button class="admin-nav-link" type="button" role="tab" data-tab="help" aria-selected="false" data-icon="info"><span class="lbl">Help</span></button>
+        <button class="admin-nav-link" type="button" data-tab="help" data-icon="info"><span class="lbl">Help</span></button>
         <div class="admin-nav-foot">
           <button class="btn btn-sm btn-flat" type="button" id="refresh">Refresh data</button>
         </div>
@@ -110,12 +110,12 @@
               placeholder="e.g. Scheduled maintenance tonight 10pm–11pm CT."></textarea>
           </div>
           <div class="btn-row admin-ann-row">
-            <select id="ann-severity">
+            <select id="ann-severity" aria-label="How urgent">
               <option value="info">Info</option>
               <option value="warning">Warning</option>
               <option value="critical">Critical</option>
             </select>
-            <select id="ann-ttl">
+            <select id="ann-ttl" aria-label="How long it shows">
               <option value="">No expiry</option>
               <option value="1">1 hour</option>
               <option value="6">6 hours</option>

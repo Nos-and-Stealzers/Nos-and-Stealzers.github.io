@@ -62,9 +62,11 @@
       </section>
 
       <nav class="cp-tabs" aria-label="Library">
-        <button type="button" class="cp-tab" data-tab="mine" aria-selected="true">Your playlists</button>
-        <button type="button" class="cp-tab" data-tab="shared" aria-selected="false">Shared</button>
-        <button type="button" class="cp-tab" data-tab="history" aria-selected="false">Recently watched</button>
+        <div class="cp-tablist" role="tablist" aria-label="Library">
+          <button type="button" class="cp-tab" role="tab" data-tab="mine" aria-selected="true">Your playlists</button>
+          <button type="button" class="cp-tab" role="tab" data-tab="shared" aria-selected="false">Shared</button>
+          <button type="button" class="cp-tab" role="tab" data-tab="history" aria-selected="false">Recently watched</button>
+        </div>
         <span class="fill"></span>
         <button class="btn btn-sm" type="button" id="cp-new">New playlist</button>
       </nav>

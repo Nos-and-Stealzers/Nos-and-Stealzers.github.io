@@ -3556,3 +3556,45 @@ iframe.mod-rainbow.mod-spin { animation: mod-hue 3s linear infinite, mod-spin 40
 .mod-foot { display: flex; gap: 0.4rem; }
 .mod-foot .btn { flex: 1; border-radius: 999px; justify-content: center; }
 .mod-panel.is-left { right: auto; left: 0.8rem; }
+
+/* ---- mod menu v2: tabs, cheats, cleaner card ---- */
+.mod-panel {
+  width: min(340px, calc(100% - 1.6rem)); padding: 0; gap: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-radius: 20px;
+}
+.mod-head { padding: 0.85rem 0.7rem 0.6rem 0.9rem; gap: 0.65rem; }
+.mod-logo {
+  width: 2.2rem; height: 2.2rem; flex: none; border-radius: 12px; display: grid; place-items: center;
+  font-weight: 900; font-size: 1.3rem; color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #c084fc));
+}
+.mod-titles { min-width: 0; display: flex; flex-direction: column; }
+.mod-titles strong { font-size: 0.98rem; }
+.mod-titles span { font-size: 0.74rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-tabs { display: flex; gap: 3px; margin: 0 0.8rem 0.2rem; padding: 3px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.mod-tab {
+  flex: 1; border: 0; background: transparent; color: var(--ink-2); cursor: pointer;
+  font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.4rem 0; border-radius: 999px;
+}
+.mod-tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.mod-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mod-body { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.6rem 0.9rem 0.9rem; overflow-y: auto; min-height: 0; }
+.mod-panel { max-height: calc(100% - 1.6rem); }
+.mod-chip { transition: background .12s, border-color .12s, color .12s; }
+.mod-link { font-size: 0.8rem; font-weight: 650; color: var(--accent); text-align: center; }
+.mod-fine { font-size: 0.72rem; }
+.mod-cheats { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; margin: 0 -0.3rem; padding: 0 0.3rem; }
+.mod-cheat { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem auto auto; align-items: center; gap: 0.3rem; padding: 0.3rem 0.35rem; border-radius: 10px; }
+.mod-cheat:hover { background: var(--surface-2); }
+.mod-cheat.is-key .mod-cheat-name { color: var(--ink); font-weight: 700; }
+.mod-cheat-name { font-size: 0.78rem; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-cheat input { min-height: 2rem; height: 2rem; padding: 0 0.45rem; font-size: 0.8rem; border-radius: 8px; width: 100%; }
+.mod-cheat .btn { min-height: 2rem; padding: 0 0.6rem; font-size: 0.74rem; }
+.mod-btn:not(.is-locked) { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-2)); }
+.plus-perks { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: -0.4rem 0 1.4rem; padding: 0; }
+.plus-perks li { padding: 0.4rem 0.85rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 0.84rem; color: var(--ink-2); }
+.plus-perks b { color: var(--accent); }
+.plus-try { border-radius: 999px; margin: 0 0 1.1rem; display: inline-flex; }
+body:not(.is-plus-member) .plus-try { display: none; }

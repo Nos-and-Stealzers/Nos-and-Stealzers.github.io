@@ -10,6 +10,15 @@
       n.appendChild(UI.icon(n.dataset.icon));
     });
 
+    /* "Try it" opens the game you played last, if there is one. */
+    try {
+      var recent = window.Store && window.Store.recentGames ? window.Store.recentGames() : null;
+      var last = recent && recent[0];
+      if (!last && window.Catalog && window.Catalog.recentGames) last = (window.Catalog.recentGames(1) || [])[0];
+      var id = last && (last.id || last);
+      if (id && typeof id === "string") document.getElementById("try-mods").href = "play.html?id=" + encodeURIComponent(id);
+    } catch (e) { /* keep the default */ }
+
     function drawEditor() {
       var cfg = Mods.config();
 

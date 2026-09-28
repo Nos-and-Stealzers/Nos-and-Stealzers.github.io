@@ -36,7 +36,14 @@
     details();
     actions();
     if (window.ModMenu && $("a-aspect")) {
-      mods = window.ModMenu.attach({ frame: function () { return frame; }, stage: stage(), anchor: $("a-aspect") });
+      mods = window.ModMenu.attach({
+        frame: function () { return frame; },
+        stage: stage(),
+        anchor: $("a-aspect"),
+        game: game,
+        origin: hostOrigin,
+        reload: function () { embed(true); }
+      });
     }
     stars();
     window.UI.render($("g-related"), window.Catalog.related(game, 12), { desc: false });

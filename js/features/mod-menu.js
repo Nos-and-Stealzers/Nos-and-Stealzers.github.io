@@ -190,12 +190,21 @@
       if (cfg.remember) save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed });
     }
 
+    var tab = "looks";
+
     function draw() {
+      cfg = config();
       panel.innerHTML = "";
+      panel.classList.toggle("is-left", cfg.side === "left");
+
       var head = el("div", "mod-head");
-      var title = el("strong", null, "Mod menu");
-      head.appendChild(title);
-      head.appendChild(el("span", "mod-tag", "Campus+"));
+      var badge = el("span", "mod-logo", "+");
+      badge.setAttribute("aria-hidden", "true");
+      head.appendChild(badge);
+      var titles = el("div", "mod-titles");
+      titles.appendChild(el("strong", null, "Mod menu"));
+      titles.appendChild(el("span", null, (opts.game && opts.game.title) || "Campus+"));
+      head.appendChild(titles);
       var x = el("button", "chat-icon-btn mod-x");
       x.type = "button";
       x.setAttribute("aria-label", "Close mod menu");
@@ -204,11 +213,28 @@
       head.appendChild(x);
       panel.appendChild(head);
 
-      cfg = config();
-      panel.classList.toggle("is-left", cfg.side === "left");
+      var tabs = el("div", "mod-tabs");
+      tabs.setAttribute("role", "tablist");
+      [["looks", "Looks"], ["cheats", "Cheats"], ["game", "Game"]].forEach(function (t) {
+        var b = el("button", "mod-tab", t[1]);
+        b.type = "button";
+        b.setAttribute("role", "tab");
+        b.setAttribute("aria-selected", tab === t[0] ? "true" : "false");
+        b.addEventListener("click", function () { tab = t[0]; draw(); });
+        tabs.appendChild(b);
+      });
+      panel.appendChild(tabs);
 
+      var body = el("div", "mod-body");
+      panel.appendChild(body);
+      if (tab === "looks") drawLooks(body);
+      else if (tab === "cheats") drawCheats(body);
+      else drawGame(body);
+    }
+
+    function drawLooks(body) {
       if (cfg.presets.length) {
-        panel.appendChild(el("span", "mod-label", "Presets"));
+        body.appendChild(el("span", "mod-label", "Presets"));
         var pr = el("div", "mod-presets");
         cfg.presets.forEach(function (p) {
           var b = el("button", "mod-chip mod-preset", p.name);
@@ -222,10 +248,10 @@
           });
           pr.appendChild(b);
         });
-        panel.appendChild(pr);
+        body.appendChild(pr);
       }
 
-      panel.appendChild(el("span", "mod-label", "Looks · every game"));
+      body.appendChild(el("span", "mod-label", "Effects · every game"));
       var grid = el("div", "mod-grid");
       LOOKS.filter(function (l) { return cfg.shown.indexOf(l.id) !== -1; }).forEach(function (l) {
         var b = el("button", "mod-chip", l.label);
@@ -239,35 +265,13 @@
         });
         grid.appendChild(b);
       });
-      panel.appendChild(grid);
+      body.appendChild(grid);
 
-      panel.appendChild(slider("Zoom", 1, 2, 0.05, settings.zoom, function (v) {
+      body.appendChild(slider("Zoom", 1, 2, 0.05, settings.zoom, function (v) {
         settings.zoom = v;
         applyLooks();
         persist();
       }, function (v) { return Math.round(v * 100) + "%"; }));
-
-      var reach = sameOrigin(frame());
-      panel.appendChild(el("span", "mod-label", "Game · Arcade originals"));
-      if (reach) {
-        panel.appendChild(slider("Speed", 0.25, 3, 0.25, settings.speed, function (v) {
-          settings.speed = v;
-          applySpeed();
-          persist();
-        }, function (v) { return v + "×"; }));
-        var pause = el("button", "btn btn-sm mod-pause", settings.paused ? "Resume" : "Pause");
-        pause.type = "button";
-        pause.addEventListener("click", function () {
-          settings.paused = !settings.paused;
-          applySpeed();
-          pause.textContent = settings.paused ? "Resume" : "Pause";
-        });
-        panel.appendChild(pause);
-      } else {
-        panel.appendChild(el("p", "mod-note",
-          "Speed and pause work on Arcade originals. This game is loaded from another site, " +
-          "which browsers keep off-limits, so only looks apply here."));
-      }
 
       var foot = el("div", "mod-foot");
       var keep = el("button", "btn btn-sm mod-save", "Save as preset");
@@ -288,23 +292,250 @@
         });
       });
       foot.appendChild(keep);
-      var custom = el("a", "btn btn-sm btn-flat", "Customize");
-      custom.href = "plus.html#mods";
-      foot.appendChild(custom);
-      panel.appendChild(foot);
-
-      var reset = el("button", "btn btn-sm btn-flat mod-reset", "Reset everything");
+      var reset = el("button", "btn btn-sm btn-flat", "Clear effects");
       reset.type = "button";
       reset.addEventListener("click", function () {
         settings.looks = {};
         settings.zoom = 1;
-        settings.speed = 1;
-        settings.paused = false;
-        applyAll();
+        applyLooks();
         persist();
         draw();
       });
-      panel.appendChild(reset);
+      foot.appendChild(reset);
+      body.appendChild(foot);
+      var custom = el("a", "mod-link", "Customize the menu");
+      custom.href = "plus.html#mods";
+      body.appendChild(custom);
+    }
+
+    function drawGame(body) {
+      var reach = sameOrigin(frame());
+      body.appendChild(el("span", "mod-label", "Speed & pause"));
+      if (reach) {
+        body.appendChild(slider("Game speed", 0.25, 3, 0.25, settings.speed, function (v) {
+          settings.speed = v;
+          applySpeed();
+          persist();
+        }, function (v) { return v + "×"; }));
+        var row = el("div", "mod-foot");
+        var pause = el("button", "btn btn-sm", settings.paused ? "Resume" : "Pause");
+        pause.type = "button";
+        pause.addEventListener("click", function () {
+          settings.paused = !settings.paused;
+          applySpeed();
+          pause.textContent = settings.paused ? "Resume" : "Pause";
+        });
+        row.appendChild(pause);
+        var normal = el("button", "btn btn-sm btn-flat", "Normal speed");
+        normal.type = "button";
+        normal.addEventListener("click", function () {
+          settings.speed = 1;
+          settings.paused = false;
+          applySpeed();
+          persist();
+          draw();
+        });
+        row.appendChild(normal);
+        body.appendChild(row);
+      } else {
+        body.appendChild(el("p", "mod-note",
+          "Speed and pause work on games hosted on this site. This one loads from another site, " +
+          "which browsers keep off-limits."));
+      }
+    }
+
+    /* ---- cheats: edit the numbers a game keeps in its save ---- */
+
+    var cheat = { loading: false, data: null, keys: [], fields: [], error: "", undo: null };
+
+    function multiplayer() {
+      var g = opts.game || {};
+      return g.category === "multiplayer" ||
+        /\.io\b|multiplayer|online|\b1v1\b|\bpvp\b|battle royale|\bmmo/i.test((g.title || "") + " " + (g.description || ""));
+    }
+
+    var WANTED = /coin|money|gold|gem|cash|diamond|point|token|credit|star|ruby|crystal|energy|\bxp\b|exp|level|lives|life|health|hp|ammo|score|bucks|dollar|currency|skill|upgrade|power|key|ticket|orb|shard/i;
+
+    function collect(value, path, out, depth) {
+      if (depth > 6 || out.length > 200) return;
+      if (typeof value === "number" && isFinite(value)) { out.push({ path: path, value: value }); return; }
+      if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value) && value.length < 16) {
+        out.push({ path: path, value: Number(value), asString: true });
+        return;
+      }
+      if (value && typeof value === "object") {
+        Object.keys(value).slice(0, 300).forEach(function (k) {
+          collect(value[k], path.concat(k), out, depth + 1);
+        });
+      }
+    }
+
+    function parse(raw) {
+      if (typeof raw !== "string") return { json: false, value: raw };
+      try { return { json: true, value: JSON.parse(raw) }; } catch (e) { return { json: false, value: raw }; }
+    }
+
+    function scan() {
+      var origin = opts.origin && opts.origin();
+      if (!origin || !window.GameSaves) {
+        cheat.error = "This game doesn't keep a save the menu can reach.";
+        return Promise.resolve();
+      }
+      cheat.loading = true;
+      cheat.error = "";
+      return window.GameSaves.readAll(origin).then(function (res) {
+        var data = (res && res.data) || {};
+        var mine = window.GameKeys ? window.GameKeys.forGame(opts.game, data) : { watched: [], guessed: [] };
+        var keys = mine.watched.concat(mine.guessed);
+        cheat.data = data;
+        cheat.keys = keys;
+        var fields = [];
+        keys.forEach(function (k) {
+          var parsed = parse(data[k]);
+          var found = [];
+          collect(parsed.value, [], found, 0);
+          found.forEach(function (f) {
+            f.key = k;
+            f.json = parsed.json;
+            var name = f.path.length ? f.path.join(".") : k;
+            f.label = name;
+            f.rank = WANTED.test(name) ? 0 : 1;
+            fields.push(f);
+          });
+        });
+        fields.sort(function (a, b) { return a.rank - b.rank || a.label.localeCompare(b.label); });
+        cheat.fields = fields.slice(0, 60);
+      }).catch(function () {
+        cheat.error = "Couldn't reach this game's save. Cheats work on games hosted here and on " +
+          "your GitHub game hosts, in a normal (not private) window.";
+      }).then(function () { cheat.loading = false; });
+    }
+
+    function setPath(obj, path, v) {
+      var o = obj;
+      for (var i = 0; i < path.length - 1; i++) o = o[path[i]];
+      o[path[path.length - 1]] = v;
+    }
+
+    /* Write changed numbers back, then restart the game so it reads them. */
+    function applyCheats(changes) {
+      var origin = opts.origin && opts.origin();
+      var byKey = {};
+      var undo = {};
+      changes.forEach(function (c) {
+        var f = c.field;
+        var raw = cheat.data[f.key];
+        if (!(f.key in byKey)) {
+          undo[f.key] = raw;
+          byKey[f.key] = f.json ? JSON.parse(raw) : raw;
+        }
+        var v = f.asString ? String(c.value) : c.value;
+        if (!f.path.length) byKey[f.key] = String(c.value);
+        else setPath(byKey[f.key], f.path, v);
+      });
+      var out = {};
+      Object.keys(byKey).forEach(function (k) {
+        out[k] = typeof byKey[k] === "string" ? byKey[k] : JSON.stringify(byKey[k]);
+      });
+      return window.GameSaves.writeKeys(origin, out, true).then(function () {
+        cheat.undo = undo;
+        if (opts.reload) opts.reload();
+        window.UI.toast("Cheats applied. The game restarted to load them.", 3500);
+        return scan();
+      }).catch(function (err) {
+        window.UI.toast((err && err.message) || "Couldn't write the save", 3500);
+      });
+    }
+
+    function drawCheats(body) {
+      if (multiplayer()) {
+        body.appendChild(el("p", "mod-note", "Cheats are off for multiplayer games. Looks still work."));
+        return;
+      }
+      if (!cheat.data && !cheat.loading && !cheat.error) {
+        body.appendChild(el("p", "mod-note", "Reading this game's save…"));
+        scan().then(function () { if (tab === "cheats" && !panel.hidden) draw(); });
+        return;
+      }
+      if (cheat.loading) { body.appendChild(el("p", "mod-note", "Reading this game's save…")); return; }
+      if (cheat.error) { body.appendChild(el("p", "mod-note", cheat.error)); return; }
+
+      if (!cheat.fields.length) {
+        body.appendChild(el("p", "mod-note",
+          "No editable numbers found yet. Play a bit (earn some coins, finish a level), " +
+          "then press Rescan. Games that save in a binary format can't be edited here."));
+      } else {
+        var money = cheat.fields.filter(function (f) { return f.rank === 0; });
+        var top = el("div", "mod-foot");
+        var maxAll = el("button", "btn btn-sm btn-cta", "Max everything");
+        maxAll.type = "button";
+        maxAll.disabled = !money.length;
+        maxAll.title = "Sets coins, gems, cash, XP, lives and the like to 999,999";
+        maxAll.addEventListener("click", function () {
+          applyCheats(money.map(function (f) {
+            return { field: f, value: /level|lives|life/i.test(f.label) ? Math.max(f.value, 99) : 999999 };
+          }));
+        });
+        top.appendChild(maxAll);
+        body.appendChild(top);
+
+        body.appendChild(el("span", "mod-label", "Saved values"));
+        var list = el("div", "mod-cheats");
+        cheat.fields.forEach(function (f) {
+          var row = el("div", "mod-cheat" + (f.rank === 0 ? " is-key" : ""));
+          var name = el("span", "mod-cheat-name", f.label);
+          name.title = f.key + (f.path.length ? " → " + f.path.join(".") : "");
+          row.appendChild(name);
+          var input = document.createElement("input");
+          input.type = "number";
+          input.value = Math.round(f.value * 100) / 100;
+          input.setAttribute("aria-label", f.label);
+          row.appendChild(input);
+          var set = el("button", "btn btn-sm", "Set");
+          set.type = "button";
+          set.addEventListener("click", function () {
+            var v = Number(input.value);
+            if (!isFinite(v)) return;
+            applyCheats([{ field: f, value: v }]);
+          });
+          row.appendChild(set);
+          var max = el("button", "btn btn-sm btn-flat", "Max");
+          max.type = "button";
+          max.addEventListener("click", function () { applyCheats([{ field: f, value: 999999 }]); });
+          row.appendChild(max);
+          list.appendChild(row);
+        });
+        body.appendChild(list);
+      }
+
+      var foot = el("div", "mod-foot");
+      var again = el("button", "btn btn-sm btn-flat", "Rescan");
+      again.type = "button";
+      again.addEventListener("click", function () {
+        cheat.data = null;
+        draw();
+      });
+      foot.appendChild(again);
+      if (cheat.undo) {
+        var undo = el("button", "btn btn-sm btn-flat", "Undo last");
+        undo.type = "button";
+        undo.addEventListener("click", function () {
+          var origin = opts.origin && opts.origin();
+          var back = cheat.undo;
+          cheat.undo = null;
+          window.GameSaves.writeKeys(origin, back, true).then(function () {
+            if (opts.reload) opts.reload();
+            window.UI.toast("Undone");
+            cheat.data = null;
+            draw();
+          });
+        });
+        foot.appendChild(undo);
+      }
+      body.appendChild(foot);
+      body.appendChild(el("p", "mod-note mod-fine",
+        "Edits the numbers this game saved on your device. Keep a backup before big changes: " +
+        "some games reset a save that looks tampered with."));
     }
 
     function slider(label, min, max, step, value, onInput, fmt) {

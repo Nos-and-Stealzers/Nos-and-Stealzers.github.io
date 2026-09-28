@@ -12,7 +12,7 @@
     { href: "browse.html", icon: "▤", label: "All games", count: function () { return window.Catalog.all.length; } },
     { href: "categories.html", icon: "◫", label: "Categories", count: function () { return window.Catalog.categories.length; } },
     { href: "library.html", icon: "★", label: "Pinned", count: function () { return window.Store.favorites().length; } },
-    { href: "campus-plus.html", icon: "▶", label: "Campus+" },
+    { href: "plus.html", icon: "✦", label: "Campus+" },
     { href: "ai.html", icon: "✧", label: "Campus AI", tag: "Beta" },
     { href: "stats.html", icon: "◔", label: "Activity" }
   ];

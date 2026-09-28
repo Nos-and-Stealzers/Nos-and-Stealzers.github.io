@@ -12,6 +12,8 @@
   "use strict";
 
   var KEY = "ach:mods";
+  var CONFIG_KEY = "ach:mods-config";
+  var MAX_PRESETS = 8;
   var LOOKS = [
     { id: "rainbow",  label: "Rainbow" },
     { id: "invert",   label: "Invert" },
@@ -37,7 +39,24 @@
   function member() {
     var S = window.Session;
     var u = S && S.user;
-    return !!(u && (u.isPlus || (S.isStaff && S.isStaff())));
+    if (!u) return false;
+    return !!(u.isPlus || (S.isPlus && S.isPlus()) || (S.isStaff && S.isStaff()));
+  }
+
+  /* How the menu itself is set up, edited from the Campus+ page. */
+  function config() {
+    var c = {};
+    try { c = JSON.parse(window.localStorage.getItem(CONFIG_KEY) || "{}") || {}; } catch (e) {}
+    return {
+      shown: Array.isArray(c.shown) ? c.shown : LOOKS.map(function (l) { return l.id; }),
+      presets: Array.isArray(c.presets) ? c.presets.slice(0, MAX_PRESETS) : [],
+      remember: c.remember !== false,
+      hotkey: c.hotkey !== false,
+      side: c.side === "left" ? "left" : "right"
+    };
+  }
+  function saveConfig(c) {
+    try { window.localStorage.setItem(CONFIG_KEY, JSON.stringify(c)); } catch (e) {}
   }
 
   /* ---- clock control inside a same-origin game frame ---- */
@@ -110,7 +129,8 @@
     var getFrame = opts.frame;
     var stage = opts.stage;
     var anchor = opts.anchor;
-    var settings = load();
+    var cfg = config();
+    var settings = cfg.remember ? load() : {};
     settings.looks = settings.looks || {};
     settings.zoom = settings.zoom || 1;
     settings.speed = settings.speed || 1;
@@ -166,7 +186,9 @@
 
     function applyAll() { applyLooks(); applySpeed(); }
 
-    function persist() { save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed }); }
+    function persist() {
+      if (cfg.remember) save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed });
+    }
 
     function draw() {
       panel.innerHTML = "";
@@ -182,9 +204,30 @@
       head.appendChild(x);
       panel.appendChild(head);
 
+      cfg = config();
+      panel.classList.toggle("is-left", cfg.side === "left");
+
+      if (cfg.presets.length) {
+        panel.appendChild(el("span", "mod-label", "Presets"));
+        var pr = el("div", "mod-presets");
+        cfg.presets.forEach(function (p) {
+          var b = el("button", "mod-chip mod-preset", p.name);
+          b.type = "button";
+          b.addEventListener("click", function () {
+            settings.looks = Object.assign({}, p.looks || {});
+            settings.zoom = p.zoom || 1;
+            applyLooks();
+            persist();
+            draw();
+          });
+          pr.appendChild(b);
+        });
+        panel.appendChild(pr);
+      }
+
       panel.appendChild(el("span", "mod-label", "Looks · every game"));
       var grid = el("div", "mod-grid");
-      LOOKS.forEach(function (l) {
+      LOOKS.filter(function (l) { return cfg.shown.indexOf(l.id) !== -1; }).forEach(function (l) {
         var b = el("button", "mod-chip", l.label);
         b.type = "button";
         b.setAttribute("aria-pressed", settings.looks[l.id] ? "true" : "false");
@@ -225,6 +268,30 @@
           "Speed and pause work on Arcade originals. This game is loaded from another site, " +
           "which browsers keep off-limits, so only looks apply here."));
       }
+
+      var foot = el("div", "mod-foot");
+      var keep = el("button", "btn btn-sm mod-save", "Save as preset");
+      keep.type = "button";
+      keep.addEventListener("click", function () {
+        var ask = window.Dialogs && window.Dialogs.ask
+          ? window.Dialogs.ask({ title: "Name this preset", maxLength: 24, confirmLabel: "Save", placeholder: "e.g. Retro party" })
+          : Promise.resolve(window.prompt("Name this preset"));
+        ask.then(function (name) {
+          if (!name) return;
+          var c = config();
+          c.presets = c.presets.filter(function (p) { return p.name !== name; });
+          c.presets.unshift({ name: name, looks: Object.assign({}, settings.looks), zoom: settings.zoom });
+          c.presets = c.presets.slice(0, MAX_PRESETS);
+          saveConfig(c);
+          window.UI.toast("Preset saved");
+          draw();
+        });
+      });
+      foot.appendChild(keep);
+      var custom = el("a", "btn btn-sm btn-flat", "Customize");
+      custom.href = "plus.html#mods";
+      foot.appendChild(custom);
+      panel.appendChild(foot);
 
       var reset = el("button", "btn btn-sm btn-flat mod-reset", "Reset everything");
       reset.type = "button";
@@ -271,30 +338,52 @@
     }
 
     btn.addEventListener("click", function () { toggle(panel.hidden); });
-    document.addEventListener("keydown", function (e) {
+    function onKey(e) {
       if (e.key === "Escape" && !panel.hidden) toggle(false);
-    });
+      /* Alt+M opens and closes the menu (can be turned off on the Campus+ page). */
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === "m" || e.key === "M" || e.code === "KeyM") && config().hotkey) {
+        e.preventDefault();
+        toggle(panel.hidden);
+      }
+    }
+    document.addEventListener("keydown", onKey);
 
     function paintLock() {
       btn.classList.toggle("is-locked", !member());
     }
     paintLock();
-    document.addEventListener("session:change", paintLock);
+    /* Sign-in can finish after the game has started; catch up then. */
+    function onSession() {
+      paintLock();
+      if (member()) applyAll();
+    }
+    document.addEventListener("session:change", onSession);
+    if (window.Session && window.Session.ready) window.Session.ready.then(onSession);
 
     return {
       /* Call whenever a new game frame is created. */
       frameReady: function () {
-        if (!member()) return;
-        applyLooks();
+        if (member()) applyLooks();
         var f = frame();
         if (f) f.addEventListener("load", function () {
           settings.paused = false;
-          applySpeed();
+          if (member()) applySpeed();
+          /* The game usually has keyboard focus; hear the shortcut in there too. */
+          if (sameOrigin(f)) {
+            try { f.contentWindow.addEventListener("keydown", onKey); } catch (e) {}
+          }
           if (!panel.hidden) draw();
         });
       }
     };
   }
 
-  window.ModMenu = { attach: attach };
+  window.ModMenu = {
+    attach: attach,
+    looks: LOOKS,
+    config: config,
+    saveConfig: saveConfig,
+    member: member,
+    maxPresets: MAX_PRESETS
+  };
 })();

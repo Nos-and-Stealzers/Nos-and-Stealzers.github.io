@@ -70,6 +70,7 @@
       embeddable: embeddable,
       preferDirect: preferDirect,
       sandbox: entry.sandbox || "",
+      migrateSave: entry.migrateSave || null,
       risk: entry.schoolRisk || "unknown",
       /* Carried through so "New arrivals" and the `new` sort actually have a
          field to read — without this the raw dateAdded on ~1,100 titles was

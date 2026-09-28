@@ -154,7 +154,54 @@
     window.Session.ready.then(function () {
       if (waited) return;
       window.clearTimeout(wait);
-      pullThenEmbed();
+      migrateOldSave().then(pullThenEmbed);
+    });
+  }
+
+  /* A game that moved onto this site brings its save from where it used to
+     live: from this device's old copy first, then from the account's cloud
+     copy of the old host. Only fills keys that are missing here. */
+  function migrateOldSave() {
+    var m = game.migrateSave;
+    if (!m || !m.keys || !window.GameSaves) return Promise.resolve(false);
+    var missing = m.keys.filter(function (k) {
+      try { return window.localStorage.getItem(k) == null; } catch (e) { return false; }
+    });
+    var base = (window.SITE.gameHosts || {})[m.from];
+    var doneKey = "ach:migrated:" + game.id;
+    var done = false;
+    try { done = window.localStorage.getItem(doneKey) === "1"; } catch (e) {}
+    if (!missing.length || !base || done) return Promise.resolve(false);
+    var answered = false;
+
+    var wrote = 0;
+    function take(src) {
+      if (!src) return;
+      missing = missing.filter(function (k) {
+        if (typeof src[k] !== "string") return true;
+        try { window.localStorage.setItem(k, src[k]); wrote++; return false; }
+        catch (e) { return true; }
+      });
+    }
+    function capped(p, ms) {
+      return Promise.race([p, new Promise(function (r) { window.setTimeout(r, ms); })]);
+    }
+
+    markSaved("moving your save over…", "");
+    var fromDevice = capped(window.GameSaves.readAll(base)
+      .then(function (res) { answered = true; take(res && res.data); })
+      .catch(function () {}), 7500);
+    return fromDevice.then(function () {
+      if (!missing.length || !window.Session.user || !window.API.getGameSave) return;
+      return capped(window.API.getGameSave(window.GameSaves.hostKey(base))
+        .then(function (c) { take(c && c.payload && (c.payload.local || c.payload)); })
+        .catch(function () {}), 6000);
+    }).then(function () {
+      /* Once the old copy has been looked at (or brought over), never wait
+         on it again on this device. */
+      if (answered || wrote) { try { window.localStorage.setItem(doneKey, "1"); } catch (e) {} }
+      if (wrote) markSaved("save moved over", "ok");
+      return wrote > 0;
     });
   }
 
@@ -170,6 +217,9 @@
       settled = true;
       embed();
       if (restored) markSaved("cloud save loaded", "ok");
+      else if (/checking|moving/.test(($("save-state") || {}).textContent || "")) {
+        markSaved("progress saves automatically", "");
+      }
     }
 
     /* Never let a stuck bridge hold the game hostage. If the save lands

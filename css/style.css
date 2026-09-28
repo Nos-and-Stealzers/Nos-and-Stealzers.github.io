@@ -3521,3 +3521,38 @@ iframe.mod-wobble { animation: mod-wobble 1.6s ease-in-out infinite; }
 iframe.mod-spin { animation: mod-spin 40s linear infinite; }
 iframe.mod-rainbow.mod-wobble { animation: mod-hue 3s linear infinite, mod-wobble 1.6s ease-in-out infinite; }
 iframe.mod-rainbow.mod-spin { animation: mod-hue 3s linear infinite, mod-spin 40s linear infinite; }
+
+/* ==========================================================================
+   48 · CAMPUS+ HUB + mod menu extras
+   ========================================================================== */
+.home-shortcuts a.home-plus { color: var(--accent); font-weight: 700; }
+.plus-hero { display: flex; align-items: center; gap: 1.1rem; padding: clamp(1.4rem, 4vw, 2.6rem) 0 1.4rem; }
+.plus-hero h1 { margin: 0 0 0.25rem; font-size: clamp(1.9rem, 4vw, 2.6rem); letter-spacing: -0.02em; }
+.plus-hero p { margin: 0; max-width: 56ch; }
+.plus-badge {
+  width: 4rem; height: 4rem; flex: none; border-radius: 18px; display: grid; place-items: center;
+  font-size: 2.4rem; font-weight: 900; color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #c084fc));
+  box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.plus-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin-bottom: 2.4rem; }
+.plus-card {
+  display: flex; flex-direction: column; gap: 0.45rem; padding: 1.3rem; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.plus-card:hover { text-decoration: none; transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 18px 40px -24px rgba(0,0,0,0.7); }
+.plus-card strong { font-size: 1.1rem; }
+.plus-card > span:not(.plus-card-ico):not(.plus-card-go) { color: var(--ink-2); font-size: 0.88rem; line-height: 1.45; flex: 1; }
+.plus-card-ico { width: 2.8rem; height: 2.8rem; border-radius: 14px; display: grid; place-items: center; font-size: 1.35rem; background: var(--sel); color: var(--accent); }
+.plus-card-go { margin-top: 0.4rem; font-weight: 700; font-size: 0.86rem; color: var(--accent); }
+.plus-card-go::after { content: " →"; }
+.plus-mods { margin-bottom: 3rem; scroll-margin-top: 1rem; }
+.plus-mods-head h2 { margin: 0 0 0.3rem; font-size: 1.4rem; }
+.plus-mods-head p { margin: 0 0 1.1rem; }
+.plus-effects { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.4rem; }
+.mod-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.mod-preset { flex: 0 1 auto; }
+.mod-foot { display: flex; gap: 0.4rem; }
+.mod-foot .btn { flex: 1; border-radius: 999px; justify-content: center; }
+.mod-panel.is-left { right: auto; left: 0.8rem; }

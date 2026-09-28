@@ -3636,3 +3636,16 @@ body:not(.is-plus-member) .plus-try { display: none; }
 .sso-or { display: flex; align-items: center; gap: 0.7rem; margin: 1rem 0 0; }
 .sso-or::before, .sso-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 #sso-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ============================================================
+   52. Mod menu on phones: a sheet above the tab bar, not a box
+       squeezed into the small game frame
+   ============================================================ */
+@media (max-width: 720px) {
+  .stage:not(.is-fullscreen) .mod-panel {
+    position: fixed; top: auto; left: 0.5rem; right: 0.5rem;
+    bottom: calc(3.6rem + env(safe-area-inset-bottom) + 0.5rem);
+    width: auto; max-height: min(70dvh, 560px); z-index: 80;
+  }
+  .stage.is-fullscreen .mod-panel { width: calc(100% - 1rem); right: 0.5rem; left: 0.5rem; max-height: calc(100% - 1rem); }
+}

@@ -27250,7 +27250,8 @@ window.GAME_CATALOG = [
     "embed": "allowed",
     "schoolRisk": "low",
     "icon": "",
-    "dateAdded": "2026-09-18"
+    "dateAdded": "2026-09-18",
+    "unavailable": true
   },
   {
     "id": "huge-motox3m-pool",

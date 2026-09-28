@@ -10,12 +10,14 @@ const B64 = Buffer.from(BRIDGE, "utf8").toString("base64");
 
 /* Every repo named in SITE.gameHosts needs the bridge, or the games it serves
    are invisible to backup, restore and the save editor. */
+// Every game on arcadecampushub.github.io shares one origin, and the hub
+// talks to the bridge under the first configured host (games-huge), so that
+// copy is the one that matters. The others are kept in step for safety.
 const REPOS = [
-  ["LucasGrimm389", "games-huge"],
-  ["LucasGrimm389", "flashgames"],
-  ["LucasGrimm389", "hd_fnaf"],
-  ["LucasGrimm389", "eaglercraft"],
-  ["Nos-and-Stealzers", "swfgalaxy"]
+  ["arcadecampushub", "games-huge"],
+  ["arcadecampushub", "flashgames"],
+  ["arcadecampushub", "hd_fnaf"],
+  ["arcadecampushub", "eaglercraft"]
 ];
 
 const TOK = execSync("git credential fill", {

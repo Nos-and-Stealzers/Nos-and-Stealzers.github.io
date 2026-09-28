@@ -3610,3 +3610,18 @@ body:not(.is-plus-member) .plus-try { display: none; }
 .mod-cheat.is-text { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr) auto; }
 /* A long cheat list scrolls the panel; nothing in it gets squashed. */
 .mod-body > * { flex-shrink: 0; }
+
+/* ============================================================
+   50. Campus+ — games with in-game cheats
+   ============================================================ */
+.plus-modlist-tools { display: flex; align-items: center; gap: 0.8rem; margin: 0.6rem 0 1rem; }
+.plus-modlist-tools input { max-width: 320px; flex: 1; }
+#modlist { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+.plus-modgroup { display: flex; flex-direction: column; gap: 0.4rem; margin: 0; }
+.plus-modgroup-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.plus-modgroup-n { font-size: 0.74rem; font-weight: 800; padding: 0.12rem 0.55rem; border-radius: 999px; background: var(--sel); color: var(--accent); }
+.plus-modgames { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.3rem; max-height: 220px; overflow-y: auto; }
+.plus-modgame { padding: 0.3rem 0.7rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); font-size: 0.82rem; font-weight: 600; }
+.plus-modgame:hover { text-decoration: none; color: var(--ink); border-color: var(--accent); }
+.plus-modlist-foot { margin-top: 1rem; max-width: 70ch; }
+@media (max-width: 520px) { #modlist { grid-template-columns: 1fr; } }

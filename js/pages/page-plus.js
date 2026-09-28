@@ -104,6 +104,52 @@
       if (member) drawEditor();
     }
 
+    /* ---- which games get in-game cheats ---- */
+    var KINDS = [
+      ["mario", "Super Mario 64", "God mode, fly, super speed and jump, low gravity, the three caps, and all 120 stars."],
+      ["clickteam", "Five Nights at Freddy's", "Infinite power, frozen animatronics, skip to 6 AM, and every counter editable."],
+      ["minecraft", "Minecraft (Eaglercraft)", "Creative mode, daytime, effects, items, or any command, in worlds with cheats on."],
+      ["phaser", "Phaser games", "God mode, no clip, fly, super speed, low gravity, skip level, and their scores."],
+      ["construct", "Construct games", "Super speed and jump, low gravity on platformers, and the game's own numbers."],
+      ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
+    ];
+    function drawModList() {
+      var host = document.getElementById("modlist");
+      if (!host) return;
+      var map = window.MOD_GAMES || {};
+      var q = (document.getElementById("modlist-q").value || "").trim().toLowerCase();
+      host.innerHTML = "";
+      var total = 0;
+      KINDS.forEach(function (kind) {
+        var games = Object.keys(map).filter(function (id) { return map[id] === kind[0]; })
+          .map(function (id) { return window.Catalog.byId(id); })
+          .filter(function (g) { return g && (!q || g.titleLower.indexOf(q) !== -1); })
+          .sort(function (a, b) { return a.title.localeCompare(b.title); })
+          .filter(function (g, i, all) { return !i || all[i - 1].titleLower !== g.titleLower; });
+        if (!games.length) return;
+        total += games.length;
+        var card = UI.el("div", "set-card plus-modgroup");
+        var head = UI.el("div", "plus-modgroup-head");
+        head.appendChild(UI.el("strong", "set-card-title", kind[1]));
+        head.appendChild(UI.el("span", "plus-modgroup-n", String(games.length)));
+        card.appendChild(head);
+        card.appendChild(UI.el("p", "set-hint", kind[2]));
+        var list = UI.el("div", "plus-modgames");
+        games.forEach(function (g) {
+          var a = UI.el("a", "plus-modgame", g.title);
+          a.href = "play.html?id=" + encodeURIComponent(g.id);
+          list.appendChild(a);
+        });
+        card.appendChild(list);
+        host.appendChild(card);
+      });
+      if (!total) host.appendChild(UI.el("p", "set-hint", "No games match."));
+      document.getElementById("modlist-count").textContent = total + (total === 1 ? " game" : " games");
+    }
+    var filter = document.getElementById("modlist-q");
+    if (filter) filter.addEventListener("input", drawModList);
+    drawModList();
+
     window.Session.ready.then(paint);
     document.addEventListener("session:change", paint);
   }

@@ -412,6 +412,8 @@
     }
     var title = $("stage-fullscreen-title");
     if (title) title.textContent = game ? game.title : "Playing";
+    /* The Fullscreen button took the keyboard; hand it back to the game. */
+    window.setTimeout(function () { try { if (frame) frame.focus(); } catch (e) {} }, 60);
 
     var calls = document.querySelector(".callroot");
     if (active && calls && calls.parentNode !== node) {

@@ -748,6 +748,10 @@
         if (member()) applyLooks();
         var f = frame();
         if (f) f.addEventListener("load", function () {
+          /* For everyone, not just members: games that swallow clicks
+             otherwise lose the keyboard for good once you click away. */
+          var l = link();
+          if (l) l.ask("run", "focus").catch(function () {});
           settings.paused = false;
           if (member()) applySpeed();
           /* The game usually has keyboard focus; hear the shortcut in there too. */

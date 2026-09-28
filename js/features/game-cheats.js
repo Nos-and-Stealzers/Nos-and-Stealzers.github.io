@@ -28,6 +28,7 @@
     var raf = win.__achRealRaf || win.requestAnimationFrame.bind(win);
     function frame() {
       try { if (s.engine && s.engine.tick) s.engine.tick(win, s); } catch (e) {}
+      try { quickTick(win, s, s.engine); } catch (e) {}
       raf(frame);
     }
     raf(frame);
@@ -190,9 +191,6 @@
       var a = findMario(win, s);
       var dv = sm64View(win);
       var items = [
-        { id: "health", label: "Infinite health", type: "toggle", group: "Mario" },
-        { id: "invincible", label: "Can't be hurt", type: "toggle", group: "Mario" },
-        { id: "fly", label: "Fly (hold jump)", type: "toggle", group: "Mario", hint: "Hold the jump button (X on a keyboard) to rise" },
         { id: "cap-wing", label: "Wing cap", type: "toggle", group: "Caps" },
         { id: "cap-metal", label: "Metal cap", type: "toggle", group: "Caps" },
         { id: "cap-vanish", label: "Vanish cap", type: "toggle", group: "Caps" },
@@ -238,9 +236,7 @@
       var a = findMario(win, s), dv = sm64View(win);
       if (!a || !dv) return;
       Object.keys(s.locks).forEach(function (k) { sm64Values(dv, a, k, s.locks[k]); });
-      if (s.on.health) dv.setInt16(a + 0xAE, 0x880, true);
-      if (s.on.invincible) dv.setInt16(a + 0x26, 60, true);
-      if (s.on.fly) {
+      if (s.on["q:fly"]) {
         var input = dv.getUint16(a + 0x02, true);
         var action = dv.getUint32(a + 0x0C, true);
         if ((input & INPUT_A_DOWN) && (action & ACT_FLAG_AIR)) dv.setFloat32(a + 0x4C, 38, true);
@@ -444,9 +440,20 @@
     var st = game.state;
     return st.getCurrentState ? st.getCurrentState() : st.states[st.current];
   }
+  var PH_HERO = /^(hero|player|sonic|mario|character|dude|avatar|ship|car|bike|ball|me|you)\d*$/i;
   function phHero(state) {
-    return state && (state.hero || state.player || state.sonic || state.mario || state.character) || null;
+    if (!state) return null;
+    var named = state.hero || state.player || state.sonic || state.mario || state.character;
+    if (named) return named;
+    var keys = Object.keys(state);
+    for (var i = 0; i < keys.length; i++) {
+      var v = state[keys[i]];
+      if (PH_HERO.test(keys[i]) && v && v.body && typeof v.x === "number") return v;
+    }
+    return null;
   }
+  /* Speed, fly, gravity and no clip tweak an Arcade physics body. */
+  function phArcade(hero) { return !!(hero && hero.body && hero.body.checkCollision && hero.body.velocity); }
   var PH_SKIP = /^(game|world|camera|time|add|make|input|load|cache|sound|stage|tweens|physics|particles|rnd|key|scale|state|math)$/;
   function phNumbers(state) {
     var out = [];
@@ -465,11 +472,6 @@
       var state = phState(phGame(win));
       var hero = phHero(state);
       var items = [];
-      if (hero && "invincible" in hero) items.push({ id: "god", label: "Can't be hurt", type: "toggle", group: "Player" });
-      if (hero && hero.body) {
-        items.push({ id: "fly", label: "Fly (hold up / space)", type: "toggle", group: "Player" });
-        items.push({ id: "fast", label: "Super speed", type: "toggle", group: "Player" });
-      }
       if (state && PH_NEXT.some(function (f) { return typeof state[f] === "function"; })) {
         items.push({ id: "next", label: "Skip this level", type: "button", group: "Player" });
       }
@@ -510,8 +512,6 @@
         state[k] = v;
         if (arg.lock) s.locks[k] = v;
       }
-      var hero = phHero(state);
-      if (id === "god" && hero && !s.on.god) hero.invincible = false;
     },
     tick: function (win, s) {
       var game = phGame(win);
@@ -520,19 +520,18 @@
       Object.keys(s.locks).forEach(function (k) { if (typeof state[k] === "number") state[k] = s.locks[k]; });
       var hero = phHero(state);
       if (!hero) return;
-      if (s.on.god) hero.invincible = true;
       var body = hero.body;
       if (!body) return;
       var kb = game.input && game.input.keyboard;
       var down = function (code) { try { return kb.isDown(code); } catch (e) { return false; } };
-      if (s.on.fly && (down(38) || down(32) || down(87))) {
+      if (s.on["q:fly"] && !s.on["q:noclip"] && (down(38) || down(32) || down(87))) {
         body.velocity.y = -Math.max(250, Math.abs(body.maxVelocity ? body.maxVelocity.y : 0) * 0.4);
       }
-      if (s.on.fast && body.velocity.x) {
+      if (s.on["q:speed"] && body.velocity.x) {
         var cap = body.maxVelocity && body.maxVelocity.x ? body.maxVelocity.x : 0;
         if (!s.fastCap && cap) { s.fastCap = cap; body.maxVelocity.x = cap * 2; }
         body.velocity.x = body.velocity.x > 0 ? Math.max(body.velocity.x, 400) : Math.min(body.velocity.x, -400);
-      } else if (!s.on.fast && s.fastCap) {
+      } else if (!s.on["q:speed"] && s.fastCap) {
         body.maxVelocity.x = s.fastCap;
         s.fastCap = 0;
       }
@@ -616,7 +615,13 @@
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
      game made (not the browser's) and offer the money-like numbers. */
-  var WANTED = /coins?$|money|gold$|gems?$|cash|diamonds?$|points?$|tokens?$|credits?$|stars?$|rub(y|ies)$|crystals?$|energy$|^xp$|exp$|lives$|^life$|health$|^hp$|ammo|score$|bucks$|dollars?$|currency|tickets?$|orbs?$|shards?$|^level$|rings?$/i;
+  /* Whole words only, so "String" isn't a ring and "pointerX" isn't points. */
+  var WANTED_WORD = /^(coins?|money|gold|gems?|cash|diamonds?|points?|tokens?|credits?|stars?|rub(y|ies)|crystals?|energy|xp|exp|lives|life|health|hp|ammo|score|bucks|dollars?|currency|tickets?|orbs?|shards?|level|lvl|rings?)$/;
+  var WANTED = { test: function (k) {
+    return String(k).replace(/([a-z0-9])([A-Z])/g, "$1 $2").split(/[^A-Za-z]+/).some(function (w) {
+      return WANTED_WORD.test(w.toLowerCase());
+    });
+  } };
   var NATIVE = /\[native code\]/;
   function scriptMade(win, v) {
     if (!v || typeof v !== "object") return false;
@@ -706,6 +711,255 @@
     }
   };
 
+  /* ------------------------------------------------ quick mods, any game */
+
+  /* Each engine can offer a few "numbers" (name, get, set) and hooks for the
+     general mods. Anything a game keeps as health or a timer can then be
+     held in place, whatever engine it's on. */
+  clickteam.numbers = function (win) {
+    var app = ctApp(win);
+    if (!app) return [];
+    var c = ctCounters(app);
+    return Object.keys(c).map(function (n) {
+      return { name: n, get: function () { return c[n][0].rsValue; }, set: function (v) { ctSet(c[n], v); } };
+    });
+  };
+  construct.numbers = function (win) {
+    return (cVars(win) || []).filter(function (gv) { return typeof gv.get() === "number"; });
+  };
+  phaser.numbers = function (win) {
+    var game = phGame(win), state = game && phState(game);
+    var hero = phHero(state);
+    var out = phNumbers(state).map(function (k) {
+      return { name: k, get: function () { return state[k]; }, set: function (v) { state[k] = v; } };
+    });
+    ["health", "lives", "hp"].forEach(function (k) {
+      if (hero && typeof hero[k] === "number") {
+        out.push({ name: "hero." + k, get: function () { return hero[k]; }, set: function (v) { hero[k] = v; } });
+      }
+    });
+    return out;
+  };
+  generic.numbers = function (win) {
+    return genericFields(win).map(function (f) {
+      return { name: f.label, get: function () { return pathGet(win, f.path); }, set: function (v) { pathSet(win, f.path, v); } };
+    });
+  };
+
+  /* Mario: health and invulnerability, faster running, higher jumps,
+     floatier falls. */
+  var ACT_FLAG_MOVING = 0x04000000;
+  sm64.quick = {
+    god: function (win, s, dv, a) {
+      dv.setInt16(a + 0xAE, 0x880, true);
+      dv.setInt16(a + 0x26, 60, true);
+    },
+    speed: function (win, s, dv, a) {
+      var action = dv.getUint32(a + 0x0C, true);
+      var fv = dv.getFloat32(a + 0x54, true);
+      if ((action & ACT_FLAG_MOVING) && fv > 8 && fv < 64) dv.setFloat32(a + 0x54, Math.min(64, fv * 1.08), true);
+    },
+    jump: function (win, s, dv, a) {
+      var air = !!(dv.getUint32(a + 0x0C, true) & ACT_FLAG_AIR);
+      var vy = dv.getFloat32(a + 0x4C, true);
+      if (air && !s.wasAir && vy > 20) dv.setFloat32(a + 0x4C, vy * 1.7, true);
+      s.wasAir = air;
+    },
+    grav: function (win, s, dv, a) {
+      var air = !!(dv.getUint32(a + 0x0C, true) & ACT_FLAG_AIR);
+      if (air) dv.setFloat32(a + 0x4C, dv.getFloat32(a + 0x4C, true) + 2.4, true);
+    },
+    fly: true
+  };
+
+  /* Phaser: the hero's physics body. */
+  phaser.quick = {
+    god: function (win, s, hero) { if ("invincible" in hero) hero.invincible = true; },
+    speed: true,
+    fly: true,
+    grav: function (win, s, hero, game) {
+      var arcade = game.physics && game.physics.arcade;
+      if (arcade && arcade.gravity && s.grav0 === undefined) { s.grav0 = arcade.gravity.y; arcade.gravity.y *= 0.4; }
+      if (hero.body && hero.body.gravity && s.bodyGrav0 === undefined) { s.bodyGrav0 = hero.body.gravity.y; hero.body.gravity.y *= 0.4; }
+    },
+    noclip: function (win, s, hero, game) {
+      var body = hero.body;
+      if (!body) return;
+      body.checkCollision.none = true;
+      body.checkCollision.up = body.checkCollision.down = body.checkCollision.left = body.checkCollision.right = false;
+      body.allowGravity = false;
+      var kb = game.input.keyboard;
+      var down = function (c) { try { return kb.isDown(c); } catch (e) { return false; } };
+      var x = (down(39) || down(68) ? 1 : 0) - (down(37) || down(65) ? 1 : 0);
+      var y = (down(40) || down(83) ? 1 : 0) - (down(38) || down(87) || down(32) ? 1 : 0);
+      body.velocity.x = x * 320;
+      body.velocity.y = y * 320;
+    },
+    off: function (win, s, hero, game, id) {
+      if (id === "grav") {
+        var arcade = game.physics && game.physics.arcade;
+        if (arcade && s.grav0 !== undefined) arcade.gravity.y = s.grav0;
+        if (hero && hero.body && s.bodyGrav0 !== undefined) hero.body.gravity.y = s.bodyGrav0;
+        s.grav0 = s.bodyGrav0 = undefined;
+      }
+      if (id === "noclip" && hero && hero.body) {
+        var c = hero.body.checkCollision;
+        c.none = false; c.up = c.down = c.left = c.right = true;
+        hero.body.allowGravity = true;
+      }
+      if (id === "god" && hero && "invincible" in hero) hero.invincible = false;
+    }
+  };
+
+  /* Construct: the Platform / 8-direction movement on every instance. */
+  function cMovers(win) {
+    var out = [];
+    try {
+      var rt = win.cr_getC2Runtime && win.cr_getC2Runtime();
+      if (rt && rt.types_by_index) {
+        rt.types_by_index.forEach(function (t) {
+          (t.instances || []).forEach(function (inst) {
+            (inst.behavior_insts || []).forEach(function (b) {
+              if (typeof b.maxspeed === "number") {
+                out.push({ b: b, speed: "maxspeed", jump: "jumpStrength", grav: "g", acc: "acc" });
+              }
+            });
+          });
+        });
+        return out;
+      }
+    } catch (e) {}
+    try {
+      var ri = win.c3_runtimeInterface;
+      var local = ri && (ri._localRuntime || (ri._GetLocalRuntime && ri._GetLocalRuntime()));
+      var objs = local && local.GetIRuntime().objects;
+      Object.keys(objs || {}).forEach(function (name) {
+        objs[name].getAllInstances().forEach(function (inst) {
+          var bs = inst.behaviors || {};
+          Object.keys(bs).forEach(function (k) {
+            var b = bs[k];
+            if (b && typeof b.maxSpeed === "number") {
+              out.push({ b: b, speed: "maxSpeed", jump: "jumpStrength", grav: "gravity", acc: "acceleration" });
+            }
+          });
+        });
+      });
+    } catch (e) {}
+    return out;
+  }
+  var C_SCALE = { speed: ["speed", 2], jump: ["jump", 1.6], grav: ["grav", 0.4] };
+  function cScale(win, s) {
+    cMovers(win).forEach(function (m) {
+      var b = m.b;
+      if (!b.__ach) b.__ach = {};
+      Object.keys(C_SCALE).forEach(function (id) {
+        var field = m[C_SCALE[id][0]];
+        if (typeof b[field] !== "number") return;
+        if (b.__ach[field] === undefined) b.__ach[field] = b[field];
+        var want = s.on["q:" + id] ? b.__ach[field] * C_SCALE[id][1] : b.__ach[field];
+        if (b[field] !== want) b[field] = want;
+        if (id === "speed" && typeof b[m.acc] === "number") {
+          if (b.__ach[m.acc] === undefined) b.__ach[m.acc] = b[m.acc];
+          b[m.acc] = s.on["q:speed"] ? b.__ach[m.acc] * 2 : b.__ach[m.acc];
+        }
+      });
+    });
+  }
+  construct.quick = {
+    speed: function (win, s) { cScale(win, s); },
+    jump: function (win, s) { cScale(win, s); },
+    grav: function (win, s) { cScale(win, s); },
+    off: function (win, s) { cScale(win, s); }
+  };
+
+  var HEALTH = /health|\bhp$|^hp|lives?$|^life|shield|armou?r/i;
+  var TIMER = /^(time|timer|timecount|timeleft|time_left|timeremaining|countdown|clock|gametime|leveltime)$|time of day|timer$|countdown/i;
+  var QUICK = [
+    ["fast", "Fast-forward 2×", "Runs the whole game twice as fast"],
+    ["slow", "Slow motion ½×", "Runs the whole game at half speed"],
+    ["god", "God mode", "Health and lives stay full"],
+    ["speed", "Super speed", "Your character moves faster"],
+    ["jump", "Super jump", "Jumps go higher"],
+    ["grav", "Low gravity", "Floatier jumps and falls"],
+    ["noclip", "No clip", "Move through walls with the arrow keys or WASD"],
+    ["fly", "Fly", "Hold jump to rise (X in Mario, up or space elsewhere)"],
+    ["timer", "Freeze timer", "Timers and clocks stop counting"]
+  ];
+
+  function quickItems(win, s, eng) {
+    var q = (eng && eng.quick) || {};
+    var nums = eng && eng.numbers ? safe(function () { return eng.numbers(win); }, []) : [];
+    var has = {
+      fast: true, slow: true,
+      god: (eng === sm64) || nums.some(function (n) { return HEALTH.test(n.name); }) ||
+        (eng === phaser && !!safe(function () { var h = phHero(phState(phGame(win))); return h && "invincible" in h; }, false)),
+      speed: !!q.speed && (eng !== construct || cMovers(win).length > 0),
+      jump: !!q.jump && (eng !== construct || cMovers(win).some(function (m) { return typeof m.b[m.jump] === "number"; })),
+      grav: !!q.grav && (eng !== construct || cMovers(win).some(function (m) { return typeof m.b[m.grav] === "number"; })),
+      noclip: !!q.noclip,
+      fly: !!q.fly,
+      timer: nums.some(function (n) { return TIMER.test(n.name) && !/\bad|^ad|last|delay/i.test(n.name); })
+    };
+    if (eng === phaser && !phArcade(phHero(phState(phGame(win))))) has.speed = has.fly = has.noclip = has.grav = false;
+    return QUICK.filter(function (m) { return has[m[0]]; }).map(function (m) {
+      return { id: "q:" + m[0], label: m[1], hint: m[2], type: "toggle", group: "Quick mods", on: !!s.on["q:" + m[0]] };
+    });
+  }
+  function safe(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
+
+  function quickRun(win, s, eng, id, on) {
+    var k = id.slice(2);
+    if (on) s.on[id] = true; else delete s.on[id];
+    if (k === "fast" || k === "slow") {
+      if (on) delete s.on[k === "fast" ? "q:slow" : "q:fast"];
+      timeControl(win).speed = s.on["q:fast"] ? 2 : s.on["q:slow"] ? 0.5 : 1;
+      return;
+    }
+    if (k === "god" || k === "timer") {
+      s.held = s.held || {};
+      if (!on) Object.keys(s.held).forEach(function (n) { if (s.held[n].why === k) delete s.held[n]; });
+      else {
+        var re = k === "god" ? HEALTH : TIMER;
+        (eng && eng.numbers ? safe(function () { return eng.numbers(win); }, []) : []).forEach(function (n) {
+          if (re.test(n.name) && !(k === "timer" && /\bad|^ad|last|delay/i.test(n.name))) s.held[n.name] = { why: k, value: n.get() };
+        });
+      }
+    }
+    var q = eng && eng.quick;
+    if (!on && q && q.off) {
+      var game = eng === phaser ? phGame(win) : null;
+      q.off(win, s, game ? phHero(phState(game)) : null, game, k);
+    }
+  }
+
+  function quickTick(win, s, eng) {
+    var q = eng && eng.quick;
+    if (s.held && eng && eng.numbers) {
+      var nums = safe(function () { return eng.numbers(win); }, []);
+      nums.forEach(function (n) {
+        var h = s.held[n.name];
+        if (!h) return;
+        var v = n.get();
+        /* God mode keeps the best value seen; a frozen timer keeps its value. */
+        if (h.why === "god" && v > h.value) h.value = v;
+        if (v !== h.value) n.set(h.value);
+      });
+    }
+    if (!q) return;
+    var on = function (k) { return !!s.on["q:" + k]; };
+    if (eng === sm64) {
+      var a = findMario(win, s), dv = sm64View(win);
+      if (!a || !dv) return;
+      ["god", "speed", "jump", "grav"].forEach(function (k) { if (on(k)) q[k](win, s, dv, a); });
+    } else if (eng === phaser) {
+      var game = phGame(win), hero = phHero(phState(game));
+      if (!hero) return;
+      ["god", "grav", "noclip"].forEach(function (k) { if (on(k)) q[k](win, s, hero, game); });
+    } else if (eng === construct && (on("speed") || on("jump") || on("grav"))) {
+      cScale(win, s);
+    }
+  }
+
   /* ------------------------------------------------------------- public */
 
   var ENGINES = [sm64, clickteam, construct, phaser, eagler, generic];
@@ -748,20 +1002,49 @@
     var s = state(win);
     var eng = engineFor(win);
     var clock = win.__achClock;
-    var base = { engine: eng ? eng.name : "", note: "", items: [],
+    var base = { engine: eng ? eng.name : "Any game", note: "", items: [],
       speed: clock ? clock.speed : 1, paused: clock ? clock.paused : false };
-    if (!eng) return base;
     ensureLoop(win);
+    var quick = quickItems(win, s, eng);
+    if (!eng) {
+      base.items = quick;
+      base.note = "This game's insides aren't readable, so only the speed mods apply.";
+      return base;
+    }
     var got = eng.items(win, s);
     base.note = got.note || "";
-    base.items = got.items.map(function (it) {
+    base.items = quick.concat(got.items.map(function (it) {
       if (it.type === "toggle") it.on = !!s.on[it.id];
       return it;
-    });
+    }));
     return base;
   }
 
+  /* Some engines (Emscripten, e.g. Mario 64) cancel mouse-down on their
+     canvas, so clicking back into the game after clicking away never gives
+     it the keyboard again. Take focus back on any press inside it. */
+  function keepFocus(win, depth) {
+    depth = depth || 0;
+    try {
+      if (!win.__achFocus) {
+        win.__achFocus = true;
+        var grab = function () {
+          try { if (win.document.hasFocus && !win.document.hasFocus()) win.focus(); } catch (e) {}
+        };
+        ["pointerdown", "mousedown", "touchstart"].forEach(function (type) {
+          win.addEventListener(type, grab, true);
+        });
+      }
+      if (depth < 2) {
+        for (var i = 0; i < win.frames.length; i++) {
+          try { if (win.frames[i].document) keepFocus(win.frames[i], depth + 1); } catch (e) {}
+        }
+      }
+    } catch (e) {}
+  }
+
   function run(win, id, arg) {
+    if (id === "focus") { keepFocus(win); return { engine: "", items: [] }; }
     win = target(win);
     var s = state(win);
     if (id === "clock") {
@@ -771,6 +1054,10 @@
       return inspect(win);
     }
     var eng = engineFor(win);
+    if (id.indexOf("q:") === 0) {
+      quickRun(win, s, eng, id, !!(arg && arg.on));
+      return inspect(win);
+    }
     if (!eng) return inspect(win);
     var all = eng.items(win, s).items;
     var item = all.filter(function (i) { return i.id === id; })[0];
@@ -783,5 +1070,5 @@
     return inspect(win);
   }
 
-  window.GameCheats = { inspect: inspect, run: run, timeControl: timeControl };
+  window.GameCheats = { inspect: inspect, run: run, timeControl: timeControl, keepFocus: keepFocus };
 })();

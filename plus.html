@@ -53,10 +53,27 @@
       <a class="plus-card" href="#mods" id="card-mods">
         <span class="plus-card-ico" data-icon="star"></span>
         <strong>Mod menu</strong>
-        <span>Effects, speed control, and cheats that max out coins and gems in single-player games.</span>
+        <span>God mode, fly, super speed, no clip and more, plus effects and speed control. See which games below.</span>
         <span class="plus-card-go">Customize mods</span>
       </a>
     </div>
+
+    <section class="plus-mods plus-modlist" id="mod-games" aria-labelledby="modlist-h">
+      <div class="plus-mods-head">
+        <h2 id="modlist-h">Games with in-game cheats</h2>
+        <p class="dim">Every game gets the looks. These also get cheats that reach inside the game.</p>
+      </div>
+      <div class="plus-modlist-tools">
+        <input type="search" id="modlist-q" placeholder="Filter games" aria-label="Filter games with cheats" autocomplete="off">
+        <span class="dim" id="modlist-count"></span>
+      </div>
+      <div id="modlist"></div>
+      <p class="set-hint plus-modlist-foot">
+        Any other game served through play.arcadecampushub.online gets fast-forward, slow motion and the save editor,
+        and plain JavaScript games often show their coins and score too. In-game cheats work on arcadecampushub.online;
+        on the mirror sites games load from elsewhere, so only the looks and save editor apply there.
+      </p>
+    </section>
 
     <section class="plus-mods" id="mods" aria-labelledby="mods-h">
       <div class="plus-mods-head">
@@ -106,6 +123,7 @@
 
   <script src="js/core/config.js"></script>
   <script src="data/games.js"></script>
+  <script src="data/mod-games.js"></script>
   <script src="js/core/store.js"></script>
   <script src="js/features/catalog-overlay.js"></script>
   <script src="js/features/catalog.js"></script>

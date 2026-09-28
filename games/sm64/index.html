@@ -66,6 +66,23 @@
         }
       };
     </script>
+    <script>
+      /* The game cancels mouse-down on its canvas, so a click alone never
+         brings the keyboard back after clicking away. */
+      ["pointerdown", "mousedown", "touchstart"].forEach(function (type) {
+        window.addEventListener(type, function () {
+          if (!document.hasFocus()) window.focus();
+        }, true);
+      });
+      /* Keep the drawing size matched to the window (fullscreen, resizes). */
+      window.addEventListener("resize", function () {
+        var c = document.getElementById("canvas");
+        if (c.width !== window.innerWidth || c.height !== window.innerHeight) {
+          c.width = window.innerWidth;
+          c.height = window.innerHeight;
+        }
+      });
+    </script>
     <script async type="text/javascript" src="sm64.us.f3dex2e.js"></script>
   </body>
 </html>

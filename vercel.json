@@ -4,7 +4,6 @@
   "buildCommand": null,
   "installCommand": null,
   "outputDirectory": ".",
-  "trailingSlash": false,
   "headers": [
     {
       "source": "/sw.js",

@@ -34,7 +34,7 @@
        same-site, so a game's storage counts as first-party and survives
        private windows. Mirrors keep loading github.io directly. */
     gameProxy: {
-      enabled: false,
+      enabled: true,
       from: "https://arcadecampushub.github.io",
       to: "https://play.arcadecampushub.online"
     },
@@ -62,7 +62,7 @@
 
     /* --------------------------------------------------------------- TURN relay for voice/video calls. */
     turn: {
-      enabled: false,
+      enabled: true,
       servers: []
     },
 

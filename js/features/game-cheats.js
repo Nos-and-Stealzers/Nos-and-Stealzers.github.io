@@ -1221,6 +1221,189 @@
     }
   };
 
+  /* 2048 (Gabriele Cirulli's and its many copies): the game in progress is
+     JSON in localStorage ("gameState", or a variant name such as
+     "gameStateCupcakes"), read when the page loads. */
+  function g2048Keys(win) {
+    var out = null;
+    try {
+      /* The game's own storage manager says which keys are its own; several
+         2048s on one site each use different ones. */
+      var m = new win.LocalStorageManager();
+      var sk = m.gameStateKey || "gameState", bk = m.bestScoreKey || "bestScore";
+      var v = JSON.parse(win.localStorage.getItem(sk));
+      if (v && v.grid && v.grid.cells && typeof v.score === "number") out = { state: sk, best: bk, data: v };
+    } catch (e) {}
+    return out;
+  }
+  function g2048Tiles(data, fn) {
+    data.grid.cells.forEach(function (col, x) {
+      col.forEach(function (cell, y) { col[y] = fn(cell, x, y); });
+    });
+  }
+  var g2048 = {
+    name: "2048",
+    detect: function (win) {
+      /* 2048 Multitasking plays several boards off one save; left alone. */
+      return typeof win.GameManager === "function" && typeof win.LocalStorageManager === "function" &&
+        !/multitask/i.test(win.document.title || "");
+    },
+    items: function (win) {
+      var k = g2048Keys(win);
+      if (!k) return { items: [], note: "Make one move so the game saves, then Refresh." };
+      var best = Number(win.localStorage.getItem(k.best)) || 0;
+      return {
+        note: "Changes restart the game so it loads the new board.",
+        items: [
+          { id: "g2-2048", label: "Turn the biggest tile into 2048", type: "button", group: "Board" },
+          { id: "g2-clean", label: "Clear the 2s and 4s", type: "button", group: "Board",
+            hint: "Frees up space; the rest of the board stays" },
+          { id: "g2-double", label: "Double every tile", type: "button", group: "Board" },
+          { id: "g2-score", label: "Score", type: "value", group: "Score", value: k.data.score, noLock: true },
+          { id: "g2-best", label: "Best score", type: "value", group: "Score", value: best, noLock: true }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var k = g2048Keys(win);
+      if (!k) throw new Error("Make one move so the game saves, then try again.");
+      var d = k.data, v = Math.round(Number(arg && arg.value));
+      if (id === "g2-best") {
+        if (!isFinite(v) || v < 0) return;
+        win.localStorage.setItem(k.best, String(v));
+        s.restart = true;
+        return;
+      }
+      if (id === "g2-score" && isFinite(v) && v >= 0) d.score = v;
+      if (id === "g2-double") g2048Tiles(d, function (c) { if (c) c.value *= 2; return c; });
+      if (id === "g2-clean") {
+        var left = 0;
+        g2048Tiles(d, function (c) { if (c && c.value > 4) left++; return c; });
+        /* Keep at least one tile so the board is never empty. */
+        if (left) g2048Tiles(d, function (c) { return c && c.value <= 4 ? null : c; });
+      }
+      if (id === "g2-2048") {
+        var top = null;
+        g2048Tiles(d, function (c) { if (c && (!top || c.value > top.value)) top = c; return c; });
+        if (top && top.value < 2048) top.value = 2048;
+      }
+      d.over = false;
+      d.won = false;
+      d.keepPlaying = true;
+      win.localStorage.setItem(k.state, JSON.stringify(d));
+      s.restart = true;
+    }
+  };
+
+  /* Flappy Bird (nebezb's clone): plain global variables and functions. */
+  var flappy = {
+    name: "Flappy Bird",
+    detect: function (win) {
+      return typeof win.playerDead === "function" && typeof win.playerJump === "function" &&
+        typeof win.pipeheight === "number";
+    },
+    items: function (win, s) {
+      if (s.flappyGap === undefined) s.flappyGap = win.pipeheight;
+      return {
+        items: [
+          { id: "fb-god", label: "Can't die", type: "toggle", group: "Play", hint: "Pipes and the ground bounce you back up" },
+          { id: "fb-wide", label: "Wide gaps", type: "toggle", group: "Play", hint: "New pipes have twice the room" },
+          { id: "fb-floaty", label: "Floaty", type: "toggle", group: "Play", hint: "Half the gravity" },
+          { id: "fb-score", label: "Score", type: "value", group: "Score", value: win.score, noLock: true },
+          { id: "fb-high", label: "High score", type: "value", group: "Score", value: win.highscore, noLock: true }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      if (s.flappyGap === undefined) s.flappyGap = win.pipeheight;
+      if (s.flappyGrav === undefined) s.flappyGrav = win.gravity;
+      var v = Math.round(Number(arg && arg.value));
+      if (id === "fb-god") {
+        if (!win.__achFlappyDead) {
+          var dead = win.__achFlappyDead = win.playerDead;
+          win.playerDead = function () {
+            if (win.__achCheats && win.__achCheats.on["fb-god"]) { win.velocity = win.jump; return; }
+            return dead.apply(this, arguments);
+          };
+        }
+      }
+      if (id === "fb-wide") win.pipeheight = s.on["fb-wide"] ? s.flappyGap * 2 : s.flappyGap;
+      if (id === "fb-floaty") win.gravity = s.on["fb-floaty"] ? s.flappyGrav / 2 : s.flappyGrav;
+      if (id === "fb-score" && isFinite(v) && v >= 0) {
+        win.score = v;
+        try { win.setBigScore(); } catch (e) {}
+      }
+      if (id === "fb-high" && isFinite(v) && v >= 0) {
+        win.highscore = v;
+        try { win.setCookie("highscore", v, 999); } catch (e) {}
+      }
+    }
+  };
+
+  /* Temple Run 2 (web port): everything lives in one JSON save,
+     TR2_GAME_STATE, read when the page loads. Abilities go to level 5. */
+  var templeRun = {
+    name: "Temple Run 2",
+    detect: function (win) {
+      try { return !!win.localStorage.getItem("TR2_GAME_STATE") && !!win.BABYLON; } catch (e) { return false; }
+    },
+    items: function (win) {
+      var st = JSON.parse(win.localStorage.getItem("TR2_GAME_STATE"));
+      var stats = st.statsData || {};
+      return {
+        note: "Best done from the main menu: changes restart the game so it loads them.",
+        items: [
+          { id: "tr-coins", label: "Coins", type: "value", group: "Money", value: stats.totalCoins || 0, noLock: true },
+          { id: "tr-rich", label: "+100,000 coins", type: "button", group: "Money" },
+          { id: "tr-abilities", label: "Max every ability", type: "button", group: "Upgrades",
+            hint: "Shield, Coin Magnet and Boost to level 5" },
+          { id: "tr-powerup", label: "Unlock the power meter", type: "button", group: "Upgrades" },
+          { id: "tr-high", label: "High score", type: "value", group: "Stats", value: stats.highestScore || 0, noLock: true }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var st = JSON.parse(win.localStorage.getItem("TR2_GAME_STATE"));
+      st.statsData = st.statsData || {};
+      var v = Math.round(Number(arg && arg.value));
+      if (id === "tr-coins" && isFinite(v) && v >= 0) st.statsData.totalCoins = v;
+      if (id === "tr-rich") st.statsData.totalCoins = (st.statsData.totalCoins || 0) + 100000;
+      if (id === "tr-high" && isFinite(v) && v >= 0) st.statsData.highestScore = v;
+      if (id === "tr-abilities") st.abilitiesData = { abilitiesLevels: [5, 5, 5] };
+      if (id === "tr-powerup") { st.flagsData = st.flagsData || {}; st.flagsData.powerupUplocked = true; }
+      win.localStorage.setItem("TR2_GAME_STATE", JSON.stringify(st));
+      s.restart = true;
+    }
+  };
+
+  /* Crossy Road (web port): coins and best score are plain numbers in
+     localStorage, read at start. */
+  var crossy = {
+    name: "Crossy Road",
+    detect: function (win) {
+      try { return "doSpawnCoin" in win && win.localStorage.getItem("crossyScore") !== null; } catch (e) { return false; }
+    },
+    items: function (win) {
+      var ls = win.localStorage;
+      return {
+        note: "Changes restart the game so it loads them.",
+        items: [
+          { id: "cr-coins", label: "Coins", type: "value", group: "Money", value: Number(ls.getItem("coins")) || 0, noLock: true },
+          { id: "cr-rich", label: "+10,000 coins", type: "button", group: "Money", hint: "Enough for the prize machine many times over" },
+          { id: "cr-top", label: "Top score", type: "value", group: "Score", value: Number(ls.getItem("crossyScore")) || 0, noLock: true }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var ls = win.localStorage, v = Math.round(Number(arg && arg.value));
+      if (id === "cr-rich") ls.setItem("coins", String((Number(ls.getItem("coins")) || 0) + 10000));
+      else if (id === "cr-coins" && isFinite(v) && v >= 0) ls.setItem("coins", String(v));
+      else if (id === "cr-top" && isFinite(v) && v >= 0) ls.setItem("crossyScore", String(v));
+      else return;
+      s.restart = true;
+    }
+  };
+
   /* ---------------------------------------- any game: its own variables */
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
@@ -1572,7 +1755,8 @@
 
   /* ------------------------------------------------------------- public */
 
-  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, unity, dino, cookie, retroBowl, generic];
+  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, unity, dino, cookie, retroBowl,
+    g2048, flappy, templeRun, crossy, generic];
 
   function engineFor(win) {
     var s = state(win);

@@ -37,7 +37,13 @@ const SPECIAL = {
   "huge-motox3m-pool": "moto",
   "retro-bowl-plus": "retrobowl",
   "huge-retrobowl": "retrobowl",
-  "huge-retro-bowl-huge": "retrobowl"
+  "huge-retro-bowl-huge": "retrobowl",
+  "huge-meme2048": "g2048",
+  "huge-cupcake2048": "g2048",
+  "ext3-dao-2048": "g2048",
+  "huge-flappy-bird": "flappy",
+  "huge-temple-run-2": "temple",
+  "huge-crossyroad": "crossy"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 

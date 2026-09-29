@@ -21,7 +21,23 @@ const SPECIAL = {
   "huge-sm64": "mario",
   "huge-sonic-the-hedgehog": "phaser",
   "huge-sonic-hedgehog": "phaser",
-  "huge-house-of-hazards": "unity"
+  "huge-house-of-hazards": "unity",
+  "huge-cookie-clicker": "cookie",
+  "huge-cookieclicker": "cookie",
+  "huge-chrome-dino": "dino",
+  "huge-chromedino": "dino",
+  "dino": "dino",
+  "huge-motox3m": "moto",
+  "huge-moto-x3m-2": "moto",
+  "huge-motox3m2": "moto",
+  "huge-motox3m-spooky": "moto",
+  "huge-motox3m-winter": "moto",
+  "huge-motox3mwinter": "moto",
+  "huge-moto-x3m-pool-party": "moto",
+  "huge-motox3m-pool": "moto",
+  "retro-bowl-plus": "retrobowl",
+  "huge-retrobowl": "retrobowl",
+  "huge-retro-bowl-huge": "retrobowl"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 

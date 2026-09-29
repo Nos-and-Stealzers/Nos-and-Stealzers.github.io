@@ -945,6 +945,282 @@
     }
   };
 
+  /* ---------------------------------------- known games: their own API */
+
+  /* Some games keep a well-known object on the window. Each entry here
+     gets its own menu of cheats built on that object. To add a game:
+     detect (is this it?), items (the menu), action (do it). Holding
+     cheats go in tick, which runs every frame. */
+
+  var dino = {
+    name: "Chrome Dino",
+    detect: function (win) { return !!(win.Runner && win.Runner.instance_ && win.Runner.instance_.tRex); },
+    items: function (win) {
+      var r = win.Runner.instance_;
+      return {
+        note: "Press space to start a run first.",
+        items: [
+          { id: "dino-god", label: "Can't crash", type: "toggle", group: "Run", hint: "Cacti and birds pass straight through" },
+          { id: "dino-auto", label: "Auto-jump", type: "toggle", group: "Run", hint: "Jumps and ducks by itself" },
+          { id: "dino-speed", label: "Speed", type: "value", group: "Run", value: Math.round(r.currentSpeed * 10) / 10,
+            locked: false, noLock: true },
+          { id: "dino-score", label: "Score", type: "value", group: "Run",
+            value: Math.round(r.distanceMeter.getActualDistance(Math.ceil(r.distanceRan))), noLock: true },
+          { id: "dino-hi", label: "Set high score to 99,999", type: "button", group: "Score" },
+          { id: "dino-night", label: "Toggle night mode", type: "button", group: "Look" }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var r = win.Runner.instance_;
+      var v = Number(arg && arg.value);
+      if (id === "dino-speed" && isFinite(v)) {
+        if (s.dinoMax === undefined) s.dinoMax = r.config.MAX_SPEED;
+        r.currentSpeed = Math.max(1, Math.min(60, v));
+        /* Lets it hold a speed above the normal top speed, without raising
+           the cap left over from an earlier, faster setting. */
+        r.config.MAX_SPEED = Math.max(s.dinoMax, r.currentSpeed);
+      }
+      if (id === "dino-score" && isFinite(v)) {
+        /* The meter shows distance scaled by its coefficient (0.025). */
+        r.distanceRan = Math.max(0, v) / (r.distanceMeter.config.COEFFICIENT || 0.025);
+      }
+      if (id === "dino-hi") {
+        r.highestScore = 99999 / (r.distanceMeter.config.COEFFICIENT || 0.025);
+        r.distanceMeter.setHighScore(r.highestScore);
+      }
+      if (id === "dino-night") r.invert(true);
+      if (id === "dino-god") {
+        if (!win.__achDinoCrash) win.__achDinoCrash = win.checkForCollision;
+        win.checkForCollision = s.on["dino-god"] ? function () { return false; } : win.__achDinoCrash;
+      }
+    },
+    tick: function (win, s) {
+      if (!s.on["dino-auto"]) return;
+      var r = win.Runner.instance_;
+      if (!r || !r.playing || r.crashed) return;
+      var t = r.tRex, o = r.horizon && r.horizon.obstacles[0];
+      if (!o) return;
+      var gap = o.xPos - (t.xPos + t.config.WIDTH);
+      var reach = 40 + r.currentSpeed * 9;
+      /* Birds flying high are ducked under; everything else is jumped. */
+      var high = o.typeConfig.type === "PTERODACTYL" && o.yPos < 75;
+      if (gap > 0 && gap < reach) {
+        if (high) { if (!t.ducking) t.setDuck(true); }
+        else if (!t.jumping) { if (t.ducking) t.setDuck(false); t.startJump(r.currentSpeed); }
+      } else if (t.ducking && gap < 0) t.setDuck(false);
+    }
+  };
+
+  var cookie = {
+    name: "Cookie Clicker",
+    detect: function (win) { return !!(win.Game && win.Game.Objects && win.Game.Earn && win.Game.cookiesPs !== undefined); },
+    items: function (win) {
+      var G = win.Game;
+      var items = [
+        { id: "ck-add", label: "Cookies", type: "value", group: "Cookies", value: Math.floor(G.cookies), noLock: true },
+        { id: "ck-lots", label: "+1 trillion cookies", type: "button", group: "Cookies" },
+        { id: "ck-auto", label: "Auto-clicker", type: "toggle", group: "Cookies", hint: "About 20 clicks a second" },
+        { id: "ck-golden", label: "Spawn a golden cookie", type: "button", group: "Cookies" },
+        { id: "ck-frenzy", label: "Frenzy ×7 for a minute", type: "button", group: "Cookies" },
+        { id: "ck-lumps", label: "+100 sugar lumps", type: "button", group: "Unlocks" },
+        { id: "ck-buildings", label: "+50 of every building", type: "button", group: "Unlocks" },
+        { id: "ck-upgrades", label: "Buy every upgrade", type: "button", group: "Unlocks",
+          hint: "Every upgrade at once; it can't be undone except by wiping the save" },
+        { id: "ck-achievements", label: "Unlock every achievement", type: "button", group: "Unlocks" },
+        { id: "ck-save", label: "Save now", type: "button", group: "Save" }
+      ];
+      return { items: items, note: "The game saves every minute; press Save now to keep changes right away." };
+    },
+    action: function (win, s, id, arg) {
+      var G = win.Game;
+      var v = Number(arg && arg.value);
+      if (id === "ck-add" && isFinite(v) && v >= 0) {
+        var d = v - G.cookies;
+        if (d > 0) G.Earn(d); else G.cookies = v;
+      }
+      if (id === "ck-lots") G.Earn(1e12);
+      if (id === "ck-golden") new G.shimmer("golden");
+      if (id === "ck-frenzy") G.gainBuff("frenzy", 60, 7);
+      if (id === "ck-lumps") G.gainLumps(100);
+      if (id === "ck-buildings") {
+        Object.keys(G.Objects).forEach(function (k) { G.Objects[k].getFree(50); });
+      }
+      if (id === "ck-upgrades") G.SetAllUpgrades(1);
+      if (id === "ck-achievements") G.SetAllAchievs(1);
+      if (id === "ck-save") G.WriteSave();
+      G.upgradesToRebuild = 1;
+      G.recalculateGains = 1;
+    },
+    tick: function (win, s) {
+      if (!s.on["ck-auto"]) return;
+      var now = Date.now();
+      if (now - (s.ckLast || 0) < 50) return;
+      s.ckLast = now;
+      try { win.Game.ClickCookie(); } catch (e) {}
+    }
+  };
+
+  /* Moto X3M (all five): progress is JSON in localStorage next to a
+     "<key>h" copy of its Java-style string hash; a save whose hash doesn't
+     match is wiped. Edits are re-signed, then the game restarts to load them. */
+  function mxHash(t) {
+    var e = 0;
+    for (var i = 0; i < t.length; i++) { e = (e << 5) - e + t.charCodeAt(i); e |= 0; }
+    return String(e);
+  }
+  /* Every copy shares one site, so each game's own key is picked by its
+     folder; anything else falls back to the only valid save there is. */
+  var MX_KEYS = { "motox3m": "mx3m_poki", "moto-x3m-2": "mx3m2sf2_y8", "motox3m2": "mx3m2sf2_y8",
+    "motox3m-spooky": "mx3m_6_gd", "motox3m-winter": "mx3m_4_gd", "motox3mwinter": "mx3m_4_gd",
+    "moto-x3m-pool-party": "mx3m_5_pk", "motox3m-pool": "mx3m_5_gd" };
+  function mxSave(win) {
+    var ls;
+    try { ls = win.localStorage; } catch (e) { return null; }
+    var dir = (String(win.location.pathname).match(/([^\/]+)\/[^\/]*$/) || [])[1];
+    var keys = MX_KEYS[dir] ? [MX_KEYS[dir]] : [];
+    if (!keys.length) {
+      for (var i = 0; i < ls.length; i++) {
+        var k0 = ls.key(i);
+        if (/^mx3m/.test(k0) && ls.getItem(k0 + "h") !== null) keys.push(k0);
+      }
+      if (keys.length !== 1) return null;
+    }
+    var k = keys[0], raw = ls.getItem(k), sig = ls.getItem(k + "h");
+    if (!raw || sig === null || mxHash(raw) !== sig) return null;
+    try {
+      var data = JSON.parse(raw);
+      if (data && data.invsav) return { key: k, data: data };
+    } catch (e) {}
+    return null;
+  }
+  var moto = {
+    name: "Moto X3M",
+    detect: function (win) {
+      if (!win.Phaser) return false;
+      if (mxSave(win)) return true;
+      var dir = (String(win.location.pathname).match(/([^\/]+)\/[^\/]*$/) || [])[1];
+      return !!MX_KEYS[dir];
+    },
+    items: function (win) {
+      var found = mxSave(win);
+      if (!found) {
+        return { items: [], note: "Press Play once (Local Save in Moto X3M 2) so the game makes its save, then Refresh." };
+      }
+      var sv = found.data.invsav;
+      var levels = Object.keys(sv).filter(function (k) { return /^r_\d+_r$/.test(k); }).length;
+      var bikes = Object.keys(sv).filter(function (k) { return /^skin\d+$/.test(k) && sv[k] === true; }).length;
+      return {
+        note: "Changes restart the game so it loads them.",
+        items: [
+          { id: "mx-levels", label: "Unlock every level", type: "button", group: "Unlocks",
+            hint: levels + " open now; all of them get 3 stars" },
+          { id: "mx-bikes", label: "Unlock every bike", type: "button", group: "Unlocks",
+            hint: (bikes || 1) + " of 8 owned now" },
+          { id: "mx-reset", label: "Start the save over", type: "button", group: "Save",
+            hint: "Back to level 1 and the first bike" }
+        ]
+      };
+    },
+    action: function (win, s, id) {
+      var found = mxSave(win);
+      if (!found) throw new Error("Open the level list once so the game saves, then try again.");
+      var sv = found.data.invsav;
+      if (id === "mx-reset") {
+        win.localStorage.removeItem(found.key);
+        win.localStorage.removeItem(found.key + "h");
+        s.restart = true;
+        return;
+      }
+      if (id === "mx-levels") {
+        /* Intro levels (Moto X3M 1) are ri_N, the rest r_N; covering 60
+           handles every edition, and the game ignores numbers it lacks. */
+        if (Object.keys(sv).some(function (k) { return /^ri_\d+_r$/.test(k); })) {
+          for (var j = 1; j <= 10; j++) sv["ri_" + j + "_r"] = 3;
+        }
+        for (var i = 1; i <= 60; i++) sv["r_" + i + "_r"] = 3;
+      }
+      if (id === "mx-bikes") for (var b = 1; b <= 8; b++) sv["skin" + b] = true;
+      var raw = JSON.stringify(found.data);
+      win.localStorage.setItem(found.key, raw);
+      win.localStorage.setItem(found.key + "h", mxHash(raw));
+      s.restart = true;
+    }
+  };
+
+  /* Retro Bowl (GameMaker): each save slot is an INI in localStorage,
+     "RetroBowl.<n>.savedata.ini", with plain key="value" lines. The game
+     reads it when a save is loaded, so edits restart the game. */
+  function rbSlots(win) {
+    var out = [];
+    try {
+      for (var i = 0; i < win.localStorage.length; i++) {
+        var k = win.localStorage.key(i);
+        var m = /^RetroBowl\.(\d+)\.savedata\.ini$/.exec(k);
+        if (m) out.push({ key: k, slot: Number(m[1]) + 1 });
+      }
+    } catch (e) {}
+    return out.sort(function (a, b) { return a.slot - b.slot; });
+  }
+  function rbGet(text, name) {
+    var m = new RegExp("^" + name + "=\"([^\"]*)\"", "m").exec(text);
+    return m ? m[1] : null;
+  }
+  function rbSet(text, name, v) {
+    var re = new RegExp("^(" + name + "=\")[^\"]*(\")", "m");
+    return re.test(text) ? text.replace(re, "$1" + v + "$2") : text;
+  }
+  var RB_FIELDS = [
+    ["coach_credit", "Coaching credits", 999],
+    ["salary_cap", "Salary cap ($M)", 999],
+    ["fans", "Fans (%)", 100],
+    ["coach_rating", "Coach rating", 99],
+    ["facility_stadium", "Stadium level", 5],
+    ["facility_training", "Training level", 5],
+    ["facility_rehab", "Rehab level", 5]
+  ];
+  var retroBowl = {
+    name: "Retro Bowl",
+    detect: function (win) {
+      return /retro ?bowl/i.test(win.document.title || "") &&
+        (rbSlots(win).length > 0 || /html5game/.test(String(win.document.documentElement.innerHTML).slice(0, 4000)));
+    },
+    items: function (win, s) {
+      var slots = rbSlots(win);
+      if (!slots.length) return { items: [], note: "Start a new game in any save slot first, then Refresh." };
+      var cur = slots.filter(function (x) { return x.slot === s.rbSlot; })[0] || slots[0];
+      s.rbSlot = cur.slot;
+      var text = win.localStorage.getItem(cur.key) || "";
+      var items = [];
+      if (slots.length > 1) {
+        slots.forEach(function (x) {
+          items.push({ id: "rb-slot:" + x.slot, label: "Save " + x.slot, type: "toggle", group: "Which save", on: x.slot === cur.slot });
+        });
+      }
+      items.push({ id: "rb-max", label: "Max everything", type: "button", group: "Team",
+        hint: "999 credits and cap, 100% fans, top facilities" });
+      RB_FIELDS.forEach(function (f) {
+        var v = rbGet(text, f[0]);
+        if (v !== null) items.push({ id: "rb:" + f[0], label: f[1], type: "value", group: "Team", value: Number(v), noLock: true });
+      });
+      return { items: items, note: "Edits apply when the game loads Save " + cur.slot + "; it restarts to do that." };
+    },
+    action: function (win, s, id, arg) {
+      if (id.indexOf("rb-slot:") === 0) { s.rbSlot = Number(id.slice(8)); delete s.on[id]; return; }
+      var slot = rbSlots(win).filter(function (x) { return x.slot === s.rbSlot; })[0] || rbSlots(win)[0];
+      if (!slot) return;
+      var text = win.localStorage.getItem(slot.key);
+      if (id === "rb-max") RB_FIELDS.forEach(function (f) { text = rbSet(text, f[0], f[2]); });
+      else if (id.indexOf("rb:") === 0) {
+        var v = Math.round(Number(arg && arg.value));
+        if (!isFinite(v) || v < 0) return;
+        text = rbSet(text, id.slice(3), v);
+      } else return;
+      win.localStorage.setItem(slot.key, text);
+      s.restart = true;
+    }
+  };
+
   /* ---------------------------------------- any game: its own variables */
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
@@ -1296,7 +1572,7 @@
 
   /* ------------------------------------------------------------- public */
 
-  var ENGINES = [sm64, clickteam, construct, phaser, eagler, unity, generic];
+  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, unity, dino, cookie, retroBowl, generic];
 
   function engineFor(win) {
     var s = state(win);

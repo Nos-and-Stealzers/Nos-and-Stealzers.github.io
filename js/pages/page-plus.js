@@ -123,6 +123,10 @@
       ["minecraft", "Minecraft (Eaglercraft)", "Creative mode, daytime, effects, items, or any command, in worlds with cheats on."],
       ["phaser", "Phaser games", "God mode, no clip, fly, super speed, low gravity, skip level, and their scores."],
       ["construct", "Construct games", "Super speed and jump, low gravity on platformers, and the game's own numbers."],
+      ["cookie", "Cookie Clicker", "Set cookies, an auto-clicker, golden cookies and frenzies, sugar lumps, free buildings, and every upgrade and achievement."],
+      ["dino", "Chrome Dino", "Can't crash, auto-jump, any speed, set the score and high score, night mode."],
+      ["moto", "Moto X3M", "Every level open with 3 stars and every bike, in all five Moto X3M games."],
+      ["retrobowl", "Retro Bowl", "Coaching credits, salary cap, fans, coach rating and facilities for any save slot, or max them all."],
       ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets every character unlocked and task skipping."],
       ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
     ];

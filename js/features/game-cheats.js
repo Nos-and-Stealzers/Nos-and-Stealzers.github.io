@@ -186,7 +186,11 @@
 
   var sm64 = {
     name: "Super Mario 64",
-    detect: function (win) { return !!(win.HEAPU8 && win._main && win.document.getElementById("canvas")); },
+    /* Unity's older builds are Emscripten too (HEAPU8, _main, #canvas);
+       only the sm64 port lacks a Unity loader. */
+    detect: function (win) {
+      return !!(win.HEAPU8 && win._main && win.document.getElementById("canvas")) && !unity.detect(win);
+    },
     items: function (win, s) {
       var a = findMario(win, s);
       var dv = sm64View(win);
@@ -611,6 +615,336 @@
     }
   };
 
+  /* ------------------------------------------------------ Unity WebGL */
+
+  /* Unity games keep their save (PlayerPrefs) as one small file in the
+     page's IndexedDB, at /idbfs/<md5 of the game's folder URL>/PlayerPrefs.
+     The game only reads it at start, so edits are written there and the
+     game restarts to pick them up. Games Unity loads with UnityLoader
+     (2019 and older) and createUnityInstance (2020+) both work this way. */
+
+  function md5(str) {
+    function add(x, y) { var l = (x & 0xffff) + (y & 0xffff); return (((x >> 16) + (y >> 16) + (l >> 16)) << 16) | (l & 0xffff); }
+    function step(q, a, b, x, s, t) { q = add(add(a, q), add(x, t)); return add((q << s) | (q >>> (32 - s)), b); }
+    var bytes = unescape(encodeURIComponent(str));
+    var n = bytes.length, words = [], i;
+    for (i = 0; i < n; i++) words[i >> 2] |= bytes.charCodeAt(i) << ((i % 4) * 8);
+    words[n >> 2] |= 0x80 << ((n % 4) * 8);
+    words[(((n + 8) >> 6) + 1) * 16 - 2] = n * 8;
+    var S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+    var a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+    for (i = 0; i < words.length; i += 16) {
+      var A = a, B = b, C = c, D = d;
+      for (var j = 0; j < 64; j++) {
+        var r = j >> 4, f, g;
+        if (r === 0) { f = (b & c) | (~b & d); g = j; }
+        else if (r === 1) { f = (b & d) | (c & ~d); g = (5 * j + 1) % 16; }
+        else if (r === 2) { f = b ^ c ^ d; g = (3 * j + 5) % 16; }
+        else { f = c ^ (b | ~d); g = (7 * j) % 16; }
+        var t = step(f, a, b, words[i + g] | 0, S[r * 4 + (j % 4)], Math.floor(Math.abs(Math.sin(j + 1)) * 4294967296) | 0);
+        a = d; d = c; c = b; b = t;
+      }
+      a = add(a, A); b = add(b, B); c = add(c, C); d = add(d, D);
+    }
+    return [a, b, c, d].map(function (v) {
+      var h = "";
+      for (var k = 0; k < 4; k++) h += ("0" + ((v >>> (k * 8)) & 255).toString(16)).slice(-2);
+      return h;
+    }).join("");
+  }
+
+  /* PlayerPrefs file: "UnityPrf" + 8 header bytes, then entries of
+     key, then 0xFE int32 | 0xFD float32 | a length-prefixed UTF-8 string.
+     Lengths under 128 are one byte; longer ones are 0x80 + int32. */
+  function prefsParse(bytes) {
+    var list = [];
+    if (!bytes || bytes.length < 16) return list;
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var p = 16;
+    function len() {
+      var n = bytes[p++];
+      if (n === 0x80) { n = dv.getInt32(p, true); p += 4; }
+      return n;
+    }
+    function text(n) {
+      var s = "";
+      for (var i = 0; i < n; i++) s += String.fromCharCode(bytes[p + i]);
+      p += n;
+      try { return decodeURIComponent(escape(s)); } catch (e) { return s; }
+    }
+    while (p < bytes.length) {
+      var key = text(len());
+      var t = bytes[p];
+      if (t === 0xFE) { list.push({ key: key, type: "int", value: dv.getInt32(p + 1, true) }); p += 5; }
+      else if (t === 0xFD) { list.push({ key: key, type: "float", value: dv.getFloat32(p + 1, true) }); p += 5; }
+      else list.push({ key: key, type: "string", value: text(len()) });
+    }
+    return list;
+  }
+  function prefsBuild(header, list) {
+    var out = [];
+    var i;
+    for (i = 0; i < 16; i++) out.push(header && header.length >= 16 ? header[i] : [85, 110, 105, 116, 121, 80, 114, 102, 0, 0, 1, 0, 0, 0, 16, 0][i]);
+    function len(n) {
+      if (n < 128) out.push(n);
+      else out.push(0x80, n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255);
+    }
+    function text(s) {
+      var b = unescape(encodeURIComponent(s));
+      len(b.length);
+      for (var k = 0; k < b.length; k++) out.push(b.charCodeAt(k));
+    }
+    list.forEach(function (e) {
+      text(e.key);
+      if (e.type === "string") { text(String(e.value)); return; }
+      var buf = new DataView(new ArrayBuffer(4));
+      if (e.type === "float") buf.setFloat32(0, e.value, true);
+      else buf.setInt32(0, e.value, true);
+      out.push(e.type === "float" ? 0xFD : 0xFE);
+      for (i = 0; i < 4; i++) out.push(buf.getUint8(i));
+    });
+    return new Uint8Array(out);
+  }
+
+  function idb(win, fn) {
+    return new Promise(function (resolve, reject) {
+      var req = win.indexedDB.open("/idbfs");
+      req.onerror = function () { reject(new Error("This game's save can't be opened.")); };
+      req.onupgradeneeded = function () {
+        /* No save yet at all: don't create an empty database Unity then trips on. */
+        req.transaction.abort();
+      };
+      req.onsuccess = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains("FILE_DATA")) { db.close(); reject(new Error("This game hasn't saved anything yet. Play a little first.")); return; }
+        fn(db.transaction("FILE_DATA", "readwrite").objectStore("FILE_DATA"), function (v) { db.close(); resolve(v); }, reject);
+      };
+    });
+  }
+  function ask(r) {
+    return new Promise(function (resolve, reject) {
+      r.onsuccess = function () { resolve(r.result); };
+      r.onerror = function () { reject(r.error); };
+    });
+  }
+
+  /* Where this game's save lives. Unity 5.6 and later name the folder after
+     the page's folder URL; Unity 5.x before that keeps one /idbfs/PlayerPrefs
+     for the whole host. Only this game's own folder is used when it exists,
+     since every game on a host shares one /idbfs. */
+  function unityDir(win) {
+    var url = String(win.location.href).split(/[?#]/)[0];
+    return "/idbfs/" + md5(url.slice(0, url.lastIndexOf("/")));
+  }
+  function unityFind(win) {
+    var mine = unityDir(win) + "/PlayerPrefs";
+    return idb(win, function (store, done, fail) {
+      ask(store.getKey(mine)).then(function (k) {
+        if (k !== undefined) return mine;
+        return ask(store.getKey("/idbfs/PlayerPrefs")).then(function (old) {
+          return old === undefined ? null : "/idbfs/PlayerPrefs";
+        });
+      }).then(done, fail);
+    });
+  }
+
+  function unityLoad(win, s) {
+    return unityFind(win).then(function (key) {
+      if (!key) { s.unity = { error: "This game hasn't saved anything yet. Play a little, then Refresh." }; return; }
+      return idb(win, function (store, done, fail) {
+        ask(store.get(key)).then(function (rec) {
+          s.unity = { key: key, header: rec.contents.slice(0, 16), prefs: prefsParse(rec.contents) };
+        }).then(done, fail);
+      });
+    }).catch(function (err) {
+      s.unity = { error: (err && err.message) || "This game's save can't be read." };
+    });
+  }
+
+  /* changes: { key: number | string | null (delete) }. Keeps a copy of the
+     save from before the first edit so it can be put back. */
+  function unityWrite(win, s, changes) {
+    var u = s.unity;
+    if (!u || !u.key) return Promise.reject(new Error("This game hasn't saved anything yet."));
+    return idb(win, function (store, done, fail) {
+      ask(store.get(u.key)).then(function (rec) {
+        var backup = "ach:unity-backup:" + u.key;
+        try {
+          if (!win.localStorage.getItem(backup)) {
+            win.localStorage.setItem(backup, Array.prototype.map.call(rec.contents, function (b) {
+              return ("0" + b.toString(16)).slice(-2);
+            }).join(""));
+          }
+        } catch (e) { /* private mode: no undo, the edit still works */ }
+        var list = prefsParse(rec.contents);
+        Object.keys(changes).forEach(function (k) {
+          var v = changes[k];
+          var at = -1;
+          list.forEach(function (e, i) { if (e.key === k) at = i; });
+          if (v === null) { if (at !== -1) list.splice(at, 1); return; }
+          var type = typeof v === "string" ? "string"
+            : at !== -1 && list[at].type === "float" ? "float"
+            : Math.round(v) === v ? "int" : "float";
+          if (type === "int") v = Math.max(-2147483648, Math.min(2147483647, Math.round(v)));
+          var entry = { key: k, type: type, value: v };
+          if (at === -1) list.push(entry); else list[at] = entry;
+        });
+        rec.contents = prefsBuild(rec.contents, list);
+        rec.timestamp = new Date();
+        return ask(store.put(rec, u.key));
+      }).then(done, fail);
+    }).then(function () { s.restart = true; });
+  }
+
+  function unityUndo(win, s) {
+    var u = s.unity;
+    var saved = null;
+    try { saved = win.localStorage.getItem("ach:unity-backup:" + u.key); } catch (e) {}
+    if (!saved) return Promise.resolve();
+    var bytes = new Uint8Array(saved.length / 2);
+    for (var i = 0; i < bytes.length; i++) bytes[i] = parseInt(saved.substr(i * 2, 2), 16);
+    return idb(win, function (store, done, fail) {
+      ask(store.get(u.key)).then(function (rec) {
+        rec.contents = bytes;
+        rec.timestamp = new Date();
+        return ask(store.put(rec, u.key));
+      }).then(done, fail);
+    }).then(function () {
+      try { win.localStorage.removeItem("ach:unity-backup:" + u.key); } catch (e) {}
+      s.restart = true;
+    });
+  }
+
+  /* Extras for particular Unity games, found by their page. Each value was
+     checked in the running game. */
+  var UNITY_GAMES = [
+    {
+      match: /house[\s_-]*of[\s_-]*hazards/i,
+      name: "House of Hazards",
+      items: [
+        { id: "u:hoh-chars", label: "Unlock every character", type: "button",
+          hint: "Robo Rob, Buster, Rocking Grandma and Super Sam, without playing for them or watching ads" },
+        { id: "u:hoh-relock", label: "Lock them again", type: "button",
+          hint: "Back to the four starting characters" },
+        { id: "u:hoh-skip", label: "Skip task", type: "button", live: true,
+          hint: "Ticks off the task on the note; do it on the last one to win the round" },
+        { id: "u:hoh-back", label: "Previous task", type: "button", live: true,
+          hint: "Puts the last task back on the note" },
+        { id: "u:hoh-restart", label: "Restart round", type: "button", live: true,
+          hint: "Same players and characters, back to the first task" }
+      ],
+      /* In a round, the game's Gamemanager and TaskManager sit on "Scripts". */
+      live: { "u:hoh-skip": ["Scripts", "CompletedTask"], "u:hoh-back": ["Scripts", "PreviousTask"],
+        "u:hoh-restart": ["Scripts", "RestartGame"] },
+      action: function (win, s, id) {
+        if (this.live[id]) {
+          if (!unitySend(win, this.live[id][0], this.live[id][1])) {
+            throw new Error("Start a round first; this works while you're playing.");
+          }
+          return;
+        }
+        var keys = ["Character_4", "Character_5", "Character_6", "Character_7"];
+        var ch = {};
+        keys.forEach(function (k) { ch[k] = id === "u:hoh-chars" ? 1 : null; });
+        return unityWrite(win, s, ch);
+      }
+    }
+  ];
+
+  /* SendMessage to a GameObject, and whether anything was there to get it.
+     Unity doesn't throw for a missing object; it logs, so listen for that. */
+  function unitySend(win, obj, method, arg) {
+    var inst = win.unityInstance || win.unityGame || win.gameInstance || (typeof win.SendMessage === "function" ? win : null);
+    if (!inst || typeof inst.SendMessage !== "function") return false;
+    var missed = false;
+    var c = win.console, keep = [c.log, c.warn, c.error];
+    var hear = function (m) { if (/SendMessage: object .* (not found|does not have receiver)/.test(String(m))) missed = true; };
+    c.log = c.warn = c.error = hear;
+    try {
+      if (arg === undefined) inst.SendMessage(obj, method); else inst.SendMessage(obj, method, arg);
+    } catch (e) { missed = true; }
+    finally { c.log = keep[0]; c.warn = keep[1]; c.error = keep[2]; }
+    return !missed;
+  }
+  function unityProfile(win) {
+    var where = String(win.location.pathname) + " " + (win.document.title || "");
+    return UNITY_GAMES.filter(function (g) { return g.match.test(where); })[0] || null;
+  }
+
+  var unity = {
+    name: "Unity",
+    detect: function (win) {
+      return !!(win.UnityLoader || win.createUnityInstance || win.unityInstance || win.unityGame ||
+        (win.gameInstance && typeof win.gameInstance.SendMessage === "function") ||
+        /* Unity 5.0-5.5: a bare Module with SendMessage on the window. */
+        (win.Module && typeof win.SendMessage === "function" &&
+          (typeof win.UnityProgress === "function" || /unity/i.test(String(win.document.title || "")) ||
+           /\.(data|unity3d|datagz|unityweb)(\?|$)/i.test(String(win.Module.dataUrl || "")))));
+    },
+    load: unityLoad,
+    items: function (win, s) {
+      var game = unityProfile(win);
+      var items = game ? game.items.map(function (it) {
+        return { id: it.id, label: it.label, hint: it.hint, type: it.type, group: it.live ? "In this round" : game.name };
+      }) : [];
+      var u = s.unity || {};
+      if (u.error) return { items: items, note: u.error };
+      var nums = (u.prefs || []).filter(function (e) {
+        if (/^unity\./.test(e.key)) return false;
+        /* Some games keep numbers as text; those count too. */
+        return e.type !== "string" || /^-?\d+(\.\d+)?$/.test(e.value);
+      }).slice(0, 60);
+      var money = nums.filter(function (e) { return WANTED.test(e.key); });
+      if (money.length) {
+        items.push({ id: "u:rich", label: "Max everything", type: "button", group: "Save",
+          hint: "Coins, gems, score and the like to 999,999" });
+      }
+      var backup = false;
+      try { backup = !!(u.key && win.localStorage.getItem("ach:unity-backup:" + u.key)); } catch (e) {}
+      if (backup) {
+        items.push({ id: "u:undo", label: "Undo save edits", type: "button", group: "Save",
+          hint: "Puts back the save from before the first change" });
+      }
+      nums.forEach(function (e) {
+        items.push({ id: "u:v:" + e.key, label: e.key, type: "value", group: "Saved values",
+          value: Math.round(Number(e.value) * 100) / 100, noLock: true });
+      });
+      return {
+        items: items,
+        note: game
+          ? (nums.length ? "Save edits restart the game so it loads them." : "")
+          : "Unity game. Changing a saved value restarts the game so it loads the new number" +
+            (nums.length ? "." : ". Nothing editable is saved yet; play a round, then Refresh.")
+      };
+    },
+    action: function (win, s, id, arg) {
+      var game = unityProfile(win);
+      if (game && id.indexOf("u:v:") !== 0 && game.items.some(function (it) { return it.id === id; })) {
+        return game.action.call(game, win, s, id, arg);
+      }
+      if (id === "u:undo") return unityUndo(win, s);
+      if (id === "u:rich") {
+        var ch = {};
+        ((s.unity && s.unity.prefs) || []).forEach(function (e) {
+          var numeric = e.type !== "string" || /^-?\d+(\.\d+)?$/.test(e.value);
+          if (numeric && !/^unity\./.test(e.key) && WANTED.test(e.key)) {
+            var v = /lives|life/i.test(e.key) ? 99 : 999999;
+            ch[e.key] = e.type === "string" ? String(v) : v;
+          }
+        });
+        return unityWrite(win, s, ch);
+      }
+      if (id.indexOf("u:v:") === 0) {
+        var v = Number(arg && arg.value);
+        if (!isFinite(v)) return;
+        var key = id.slice(4), one = {};
+        var was = ((s.unity && s.unity.prefs) || []).filter(function (e) { return e.key === key; })[0];
+        one[key] = was && was.type === "string" ? String(v) : v;
+        return unityWrite(win, s, one);
+      }
+    }
+  };
+
   /* ---------------------------------------- any game: its own variables */
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
@@ -962,7 +1296,7 @@
 
   /* ------------------------------------------------------------- public */
 
-  var ENGINES = [sm64, clickteam, construct, phaser, eagler, generic];
+  var ENGINES = [sm64, clickteam, construct, phaser, eagler, unity, generic];
 
   function engineFor(win) {
     var s = state(win);
@@ -997,13 +1331,20 @@
     return ENGINES.some(function (e) { try { return e.detect(win); } catch (x) { return false; } });
   }
 
-  function inspect(win) {
+  function inspect(win, fresh) {
     win = target(win);
     var s = state(win);
     var eng = engineFor(win);
+    /* Engines whose state lives in storage read it first (once, or again on
+       Refresh), so the answer can be a promise. */
+    if (eng && eng.load && (fresh || !s.loaded)) {
+      s.loaded = true;
+      return eng.load(win, s).then(function () { return inspect(win); });
+    }
     var clock = win.__achClock;
     var base = { engine: eng ? eng.name : "Any game", note: "", items: [],
       speed: clock ? clock.speed : 1, paused: clock ? clock.paused : false };
+    if (s.restart) { base.restart = true; s.restart = false; }
     ensureLoop(win);
     var quick = quickItems(win, s, eng);
     if (!eng) {
@@ -1045,6 +1386,7 @@
 
   function run(win, id, arg) {
     if (id === "focus") { keepFocus(win); return { engine: "", items: [] }; }
+    if (id === "refresh") return refresh(win);
     win = target(win);
     var s = state(win);
     if (id === "clock") {
@@ -1059,6 +1401,10 @@
       return inspect(win);
     }
     if (!eng) return inspect(win);
+    if (eng.load && !s.loaded) {
+      s.loaded = true;
+      return eng.load(win, s).then(function () { return run(win, id, arg); });
+    }
     var all = eng.items(win, s).items;
     var item = all.filter(function (i) { return i.id === id; })[0];
     if (!item) return inspect(win);
@@ -1066,9 +1412,14 @@
       s.on[id] = !!(arg && arg.on);
       if (!s.on[id]) delete s.on[id];
     }
-    eng.action && eng.action(win, s, id, arg);
+    var done = eng.action && eng.action(win, s, id, arg);
+    if (done && typeof done.then === "function") {
+      return done.then(function () { return inspect(win, true); });
+    }
     return inspect(win);
   }
 
-  window.GameCheats = { inspect: inspect, run: run, timeControl: timeControl, keepFocus: keepFocus };
+  function refresh(win) { return inspect(win, true); }
+
+  window.GameCheats = { inspect: inspect, run: run, refresh: refresh, timeControl: timeControl, keepFocus: keepFocus };
 })();

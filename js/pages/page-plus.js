@@ -123,6 +123,7 @@
       ["minecraft", "Minecraft (Eaglercraft)", "Creative mode, daytime, effects, items, or any command, in worlds with cheats on."],
       ["phaser", "Phaser games", "God mode, no clip, fly, super speed, low gravity, skip level, and their scores."],
       ["construct", "Construct games", "Super speed and jump, low gravity on platformers, and the game's own numbers."],
+      ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets every character unlocked and task skipping."],
       ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
     ];
     function drawModList() {

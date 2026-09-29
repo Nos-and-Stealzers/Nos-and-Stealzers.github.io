@@ -50,17 +50,18 @@
     if (e.source !== window.parent || !TRUSTED.test(e.origin)) return;
     var m = e.data;
     if (!m || m.channel !== CHANNEL || typeof m.id !== "number") return;
-    var w = game(), out;
+    var w = game();
+    function reply(out) { e.source.postMessage({ channel: CHANNEL, reply: m.id, data: out }, e.origin); }
+    function fail(err) { reply({ error: String((err && err.message) || err) }); }
     try {
-      if (!w) out = { error: "The game isn't loaded yet." };
-      else {
-        hook(w, e.origin);
-        out = m.action === "run" ? window.GameCheats.run(w, String(m.cheat), m.arg) : window.GameCheats.inspect(w);
-      }
+      if (!w) { reply({ error: "The game isn't loaded yet." }); return; }
+      hook(w, e.origin);
+      /* Some cheats (Unity saves) answer later, as a promise. */
+      Promise.resolve(m.action === "run" ? window.GameCheats.run(w, String(m.cheat), m.arg) : window.GameCheats.inspect(w))
+        .then(reply, fail);
     } catch (err) {
-      out = { error: String((err && err.message) || err) };
+      fail(err);
     }
-    e.source.postMessage({ channel: CHANNEL, reply: m.id, data: out }, e.origin);
   });
 })();
 </script>

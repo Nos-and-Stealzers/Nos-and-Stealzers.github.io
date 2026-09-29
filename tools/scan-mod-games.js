@@ -20,7 +20,8 @@ const OUT = path.join(ROOT, "data", "mod-games.js");
 const SPECIAL = {
   "huge-sm64": "mario",
   "huge-sonic-the-hedgehog": "phaser",
-  "huge-sonic-hedgehog": "phaser"
+  "huge-sonic-hedgehog": "phaser",
+  "huge-house-of-hazards": "unity"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 
@@ -60,6 +61,8 @@ function curl(url) {
 const SIGNS = [
   ["clickteam", /MMFCanvas|CRunApp|src\/Runtime\.js/i],
   ["construct", /c2runtime|cr_createRuntime|c3runtime|c3main|scripts\/main\.js|offlineclient\.js/i],
+  /* Unity WebGL: its save editor works on any of them. */
+  ["unity", /UnityLoader(\.min)?\.js|unityWebglLoaderUrl|UnityLoader\.instantiate|createUnityInstance|\.loader\.js["']/i],
   ["phaser?", /phaser(\.min)?\.js|phaser-ce/i]
 ];
 

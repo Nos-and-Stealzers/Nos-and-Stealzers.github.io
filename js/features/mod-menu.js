@@ -486,6 +486,11 @@
       l.ask("run", id, arg).then(function (d) {
         live.data = d;
         live.error = "";
+        /* A cheat that edited the save needs the game to start over to read it. */
+        if (d && d.restart && opts.reload) {
+          opts.reload();
+          window.UI.toast("Saved. The game is restarting to load it.", 3000);
+        }
       }).catch(function (err) {
         window.UI.toast(err.message || "That didn't work.", 3000);
       }).then(function () { if (tab === "cheats" && !panel.hidden) draw(); });
@@ -568,6 +573,7 @@
             if (isFinite(v)) liveRun(it.id, { value: v, lock: !!it.locked });
           });
           row.appendChild(set);
+          if (it.noLock) { list.appendChild(row); return; }
           var lock = el("button", "btn btn-sm btn-flat", it.locked ? "Unlock" : "Lock");
           lock.type = "button";
           lock.title = "Keep it at this number";
@@ -582,7 +588,13 @@
       var foot = el("div", "mod-foot");
       var again = el("button", "btn btn-sm btn-flat", "Refresh");
       again.type = "button";
-      again.addEventListener("click", function () { live.data = null; live.error = ""; draw(); });
+      again.addEventListener("click", function () {
+        live.loading = true;
+        draw();
+        l.ask("run", "refresh").then(function (d) { live.data = d; live.error = ""; })
+          .catch(function (err) { live.error = err.message; })
+          .then(function () { live.loading = false; if (tab === "cheats" && !panel.hidden) draw(); });
+      });
       foot.appendChild(again);
       body.appendChild(foot);
       return true;

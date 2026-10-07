@@ -118,6 +118,18 @@
         {
           "type": "host",
           "value": "play.securly.site"
+        },
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        },
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        },
+        {
+          "type": "host",
+          "value": "play.geminii.site"
         }
       ]
     },
@@ -140,7 +152,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -167,7 +179,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -194,7 +206,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -221,7 +233,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -248,7 +260,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -275,7 +287,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -302,7 +314,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -329,7 +341,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -356,7 +368,88 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site"
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://arcadecampushub.online https://*.arcadecampushub.online https://arcadecampushub.space https://*.arcadecampushub.space https://arcadecampushub.fun https://*.arcadecampushub.fun https://poppersarcade.online https://*.poppersarcade.online https://geniussis.online https://*.geniussis.online https://geniussis.space https://*.geniussis.space https://securlyfex.online https://*.securlyfex.online https://securlyfex.site https://*.securlyfex.site https://securly.site https://*.securly.site https://securlyflex.site https://*.securlyflex.site https://securlyflex.space https://*.securlyflex.space https://geminii.site https://*.geminii.site"
         },
         {
           "key": "Strict-Transport-Security",
@@ -464,6 +557,39 @@
       ],
       "destination": "https://www.securly.site/",
       "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "https://www.securlyflex.site/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "https://www.securlyflex.space/",
+      "permanent": false
+    },
+    {
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "destination": "https://www.geminii.site/",
+      "permanent": false
     }
   ],
   "rewrites": [
@@ -558,6 +684,36 @@
       "destination": "/js/features/game-cheats.js"
     },
     {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
+      "source": "/_mods/game-cheats.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "destination": "/js/features/game-cheats.js"
+    },
+    {
       "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
@@ -648,6 +804,36 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/:path"
+    },
+    {
       "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
@@ -738,6 +924,36 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "destination": "https://arcadecampushub.github.io/:repo/"
+    },
+    {
       "source": "/sonic-hedgehog-game/:path(.*)",
       "has": [
         {
@@ -828,6 +1044,36 @@
       "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
     },
     {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
+      "source": "/sonic-hedgehog-game/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/:path"
+    },
+    {
       "source": "/sonic-hedgehog-game",
       "has": [
         {
@@ -913,6 +1159,36 @@
         {
           "type": "host",
           "value": "play.securly.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.site"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.securlyflex.space"
+        }
+      ],
+      "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"
+    },
+    {
+      "source": "/sonic-hedgehog-game",
+      "has": [
+        {
+          "type": "host",
+          "value": "play.geminii.site"
         }
       ],
       "destination": "https://rzencoder.github.io/sonic-hedgehog-game/"

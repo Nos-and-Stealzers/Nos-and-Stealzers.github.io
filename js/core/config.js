@@ -43,6 +43,9 @@
       "https://securlyfex.online", "https://www.securlyfex.online",
       "https://securlyfex.site", "https://www.securlyfex.site",
       "https://securly.site", "https://www.securly.site",
+      "https://securlyflex.site", "https://www.securlyflex.site",
+      "https://securlyflex.space", "https://www.securlyflex.space",
+      "https://geminii.site", "https://www.geminii.site",
       "https://websitegames-topaz.vercel.app"
     ],
 
@@ -164,10 +167,13 @@
      limited to the main domain anymore. The original github.io bases stay
      in `direct` so old saves can be found. */
   var px = window.SITE.gameProxy;
+  /* Only configured HTTPS hub origins have matching play-host rewrites.
+     Preview deployments and arbitrary subdomains must keep the direct hosts:
+     play.<preview>.vercel.app and play.play.<domain> do not exist. */
   var onHub = window.SITE.domains.some(function (d) {
     try {
-      var h = new URL(d).hostname;
-      return location.hostname === h || location.hostname.slice(-(h.length + 1)) === "." + h;
+      var hub = new URL(d);
+      return location.origin === hub.origin && !/\.vercel\.app$/.test(hub.hostname);
     } catch (e) { return false; }
   });
   px.active = !!(px.enabled && onHub);

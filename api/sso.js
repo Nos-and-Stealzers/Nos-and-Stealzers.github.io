@@ -49,6 +49,12 @@ const HUB_ORIGINS = new Set([
   "https://www.securlyfex.site",
   "https://securly.site",
   "https://www.securly.site",
+  "https://securlyflex.site",
+  "https://www.securlyflex.site",
+  "https://securlyflex.space",
+  "https://www.securlyflex.space",
+  "https://geminii.site",
+  "https://www.geminii.site",
   "https://websitegames-topaz.vercel.app"
 ]);
 

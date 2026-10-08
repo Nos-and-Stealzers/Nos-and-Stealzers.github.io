@@ -831,12 +831,49 @@
         { id: "u:hoh-back", label: "Previous task", type: "button", live: true,
           hint: "Puts the last task back on the note" },
         { id: "u:hoh-restart", label: "Restart round", type: "button", live: true,
-          hint: "Same players and characters, back to the first task" }
+          hint: "Same players and characters, back to the first task" },
+        { id: "u:hoh-speed", label: "Super speed", type: "toggle", live: true,
+          hint: "Every player runs three times as fast" },
+        { id: "u:hoh-jump", label: "Super jump", type: "toggle", live: true,
+          hint: "Jump about two and a half times as high" }
       ],
       /* In a round, the game's Gamemanager and TaskManager sit on "Scripts". */
       live: { "u:hoh-skip": ["Scripts", "CompletedTask"], "u:hoh-back": ["Scripts", "PreviousTask"],
         "u:hoh-restart": ["Scripts", "RestartGame"] },
+      /* PlayerMovement keeps moveSpeed 5, acceleration 80, jumpHeight 6,
+         groundedMask, crouchable, crouchSpeedPer 0.25, carrySpeedPer 0.75
+         as consecutive 32-bit fields, so each player is found in the heap
+         by that run of values and only its speed and jump are changed. */
+      move: function (win, s) {
+        var mod = (win.unityGame && win.unityGame.Module) || win.Module;
+        var f = mod && mod.HEAPF32;
+        if (!f) return 0;
+        var speed = s.on["u:hoh-speed"] ? 15 : 5, jump = s.on["u:hoh-jump"] ? 15 : 6;
+        var at = s.hohAt && s.hohAt.buf === f.buffer ? s.hohAt.list : null;
+        var ok = at && at.length && at.every(function (i) { return f[i + 1] === 80 && f[i + 5] === 0.25 && f[i + 6] === 0.75; });
+        if (!ok || (s.hohScan = (s.hohScan || 0) + 1) % 8 === 0) {
+          at = [];
+          for (var i = 0; i < f.length - 7; i++) {
+            if (f[i + 1] === 80 && f[i + 5] === 0.25 && f[i + 6] === 0.75 &&
+                (f[i] === 5 || f[i] === 15) && (f[i + 2] === 6 || f[i + 2] === 15)) at.push(i);
+          }
+          s.hohAt = { buf: f.buffer, list: at };
+        }
+        at.forEach(function (i) { f[i] = speed; f[i + 2] = jump; });
+        return at.length;
+      },
+      tick: function (win, s) {
+        if (!s.on["u:hoh-speed"] && !s.on["u:hoh-jump"] && !s.hohWas) return;
+        s.hohWas = !!(s.on["u:hoh-speed"] || s.on["u:hoh-jump"]);
+        /* New rounds make new players, so keep applying it now and then. */
+        if ((s.hohTick = (s.hohTick || 0) + 1) % 30 === 0) this.move(win, s);
+      },
       action: function (win, s, id) {
+        if (id === "u:hoh-speed" || id === "u:hoh-jump") {
+          if (!this.move(win, s)) throw new Error("Start a round first; this works while you're playing.");
+          s.hohWas = true;
+          return;
+        }
         if (this.live[id]) {
           if (!unitySend(win, this.live[id][0], this.live[id][1])) {
             throw new Error("Start a round first; this works while you're playing.");
@@ -858,7 +895,9 @@
     if (!inst || typeof inst.SendMessage !== "function") return false;
     var missed = false;
     var c = win.console, keep = [c.log, c.warn, c.error];
-    var hear = function (m) { if (/SendMessage: object .* (not found|does not have receiver)/.test(String(m))) missed = true; };
+    var hear = function (m) {
+      if (/SendMessage: object .* (not found|does not have receiver)|Failed to call function/.test(String(m))) missed = true;
+    };
     c.log = c.warn = c.error = hear;
     try {
       if (arg === undefined) inst.SendMessage(obj, method); else inst.SendMessage(obj, method, arg);
@@ -882,6 +921,10 @@
            /\.(data|unity3d|datagz|unityweb)(\?|$)/i.test(String(win.Module.dataUrl || "")))));
     },
     load: unityLoad,
+    tick: function (win, s) {
+      var game = unityProfile(win);
+      if (game && game.tick) game.tick(win, s);
+    },
     items: function (win, s) {
       var game = unityProfile(win);
       var items = game ? game.items.map(function (it) {
@@ -1404,6 +1447,194 @@
     }
   };
 
+  /* A Dark Room: everything lives in $SM (the StateManager), which saves
+     on every change, so edits apply live. */
+  var darkRoom = {
+    name: "A Dark Room",
+    detect: function (win) { return !!(win.$SM && win.$SM.get && win.Room && win.Outside && win.Engine); },
+    items: function (win) {
+      var SM = win.$SM, stores = SM.get("stores") || {};
+      var list = [
+        { id: "adr-fill", label: "Fill every store", type: "button", group: "Stores",
+          hint: "Everything you've found so far to 5,000 (wood, fur, meat, scales...)" },
+        { id: "adr-basics", label: "+500 wood, fur, meat and leather", type: "button", group: "Stores" },
+        { id: "adr-fire", label: "Roaring fire, hot room", type: "button", group: "Room" }
+      ];
+      if (SM.get("game.builder.level") !== undefined && SM.get("game.builder.level") < 4) {
+        list.push({ id: "adr-builder", label: "Builder ready to build", type: "button", group: "Room",
+          hint: "Skips the wait for the stranger to recover; visit the room tab after" });
+      }
+      if (win.Outside.getMaxPopulation && SM.get("game.population") !== undefined) {
+        list.push({ id: "adr-pop", label: "Fill the huts with villagers", type: "button", group: "Village",
+          hint: "Up to what your huts hold (" + win.Outside.getMaxPopulation() + ")" });
+      }
+      Object.keys(stores).sort().forEach(function (k) {
+        list.push({ id: "adr-s:" + k, label: k, type: "value", group: "Store amounts",
+          value: Math.floor(Number(stores[k]) || 0), noLock: true });
+      });
+      return { note: "Changes apply right away and save with the game.", items: list };
+    },
+    action: function (win, s, id, arg) {
+      var SM = win.$SM, v = Math.round(Number(arg && arg.value));
+      var q = function (k) { return "stores[\"" + k + "\"]"; };
+      if (id === "adr-fill") {
+        var all = {};
+        Object.keys(SM.get("stores") || {}).forEach(function (k) { all[k] = Math.max(5000, Number(SM.get(q(k), true)) || 0); });
+        SM.setM("stores", all);
+      } else if (id === "adr-basics") {
+        SM.addM("stores", { wood: 500, fur: 500, meat: 500, leather: 500 });
+      } else if (id === "adr-fire") {
+        var R = win.Room;
+        SM.set("game.fire", R.FireEnum.fromInt(4));
+        SM.set("game.temperature", R.TempEnum.fromInt(4));
+        if (R.updateIncomeView) try { R.updateIncomeView(); } catch (e) {}
+      } else if (id === "adr-builder") {
+        SM.set("game.builder.level", 3);
+      } else if (id === "adr-pop") {
+        SM.set("game.population", win.Outside.getMaxPopulation());
+      } else if (id.indexOf("adr-s:") === 0 && isFinite(v) && v >= 0) {
+        SM.set(q(id.slice(6)), v);
+      }
+      try { win.Engine.saveGame(); } catch (e) {}
+    }
+  };
+
+  /* Bitcoin Clicker (julianyaman): the balance is the global `bitcoins`,
+     saved to localStorage "bitcoins" every second by the game itself. */
+  var bitcoinClicker = {
+    name: "Bitcoin Clicker",
+    detect: function (win) {
+      return typeof win.bitcoins === "number" && !!(win.Game && win.Game.bSecFunction && win.Game.itemAction);
+    },
+    items: function (win) {
+      return {
+        note: "Balance changes apply right away; building counts restart the game.",
+        items: [
+          { id: "btc-amt", label: "Bitcoins", type: "value", group: "Wallet", value: Math.floor(win.bitcoins * 1e8) / 1e8, noLock: true },
+          { id: "btc-1k", label: "+1,000 bitcoins", type: "button", group: "Wallet" },
+          { id: "btc-1b", label: "+1 billion bitcoins", type: "button", group: "Wallet", hint: "Enough for every machine in the shop" },
+          { id: "btc-all", label: "+10 of every miner", type: "button", group: "Miners", hint: "Free; the game restarts to count them" }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var v = Number(arg && arg.value);
+      if (id === "btc-all") {
+        (win.items || []).forEach(function (it) {
+          var n = parseInt(win.localStorage.getItem(it.name), 10) || 0;
+          win.localStorage.setItem(it.name, String(n + 10));
+        });
+        win.localStorage.setItem("bitcoins", String(win.bitcoins));
+        s.restart = true;
+        return;
+      }
+      if (id === "btc-1k") win.bitcoins += 1000;
+      else if (id === "btc-1b") win.bitcoins += 1e9;
+      else if (id === "btc-amt" && isFinite(v) && v >= 0) win.bitcoins = v;
+      else return;
+      win.localStorage.setItem("bitcoins", String(win.bitcoins));
+      try { win.Game.bSecFunction(0); } catch (e) {}
+    }
+  };
+
+  /* Particle Clicker (CERN): the lab object sits on the Angular
+     LabController; the game saves it to localStorage "lab" on its own. */
+  function pcLab(win) {
+    var el = win.document.querySelector("[ng-controller^=\"LabController\"]");
+    var c = el && win.angular && win.angular.element(el).controller("ngController");
+    return c && c.lab ? { lab: c.lab, el: el } : null;
+  }
+  var particleClicker = {
+    name: "Particle Clicker",
+    detect: function (win) { return !!(win.GameObjects && win.GameObjects.Lab && win.ObjectStorage && pcLab(win)); },
+    items: function (win) {
+      var st = pcLab(win).lab.state;
+      var v = function (k) { return Math.floor(Number(st[k]) || 0); };
+      return {
+        note: "Changes apply right away.",
+        items: [
+          { id: "pc-rich", label: "Max data, funding and reputation", type: "button", group: "Lab",
+            hint: "Enough to buy every research, worker and upgrade" },
+          { id: "pc-data", label: "Data", type: "value", group: "Lab", value: v("data"), noLock: true },
+          { id: "pc-money", label: "Funding (JTN)", type: "value", group: "Lab", value: v("money"), noLock: true },
+          { id: "pc-reputation", label: "Reputation", type: "value", group: "Lab", value: v("reputation"), noLock: true },
+          { id: "pc-detector", label: "Data per click", type: "value", group: "Detector", value: v("detector"), noLock: true }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var got = pcLab(win), st = got.lab.state, v = Number(arg && arg.value);
+      if (id === "pc-rich") { st.data = Math.max(st.data, 1e15); st.money = Math.max(st.money, 1e15); st.reputation = Math.max(st.reputation, 1e6); }
+      else if (/^pc-(data|money|reputation|detector)$/.test(id) && isFinite(v) && v >= 0) st[id.slice(3)] = v;
+      else return;
+      try { win.angular.element(got.el).scope().$apply(); } catch (e) {}
+      try { win.ObjectStorage.save("lab", st); } catch (e) {}
+    }
+  };
+
+  /* QuickClick (bazzerdv): Clicks / Autoclickers / Prestige globals,
+     saved as localStorage "QuickClickData" by Save.getSaveData(). */
+  /* Top-level `let` bindings aren't window properties; read them by name. */
+  function lexical(win, name) {
+    try { return win.eval("typeof " + name + " !== 'undefined' ? " + name + " : undefined"); } catch (e) { return undefined; }
+  }
+  var quickClick = {
+    name: "QuickClick",
+    detect: function (win) {
+      var save = lexical(win, "Save");
+      return !!(win.Clicks && win.Clicks.setNbrOwned && save && save.getSaveData);
+    },
+    items: function (win) {
+      return {
+        note: "Changes apply right away and save.",
+        items: [
+          { id: "qc-clicks", label: "Clicks", type: "value", group: "Clicks", value: Math.floor(win.Clicks.nbrOwned), noLock: true },
+          { id: "qc-1b", label: "+1 billion clicks", type: "button", group: "Clicks" },
+          { id: "qc-mouse", label: "Mouse rating", type: "value", group: "Clicks", value: Math.floor(win.Clicks.mouseUpgrades), noLock: true,
+            hint: "Clicks earned per press" }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var C = win.Clicks, v = Number(arg && arg.value);
+      if (id === "qc-1b") C.setNbrOwned(C.nbrOwned + 1e9);
+      else if (id === "qc-clicks" && isFinite(v) && v >= 0) C.setNbrOwned(v);
+      else if (id === "qc-mouse" && isFinite(v) && v >= 1) {
+        C.mouseUpgrades = v;
+        var m = win.document.getElementById("mouseupgrades");
+        if (m) m.textContent = "Mouse Rating: " + (win.abbreviate ? win.abbreviate(v) : v);
+      } else return;
+      try { if (win.main && win.main.update) win.main.update(); } catch (e) {}
+      try { lexical(win, "Save").getSaveData(); } catch (e) {}
+    }
+  };
+
+  /* devLife (naoxink): money is Stats.money; Core.updateHUD redraws and
+     Core.save writes the dev-* keys. */
+  var devLife = {
+    name: "devLife",
+    detect: function (win) { return !!(win.Stats && "money" in win.Stats && win.Core && win.Core.updateHUD && win.Core.save); },
+    items: function (win) {
+      return {
+        note: "Changes apply right away and save.",
+        items: [
+          { id: "dl-money", label: "Money", type: "value", group: "Company", value: Math.floor(win.Stats.money), noLock: true },
+          { id: "dl-rich", label: "+1 million", type: "button", group: "Company" },
+          { id: "dl-month", label: "End the month now", type: "button", group: "Time", hint: "Pays salaries and rent straight away" }
+        ]
+      };
+    },
+    action: function (win, s, id, arg) {
+      var v = Number(arg && arg.value);
+      if (id === "dl-rich") win.Stats.money += 1e6;
+      else if (id === "dl-money" && isFinite(v) && v >= 0) win.Stats.money = v;
+      else if (id === "dl-month") win.Stats.monthTimeLeft = 1;
+      else return;
+      try { win.Core.updateHUD(); } catch (e) {}
+      try { win.Core.save(true); } catch (e) {}
+    }
+  };
+
   /* ---------------------------------------- any game: its own variables */
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
@@ -1756,7 +1987,8 @@
   /* ------------------------------------------------------------- public */
 
   var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, unity, dino, cookie, retroBowl,
-    g2048, flappy, templeRun, crossy, generic];
+    g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
+    particleClicker, quickClick, devLife, generic];
 
   function engineFor(win) {
     var s = state(win);

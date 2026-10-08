@@ -43,14 +43,20 @@ const SPECIAL = {
   "ext3-dao-2048": "g2048",
   "huge-flappy-bird": "flappy",
   "huge-temple-run-2": "temple",
-  "huge-crossyroad": "crossy"
+  "huge-crossyroad": "crossy",
+  "huge-adarkroom": "darkroom",
+  "ext3-bitcoin-clicker": "bitcoin",
+  "huge-particle-clicker": "particle",
+  "huge-particleclicker": "particle",
+  "ext-quickclick": "quickclick",
+  "ext2-devlife": "devlife"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 
 /* Checked in a browser: these look like a supported engine from their page
    but expose nothing the menu can use (Construct 3 in worker mode, Phaser
    games whose player isn't reachable), so they stay off the list. */
-const EXCLUDE = new Set(["btts", "ext-quickclick", "ext2-dude-sidescroll", "ext2-hangman", "ext3-drunken-viking", "huge-basketball-legends-2020", "huge-draw-the-hill", "huge-geometry-jump-sketchy", "huge-go-ball", "huge-gopher", "huge-icys-purple-head", "huge-jelly-truck", "huge-moto-x3m-2", "huge-moto-x3m-pool-party", "huge-motox3m", "huge-motox3m-spooky", "huge-motox3m2", "huge-protektor", "huge-push-your-luck", "huge-slice-of-sasha", "huge-super-mario-construct", "huge-tactical-weapon-pack-2", "huge-unfold-2", "huge-wipo", "huge-yoshifabrication"]);
+const EXCLUDE = new Set(["btts", "ext2-dude-sidescroll", "ext2-hangman", "ext3-drunken-viking", "huge-basketball-legends-2020", "huge-draw-the-hill", "huge-geometry-jump-sketchy", "huge-go-ball", "huge-gopher", "huge-icys-purple-head", "huge-jelly-truck", "huge-moto-x3m-2", "huge-moto-x3m-pool-party", "huge-motox3m", "huge-motox3m-spooky", "huge-motox3m2", "huge-protektor", "huge-push-your-luck", "huge-slice-of-sasha", "huge-super-mario-construct", "huge-tactical-weapon-pack-2", "huge-unfold-2", "huge-wipo", "huge-yoshifabrication"]);
 /* Plain JavaScript games the scan mistook for an engine; their own
    variables still work. */
 const RETAG = {"ext2-bullet-hell": "values"};

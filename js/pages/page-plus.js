@@ -131,7 +131,12 @@
       ["crossy", "Crossy Road", "Set your coins or add 10,000, and set the top score."],
       ["flappy", "Flappy Bird", "Can't die, wide gaps, floaty gravity, and set the score and high score."],
       ["g2048", "2048", "Turn the biggest tile into 2048, clear the small tiles, double the board, and set the scores."],
-      ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets every character unlocked and task skipping."],
+      ["darkroom", "A Dark Room", "Fill every store, set any store amount, a roaring fire, the builder ready to build, and huts full of villagers."],
+      ["bitcoin", "Bitcoin Clicker", "Set your bitcoins, add a thousand or a billion, and ten free of every miner."],
+      ["particle", "Particle Clicker", "Max data, funding and reputation, or set each one, and more data per click."],
+      ["quickclick", "QuickClick", "Set your clicks or add a billion, and raise the mouse rating."],
+      ["devlife", "devLife", "Set your money or add a million, and end the month early."],
+      ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets super speed, super jump, every character unlocked and task skipping."],
       ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
     ];
     function drawModList() {

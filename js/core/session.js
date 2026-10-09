@@ -5,7 +5,7 @@
 
   /* Mirrors the server's ordering in db.js. The server is still the authority
      — this only decides what the interface bothers to show. */
-  var RANK = { user: 0, mod: 1, admin: 2, owner: 3 };
+  var RANK = { user: 0, mod: 1, admin: 2, dev: 3, owner: 4 };
 
   var user = null;
   var backend = false;
@@ -286,6 +286,7 @@
        don't each re-derive "isPlus OR staff". */
     isPlus: function () { return !!(user && user.isPlus) || Session.rank() >= RANK.mod; },
     isAdmin: function () { return Session.rank() >= RANK.admin; },
+    isDev: function () { return Session.rank() >= RANK.dev; },
     isOwner: function () { return Session.rank() >= RANK.owner; },
     outranks: function (role) { return Session.rank() > (RANK[role] || 0); },
     login: login,

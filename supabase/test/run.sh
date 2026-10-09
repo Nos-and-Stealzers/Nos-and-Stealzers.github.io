@@ -132,9 +132,20 @@ case_idempotent() {
   echo "  ok    three consecutive runs, no errors, rank stable"
 }
 
+case_dev() {
+  fresh_db
+  apply_schema || return 1
+  local out
+  out="$(psql $CONN -q -d archtest -f "$HERE_NATIVE/30-dev-perms.test.sql" 2>&1 \
+         | grep -E 'ok  |FAIL' | sed 's/^psql:.*NOTICE:  //;s/^NOTICE:  //')"
+  echo "$out" | sed 's/^/  /'
+  ! echo "$out" | grep -q 'FAIL'
+}
+
 run_case "fresh project"                 case_fresh
 run_case "project with an existing admin" case_upgrade
 run_case "re-running the file"            case_idempotent
+run_case "dev rank and permissions"      case_dev
 
 echo ""
 echo "========================================================"

@@ -825,6 +825,52 @@
     }).catch(function () { /* not signed in, or nothing live — fine either way */ });
   }
 
+  /* --------------------------------------------------------- site switches */
+
+  /* Set by devs from the admin console. Maintenance covers the page for
+     everyone but staff; force_reload_at makes open tabs reload once. */
+  var FLAG_KEY = "ach:flags-loaded-at";
+  function applySiteFlags() {
+    if (!window.API || !window.API.siteFlags) return;
+    var loadedAt = Date.now();
+    var fails = 0;
+    function check() {
+      window.API.siteFlags().then(function (f) {
+        var staff = window.Session && window.Session.isStaff && window.Session.isStaff();
+        var m = f.maintenance;
+        var cover = document.getElementById("site-maint");
+        if (m && m.on && !staff && !/admin\.html|login\.html/.test(location.pathname)) {
+          if (!cover) {
+            cover = el("div", "site-maint");
+            cover.id = "site-maint";
+            cover.setAttribute("role", "alert");
+            var box = el("div", "site-maint-box");
+            box.appendChild(el("strong", null, "Down for maintenance"));
+            box.appendChild(el("p", null, m.message || "Back soon."));
+            cover.appendChild(box);
+            document.body.appendChild(cover);
+          }
+        } else if (cover) {
+          cover.remove();
+        }
+        var at = Number(f.force_reload_at) || 0;
+        var seen = 0;
+        try { seen = Number(window.sessionStorage.getItem(FLAG_KEY)) || 0; } catch (e) {}
+        if (at > loadedAt && at > seen) {
+          try { window.sessionStorage.setItem(FLAG_KEY, String(at)); } catch (e) {}
+          window.location.reload();
+        }
+      }).catch(function () {
+        /* Older database without the switches: stop asking. */
+        if (++fails >= 2) window.clearInterval(timer);
+      });
+    }
+    /* Wait for the session so staff never see the cover flash up. */
+    var ready = window.Session && window.Session.ready;
+    Promise.resolve(ready && ready.then ? ready : null).then(check, check);
+    var timer = window.setInterval(function () { if (!document.hidden) check(); }, 60000);
+  }
+
   /* ------------------------------------------------------------------ boot */
 
   function boot() {
@@ -832,6 +878,7 @@
     var here = page();
 
     buildAnnouncementBanner();
+    applySiteFlags();
 
     if (mount) {
       var frag = document.createDocumentFragment();

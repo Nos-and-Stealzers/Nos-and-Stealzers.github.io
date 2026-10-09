@@ -44,10 +44,15 @@ select test_ok('a role change with nobody signed in is a silent no-op',
   (select role from public.profiles where username = 'someone') = 'user',
   (select role from public.profiles where username = 'someone'));
 
--- Promote properly: as the owner, who is an admin and then some.
+-- Promote properly: as the owner, through the staff RPC. A direct UPDATE
+-- never changes rank, not even for the owner.
 select set_config('test.uid',
   (select id::text from public.profiles where username = 'Stealzers'), false);
 update public.profiles set role = 'admin' where username = 'someone';
+select test_ok('a direct UPDATE of role is ignored, even from the owner',
+  (select role from public.profiles where username = 'someone') = 'user',
+  (select role from public.profiles where username = 'someone'));
+select public.admin_set_user((select id from public.profiles where username = 'someone'), 'admin', null);
 select test_ok('the owner can promote someone to admin',
   (select role from public.profiles where username = 'someone') = 'admin',
   (select role from public.profiles where username = 'someone'));
@@ -85,7 +90,7 @@ select test_ok('the owner cannot demote themselves',
 insert into auth.users (raw_user_meta_data) values ('{"username":"bystander"}'::jsonb);
 select set_config('test.uid',
   (select id::text from public.profiles where username = 'someone'), false);
-update public.profiles set state = 'suspended' where username = 'bystander';
+select public.admin_set_user((select id from public.profiles where username = 'bystander'), null, 'suspended');
 select test_ok('an admin can still suspend a normal account',
   (select state from public.profiles where username = 'bystander') = 'suspended',
   (select state from public.profiles where username = 'bystander'));

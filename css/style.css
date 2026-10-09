@@ -3067,12 +3067,14 @@ a.msgs-who:hover { background: var(--surface-2); text-decoration: none; }
 .utag .svg-ico { font-size: 0.8rem; margin: 0; }
 .utag.is-owner { --tag-ink: #f5b93a; }
 .utag.is-admin { --tag-ink: #ff6b81; }
+.utag.is-dev   { --tag-ink: #8b9cff; }
 .utag.is-mod   { --tag-ink: #3ddc97; }
 .utag.is-plus  { --tag-ink: var(--accent); }
 .utag.is-bad   { --tag-ink: var(--bad); }
 html[data-skin="paper"] .utag.is-owner, html[data-skin="linen"] .utag.is-owner { --tag-ink: #a86b00; }
 html[data-skin="paper"] .utag.is-mod, html[data-skin="linen"] .utag.is-mod { --tag-ink: #0f8a5f; }
 html[data-skin="paper"] .utag.is-admin, html[data-skin="linen"] .utag.is-admin { --tag-ink: #c42a45; }
+html[data-skin="paper"] .utag.is-dev, html[data-skin="linen"] .utag.is-dev { --tag-ink: #3f51c4; }
 /* Icon-only form in tight spots (lists, headers). */
 .utag:not(:has(.utag-l)) { padding: 0.15rem; margin-left: 0.3rem; }
 .utag:not(:has(.utag-l)) .svg-ico { font-size: 0.72rem; }
@@ -3649,3 +3651,11 @@ body:not(.is-plus-member) .plus-try { display: none; }
   }
   .stage.is-fullscreen .mod-panel { width: calc(100% - 1rem); right: 0.5rem; left: 0.5rem; max-height: calc(100% - 1rem); }
 }
+
+/* Maintenance cover (site switch). */
+.site-maint { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--bg, #0b0d12) 92%, transparent); backdrop-filter: blur(6px); }
+.site-maint-box { max-width: 26rem; padding: 1.6rem 1.8rem; text-align: center;
+  border: 1px solid var(--line, #2a2f3a); background: var(--panel, #12151c); }
+.site-maint-box strong { display: block; font-size: 1.2rem; margin-bottom: 0.4rem; }
+.site-maint-box p { margin: 0; color: var(--dim, #9aa3b2); }

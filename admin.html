@@ -43,12 +43,12 @@
         <button class="admin-nav-link" type="button" data-tab="feedback" data-icon="star"><span class="lbl">Feedback</span></button>
         <span class="admin-nav-label">People</span>
         <button class="admin-nav-link" type="button" data-tab="users" data-icon="group"><span class="lbl">Users</span></button>
-        <button class="admin-nav-link" type="button" data-tab="logins" data-icon="key"><span class="lbl">Sign-ins</span></button>
+        <button class="admin-nav-link" type="button" data-tab="logins" data-icon="key" data-owner-or-admin hidden><span class="lbl">Sign-ins</span></button>
         <span class="admin-nav-label">Content</span>
         <button class="admin-nav-link" type="button" data-tab="playlists" data-icon="video"><span class="lbl">Playlists</span></button>
-        <button class="admin-nav-link" type="button" data-tab="games" data-icon="gamepad" data-owner hidden><span class="lbl">Games</span></button>
+        <button class="admin-nav-link" type="button" data-tab="games" data-icon="gamepad" data-dev hidden><span class="lbl">Games</span></button>
         <button class="admin-nav-link" type="button" data-tab="gamedata" data-icon="database"><span class="lbl">Game data</span></button>
-        <button class="admin-nav-link" type="button" data-tab="workbench" data-icon="code" data-owner hidden><span class="lbl">Workbench</span></button>
+        <button class="admin-nav-link" type="button" data-tab="workbench" data-icon="code" data-dev hidden><span class="lbl">Workbench</span></button>
         <span class="admin-nav-label">More</span>
         <a class="admin-nav-link" href="admin-search.html" data-icon="search" data-owner-or-admin hidden><span class="lbl">Tools</span></a>
         <button class="admin-nav-link" type="button" data-tab="help" data-icon="info"><span class="lbl">Help</span></button>
@@ -125,6 +125,11 @@
             <button class="btn btn-sm btn-cta" type="button" id="ann-post">Post</button>
             <button class="btn btn-sm btn-flat" type="button" id="ann-clear">Clear live banner</button>
           </div>
+        </div>
+
+        <div class="block-head" data-dev hidden><h2>Site switches</h2><span class="fill"></span><span class="tiny dimmer">devs and owner</span></div>
+        <div class="panel admin-flags" data-dev hidden style="margin-bottom:1.4rem">
+          <div class="rows" id="flag-rows" style="border:0"></div>
         </div>
 
         <div class="two-col">

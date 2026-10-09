@@ -988,6 +988,485 @@
     }
   };
 
+  /* ---------------------------------------- Flash games (Ruffle saves) */
+
+  /* Ruffle keeps each Flash SharedObject in localStorage as a base64 .sol
+     file, under "<swf host><localPath>/<name>". The page's own .swf comes
+     from its resource timings, and only saves whose localPath is that
+     .swf's path (or a folder above it, which Flash allows) are shown. */
+  /* AMF0/AMF3 and .sol reader/writer; writing back what it read gives the same save. */
+  var Amf = (function () {
+    function Reader(bytes) { this.b = bytes; this.p = 0; this.dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength); this.str = []; this.obj = []; this.traits = []; }
+    Reader.prototype.u8 = function () { return this.b[this.p++]; };
+    Reader.prototype.u16 = function () { var v = this.dv.getUint16(this.p); this.p += 2; return v; };
+    Reader.prototype.u32 = function () { var v = this.dv.getUint32(this.p); this.p += 4; return v; };
+    Reader.prototype.f64 = function () { var v = this.dv.getFloat64(this.p); this.p += 8; return v; };
+    Reader.prototype.utf = function (n) { var s = new TextDecoder().decode(this.b.subarray(this.p, this.p + n)); this.p += n; return s; };
+    Reader.prototype.u29 = function () {
+      var v = 0;
+      for (var i = 0; i < 4; i++) {
+        var c = this.u8();
+        if (i < 3) { v = (v << 7) | (c & 0x7f); if (!(c & 0x80)) return v; }
+        else return (v << 8) | c;
+      }
+    };
+    Reader.prototype.s3 = function () {
+      var h = this.u29();
+      if (!(h & 1)) return this.str[h >> 1];
+      var s = this.utf(h >> 1);
+      if (s !== "") this.str.push(s);
+      return s;
+    };
+    Reader.prototype.v3 = function () {
+      var m = this.u8(), h, i, out, n;
+      switch (m) {
+        case 0: return { t: "undef" };
+        case 1: return null;
+        case 2: return false;
+        case 3: return true;
+        case 4: h = this.u29(); if (h & 0x10000000) h -= 0x20000000; return { t: "int", v: h };
+        case 5: return this.f64();
+        case 6: return this.s3();
+        case 7: case 11:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          out = { t: m === 7 ? "xmldoc" : "xml", v: this.utf(h >> 1) }; this.obj.push(out); return out;
+        case 8:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          out = { t: "date", v: this.f64() }; this.obj.push(out); return out;
+        case 9:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          out = { t: "array", assoc: [], dense: [] }; this.obj.push(out);
+          for (;;) { var k = this.s3(); if (k === "") break; out.assoc.push([k, this.v3()]); }
+          for (i = 0; i < (h >> 1); i++) out.dense.push(this.v3());
+          return out;
+        case 10:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          var tr;
+          if (!(h & 2)) tr = this.traits[h >> 2];
+          else {
+            if (h & 4) throw new Error("externalizable");
+            tr = { cls: this.s3(), dynamic: !!(h & 8), sealed: [] };
+            n = h >> 4;
+            for (i = 0; i < n; i++) tr.sealed.push(this.s3());
+            this.traits.push(tr);
+          }
+          out = { t: "obj", tr: tr, sealed: [], dyn: [] }; this.obj.push(out);
+          for (i = 0; i < tr.sealed.length; i++) out.sealed.push(this.v3());
+          if (tr.dynamic) for (;;) { var dk = this.s3(); if (dk === "") break; out.dyn.push([dk, this.v3()]); }
+          return out;
+        case 12:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          out = { t: "bytes", v: this.b.slice(this.p, this.p + (h >> 1)) }; this.p += h >> 1; this.obj.push(out); return out;
+        case 13: case 14: case 15: case 16:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          n = h >> 1;
+          out = { t: "vec", m: m, fixed: this.u8(), items: [] }; this.obj.push(out);
+          if (m === 16) out.cls = this.s3();
+          for (i = 0; i < n; i++) {
+            if (m === 13) { out.items.push(this.dv.getInt32(this.p)); this.p += 4; }
+            else if (m === 14) { out.items.push(this.dv.getUint32(this.p)); this.p += 4; }
+            else if (m === 15) out.items.push(this.f64());
+            else out.items.push(this.v3());
+          }
+          return out;
+        case 17:
+          h = this.u29(); if (!(h & 1)) return this.obj[h >> 1];
+          out = { t: "dict", weak: this.u8(), items: [] }; this.obj.push(out);
+          for (i = 0; i < (h >> 1); i++) out.items.push([this.v3(), this.v3()]);
+          return out;
+      }
+      throw new Error("AMF3 marker " + m + " at " + (this.p - 1));
+    };
+    Reader.prototype.s0 = function (long) { return this.utf(long ? this.u32() : this.u16()); };
+    Reader.prototype.v0 = function () {
+      var m = this.u8(), out, k, n, i;
+      switch (m) {
+        case 0: return this.f64();
+        case 1: return this.u8() !== 0;
+        case 2: return this.s0();
+        case 3: case 8: case 16:
+          out = { t: "obj0", m: m, props: [] };
+          if (m === 8) out.count = this.u32();
+          if (m === 16) out.cls = this.s0();
+          this.obj.push(out);
+          for (;;) { k = this.s0(); if (k === "" && this.b[this.p] === 9) { this.p++; break; } out.props.push([k, this.v0()]); }
+          return out;
+        case 5: return null;
+        case 6: return { t: "undef" };
+        case 7: return this.obj[this.u16()];
+        case 10: n = this.u32(); out = { t: "arr0", items: [] }; this.obj.push(out); for (i = 0; i < n; i++) out.items.push(this.v0()); return out;
+        case 11: out = { t: "date0", v: this.f64(), tz: this.u16() }; return out;
+        case 12: return { t: "long0", v: this.s0(true) };
+        case 15: return { t: "xml0", v: this.s0(true) };
+        case 17: return { t: "amf3", v: this.v3() };
+      }
+      throw new Error("AMF0 marker " + m);
+    };
+
+    function Writer() { this.parts = []; this.n = 0; this.seen = new Map(); this.cnt = 0; }
+    Writer.prototype.push = function (arr) { var u = arr instanceof Uint8Array ? arr : new Uint8Array(arr); this.parts.push(u); this.n += u.length; };
+    Writer.prototype.u8 = function (v) { this.push([v & 255]); };
+    Writer.prototype.u16 = function (v) { this.push([(v >> 8) & 255, v & 255]); };
+    Writer.prototype.u32 = function (v) { var b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v); this.push(b); };
+    Writer.prototype.f64 = function (v) { var b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, v); this.push(b); };
+    Writer.prototype.u29 = function (v) {
+      v = v & 0x1fffffff;
+      if (v < 0x80) this.push([v]);
+      else if (v < 0x4000) this.push([(v >> 7) | 0x80, v & 0x7f]);
+      else if (v < 0x200000) this.push([(v >> 14) | 0x80, ((v >> 7) & 0x7f) | 0x80, v & 0x7f]);
+      else this.push([(v >> 22) | 0x80, ((v >> 15) & 0x7f) | 0x80, ((v >> 8) & 0x7f) | 0x80, v & 0xff]);
+    };
+    Writer.prototype.s3 = function (s) { var b = new TextEncoder().encode(s); this.u29((b.length << 1) | 1); this.push(b); };
+    Writer.prototype.ref = function (o) {
+      if (this.seen.has(o)) { this.u29(this.seen.get(o) << 1); return true; }
+      this.seen.set(o, this.cnt++); return false;
+    };
+    Writer.prototype.v3 = function (v) {
+      var i;
+      if (v === null) return this.u8(1);
+      if (v === false) return this.u8(2);
+      if (v === true) return this.u8(3);
+      if (typeof v === "number") { this.u8(5); return this.f64(v); }
+      if (typeof v === "string") { this.u8(6); return this.s3(v); }
+      switch (v.t) {
+        case "undef": return this.u8(0);
+        case "int":
+          if (v.v >= -0x10000000 && v.v < 0x10000000) { this.u8(4); return this.u29(v.v & 0x1fffffff); }
+          this.u8(5); return this.f64(v.v);
+        case "xmldoc": case "xml": this.u8(v.t === "xml" ? 11 : 7); if (this.ref(v)) return; var xb = new TextEncoder().encode(v.v); this.u29((xb.length << 1) | 1); return this.push(xb);
+        case "date": this.u8(8); if (this.ref(v)) return; this.u29(1); return this.f64(v.v);
+        case "array":
+          this.u8(9); if (this.ref(v)) return;
+          this.u29((v.dense.length << 1) | 1);
+          v.assoc.forEach(function (kv) { this.s3(kv[0]); this.v3(kv[1]); }, this);
+          this.s3("");
+          v.dense.forEach(function (x) { this.v3(x); }, this);
+          return;
+        case "obj":
+          this.u8(10); if (this.ref(v)) return;
+          var tr = v.tr;
+          this.u29((tr.sealed.length << 4) | (tr.dynamic ? 8 : 0) | 3);
+          this.s3(tr.cls);
+          tr.sealed.forEach(function (k) { this.s3(k); }, this);
+          v.sealed.forEach(function (x) { this.v3(x); }, this);
+          if (tr.dynamic) { v.dyn.forEach(function (kv) { this.s3(kv[0]); this.v3(kv[1]); }, this); this.s3(""); }
+          return;
+        case "bytes": this.u8(12); if (this.ref(v)) return; this.u29((v.v.length << 1) | 1); return this.push(v.v);
+        case "vec":
+          this.u8(v.m); if (this.ref(v)) return;
+          this.u29((v.items.length << 1) | 1); this.u8(v.fixed);
+          if (v.m === 16) this.s3(v.cls || "");
+          v.items.forEach(function (x) {
+            if (v.m === 13 || v.m === 14) { var b = new Uint8Array(4); var d = new DataView(b.buffer); if (v.m === 13) d.setInt32(0, x); else d.setUint32(0, x); this.push(b); }
+            else if (v.m === 15) this.f64(x); else this.v3(x);
+          }, this);
+          return;
+        case "dict":
+          this.u8(17); if (this.ref(v)) return;
+          this.u29((v.items.length << 1) | 1); this.u8(v.weak);
+          v.items.forEach(function (kv) { this.v3(kv[0]); this.v3(kv[1]); }, this);
+          return;
+      }
+      throw new Error("can't write " + v.t);
+    };
+    Writer.prototype.s0 = function (s, long) { var b = new TextEncoder().encode(s); if (long) this.u32(b.length); else this.u16(b.length); this.push(b); };
+    Writer.prototype.v0 = function (v) {
+      if (v === null) return this.u8(5);
+      if (typeof v === "number") { this.u8(0); return this.f64(v); }
+      if (typeof v === "boolean") { this.u8(1); return this.u8(v ? 1 : 0); }
+      if (typeof v === "string") { this.u8(2); return this.s0(v); }
+      switch (v.t) {
+        case "undef": return this.u8(6);
+        case "obj0":
+          if (this.seen.has(v)) { this.u8(7); return this.u16(this.seen.get(v)); }
+          this.seen.set(v, this.cnt++);
+          this.u8(v.m);
+          if (v.m === 8) this.u32(v.count || 0);
+          if (v.m === 16) this.s0(v.cls);
+          v.props.forEach(function (kv) { this.s0(kv[0]); this.v0(kv[1]); }, this);
+          this.u16(0); return this.u8(9);
+        case "arr0":
+          if (this.seen.has(v)) { this.u8(7); return this.u16(this.seen.get(v)); }
+          this.seen.set(v, this.cnt++);
+          this.u8(10); this.u32(v.items.length); v.items.forEach(function (x) { this.v0(x); }, this); return;
+        case "date0": this.u8(11); this.f64(v.v); return this.u16(v.tz);
+        case "long0": this.u8(12); return this.s0(v.v, true);
+        case "xml0": this.u8(15); return this.s0(v.v, true);
+        case "amf3": this.u8(17); var w = new Writer(); w.v3(v.v); return this.push(w.bytes());
+      }
+      throw new Error("can't write AMF0 " + v.t);
+    };
+    Writer.prototype.bytes = function () {
+      var out = new Uint8Array(this.n), o = 0;
+      this.parts.forEach(function (p) { out.set(p, o); o += p.length; });
+      return out;
+    };
+
+    /* A whole .sol file: header, name, AMF version, then name/value pairs. */
+    function readSol(bytes) {
+      var r = new Reader(bytes);
+      if (r.u16() !== 0x00bf) throw new Error("not a .sol");
+      r.u32();
+      if (r.utf(4) !== "TCSO") throw new Error("not a .sol");
+      r.p += 6;
+      var name = r.utf(r.u16());
+      var ver = r.u32();
+      var entries = [];
+      while (r.p < bytes.length) {
+        var k, v;
+        if (ver === 3) { k = r.s3(); v = r.v3(); }
+        else { k = r.utf(r.u16()); v = r.v0(); }
+        r.u8();
+        entries.push([k, v]);
+      }
+      return { name: name, ver: ver, entries: entries };
+    }
+    function writeSol(sol) {
+      var body = new Writer();
+      sol.entries.forEach(function (kv) {
+        if (sol.ver === 3) { body.s3(kv[0]); body.v3(kv[1]); }
+        else { body.s0(kv[0]); body.v0(kv[1]); }
+        body.u8(0);
+      });
+      var nameB = new TextEncoder().encode(sol.name);
+      var b = body.bytes();
+      var len = 4 + 6 + 2 + nameB.length + 4 + b.length;
+      var w = new Writer();
+      w.u16(0x00bf); w.u32(len); w.push(new TextEncoder().encode("TCSO")); w.push([0, 4, 0, 0, 0, 0]);
+      w.u16(nameB.length); w.push(nameB); w.u32(sol.ver); w.push(b);
+      return w.bytes();
+    }
+    function b64d(s) { var bin = atob(s), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+    function b64e(u) { var s = ""; for (var i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+    function readAmf3(bytes) { return new Reader(bytes).v3(); }
+    function writeAmf3(v) { var w = new Writer(); w.v3(v); return w.bytes(); }
+    return { readSol: readSol, writeSol: writeSol, readAmf3: readAmf3, writeAmf3: writeAmf3, b64d: b64d, b64e: b64e };
+  })();
+
+  function flashSwf(win) {
+    var list = [];
+    try {
+      list = win.performance.getEntriesByType("resource").map(function (e) { return e.name; })
+        .filter(function (u) { return /\.swf(\?|#|$)/i.test(u); });
+    } catch (e) {}
+    try {
+      var q = new win.URLSearchParams(win.location.search);
+      ["swf", "url", "src"].forEach(function (k) { if (q.get(k)) list.unshift(new win.URL(q.get(k), win.location.href).href); });
+    } catch (e) {}
+    return list[0] || null;
+  }
+  function flashKeys(win, swf) {
+    var u = new win.URL(swf), host = u.host, path = decodeURIComponent(u.pathname);
+    var prefixes = ["/"];
+    var parts = path.split("/").filter(Boolean);
+    for (var i = 1; i <= parts.length; i++) prefixes.push("/" + parts.slice(0, i).join("/"));
+    var out = [];
+    for (var j = 0; j < win.localStorage.length; j++) {
+      var k = win.localStorage.key(j);
+      if (k.indexOf(host + "/") !== 0) continue;
+      var v = win.localStorage.getItem(k) || "";
+      if (v.slice(0, 3) !== "AL8") continue;          /* base64 of 00 BF: a .sol */
+      var rest = k.slice(host.length);
+      var mine = prefixes.some(function (p) {
+        var head = p === "/" ? "//" : p + "/";
+        if (rest.indexOf(head) !== 0) return false;
+        var name = rest.slice(head.length);
+        return p === path || !/\.swf\//i.test(name);
+      });
+      var shared = rest.indexOf("//") === 0;
+      if (mine) out.push({ key: k, name: shared ? rest.slice(2) : rest.slice(rest.lastIndexOf("/") + 1), shared: shared });
+    }
+    return out;
+  }
+  function flashRaw(stream, bytes, win) {
+    var Ctor = stream === "c" ? win.CompressionStream : win.DecompressionStream;
+    var C = Ctor ? new Ctor("deflate-raw") : null;
+    if (!C) return Promise.reject(new Error("This browser can't open that save."));
+    return new win.Response(new win.Blob([bytes]).stream().pipeThrough(C)).arrayBuffer()
+      .then(function (b) { return new Uint8Array(b); });
+  }
+  function amfField(o, name) {
+    if (!o || o.t !== "obj") return undefined;
+    var i = o.tr.sealed.indexOf(name);
+    if (i !== -1) return o.sealed[i];
+    for (var j = 0; j < o.dyn.length; j++) if (o.dyn[j][0] === name) return o.dyn[j][1];
+    return undefined;
+  }
+  function amfSet(o, name, v) {
+    var i = o.tr.sealed.indexOf(name);
+    if (i !== -1) { o.sealed[i] = v; return; }
+    for (var j = 0; j < o.dyn.length; j++) if (o.dyn[j][0] === name) { o.dyn[j][1] = v; return; }
+  }
+  function amfNum(v) {
+    if (typeof v === "number") return v;
+    if (v && v.t === "int") return v.v;
+    return null;
+  }
+  /* Number leaves of a decoded save, with a way to set each one. Wrapper
+     objects holding a single value (SafeNumber and the like) count as one. */
+  function amfLeaves(root, label) {
+    var out = [], seen = new Set();
+    function asNum(old, n) { return old && old.t === "int" && Math.round(n) === n && Math.abs(n) < 0x10000000 ? { t: "int", v: n } : n; }
+    function walk(v, path, set, depth) {
+      if (out.length > 400 || depth > 8) return;
+      var n = amfNum(v);
+      if (n !== null) { out.push({ path: path, value: n, set: function (x) { set(asNum(v, x)); } }); return; }
+      if (!v || typeof v !== "object" || seen.has(v)) return;
+      seen.add(v);
+      if (v.t === "obj") {
+        if (v.tr.sealed.length === 1 && v.dyn.length === 0 && amfNum(v.sealed[0]) !== null) {
+          var inner = v.sealed[0];
+          out.push({ path: path, value: amfNum(inner), set: function (x) { v.sealed[0] = asNum(inner, x); } });
+          return;
+        }
+        v.tr.sealed.forEach(function (k, i) { walk(v.sealed[i], path.concat(k), function (x) { v.sealed[i] = x; }, depth + 1); });
+        v.dyn.forEach(function (kv) { walk(kv[1], path.concat(kv[0]), function (x) { kv[1] = x; }, depth + 1); });
+      } else if (v.t === "obj0") {
+        v.props.forEach(function (kv) { walk(kv[1], path.concat(kv[0]), function (x) { kv[1] = x; }, depth + 1); });
+      } else if (v.t === "array") {
+        v.assoc.forEach(function (kv) { walk(kv[1], path.concat(kv[0]), function (x) { kv[1] = x; }, depth + 1); });
+        v.dense.forEach(function (x, i) { walk(x, path.concat(String(i)), function (y) { v.dense[i] = y; }, depth + 1); });
+      } else if (v.t === "arr0" || (v.t === "vec" && v.m === 16)) {
+        v.items.forEach(function (x, i) { walk(x, path.concat(String(i)), function (y) { v.items[i] = y; }, depth + 1); });
+      } else if (v.t === "amf3") {
+        walk(v.v, path, function (x) { v.v = x; }, depth + 1);
+      }
+    }
+    walk(root, label ? [label] : [], function () {}, 0);
+    return out;
+  }
+
+  /* Learn to Fly 3 keeps everything in one string: base64 of raw-deflated
+     AMF3 (a ProfileState holding six save slots). Checked in the game: an
+     edited slot's cash shows in the slot list and the hangar. */
+  var LTF3 = /LearnToFly3\/profileData$/;
+  function ltf3Open(win, sol) {
+    var str = sol.entries.filter(function (e) { return e[0] === "saveString"; })[0];
+    if (!str) return Promise.resolve(null);
+    return flashRaw("d", Amf.b64d(str[1]), win).then(function (raw) { return Amf.readAmf3(raw); });
+  }
+  function ltf3Seal(win, sol, profile) {
+    return flashRaw("c", Amf.writeAmf3(profile), win).then(function (z) {
+      sol.entries.forEach(function (e) { if (e[0] === "saveString") e[1] = Amf.b64e(z); });
+    });
+  }
+
+  function flashLoad(win, s) {
+    s.flash = { saves: [] };
+    var swf = flashSwf(win);
+    if (!swf) { s.flash.error = "Can't tell which Flash file this is."; return Promise.resolve(); }
+    var keys = flashKeys(win, swf);
+    return Promise.all(keys.map(function (k) {
+      var rec = { key: k.key, name: k.name, shared: k.shared };
+      try { rec.sol = Amf.readSol(Amf.b64d(win.localStorage.getItem(k.key))); }
+      catch (e) { rec.error = String(e.message || e); return rec; }
+      if (LTF3.test(k.key)) {
+        return ltf3Open(win, rec.sol).then(function (p) { rec.ltf3 = p; return rec; }, function () { return rec; });
+      }
+      return rec;
+    })).then(function (saves) { s.flash.saves = saves.filter(function (r) { return r.sol; }); });
+  }
+
+  /* Write a changed save back. Ruffle writes its own copy out when the page
+     unloads, which would undo this, so the edit is written again from
+     listeners added after Ruffle's. */
+  function flashSave(win, s, rec) {
+    var seal = rec.ltf3 ? ltf3Seal(win, rec.sol, rec.ltf3) : Promise.resolve();
+    return seal.then(function () {
+      var data = Amf.b64e(Amf.writeSol(rec.sol));
+      var backup = "ach:flash-backup:" + rec.key;
+      try { if (!win.localStorage.getItem(backup)) win.localStorage.setItem(backup, win.localStorage.getItem(rec.key)); } catch (e) {}
+      var put = function () { try { win.localStorage.setItem(rec.key, data); } catch (e) {} };
+      put();
+      ["beforeunload", "pagehide", "unload"].forEach(function (ev) { win.addEventListener(ev, put); });
+      s.restart = true;
+    });
+  }
+
+  var flash = {
+    name: "Flash",
+    detect: function (win) {
+      return !!(win.RufflePlayer && win.document.querySelector("ruffle-player, ruffle-object, ruffle-embed"));
+    },
+    load: flashLoad,
+    items: function (win, s) {
+      var f = s.flash || {};
+      if (f.error) return { items: [], note: f.error };
+      var items = [];
+      f.saves.forEach(function (rec, si) {
+        if (rec.ltf3) {
+          var slots = amfField(rec.ltf3, "saveSlots");
+          (slots && (slots.items || slots.dense) || []).forEach(function (slot, i) {
+            if (!slot || !amfField(slot, "timeDateString")) return;
+            var g = "Learn to Fly 3, slot " + (i + 1);
+            items.push({ id: "fl:ltf-cash:" + si + ":" + i, label: "Cash", type: "value", group: g,
+              value: amfNum(amfField(amfField(slot, "cash"), "value")) || 0, noLock: true });
+            items.push({ id: "fl:ltf-rich:" + si + ":" + i, label: "+1,000,000 cash", type: "button", group: g });
+          });
+          return;
+        }
+        var leaves = amfLeaves({ t: "obj0", props: rec.sol.entries }, "");
+        var money = leaves.filter(function (l) { return WANTED.test(l.path.join(" ")); });
+        var group = (rec.shared ? "Shared save " : "Save ") + rec.name;
+        if (money.length) items.push({ id: "fl:rich:" + si, label: "Max everything", type: "button", group: group,
+          hint: "Coins, money, score and the like to 999,999" });
+        leaves.slice(0, 60).forEach(function (l, li) {
+          items.push({ id: "fl:v:" + si + ":" + li, label: l.path.join(".") || rec.name, type: "value", group: group,
+            value: Math.round(l.value * 100) / 100, noLock: true });
+        });
+      });
+      var backups = f.saves.some(function (rec) {
+        try { return !!win.localStorage.getItem("ach:flash-backup:" + rec.key); } catch (e) { return false; }
+      });
+      if (backups) items.push({ id: "fl:undo", label: "Undo save edits", type: "button", group: "Save",
+        hint: "Puts back the saves from before the first change" });
+      return {
+        items: items,
+        note: f.saves.length ? "Save edits restart the game so it loads them."
+          : "Flash game. Nothing is saved yet; play until the game saves, then Refresh."
+      };
+    },
+    action: function (win, s, id, arg) {
+      var f = s.flash, m, rec, v = Number(arg && arg.value);
+      if (id === "fl:undo") {
+        f.saves.forEach(function (r) {
+          var b = "ach:flash-backup:" + r.key, old = win.localStorage.getItem(b);
+          if (!old) return;
+          var put = function () { try { win.localStorage.setItem(r.key, old); } catch (e) {} };
+          put(); ["beforeunload", "pagehide", "unload"].forEach(function (ev) { win.addEventListener(ev, put); });
+          win.localStorage.removeItem(b);
+        });
+        s.restart = true;
+        return;
+      }
+      if ((m = /^fl:ltf-(cash|rich):(\d+):(\d+)$/.exec(id))) {
+        rec = f.saves[+m[2]];
+        var slot = (amfField(rec.ltf3, "saveSlots").items || [])[+m[3]];
+        var cash = amfField(slot, "cash");
+        var now = amfNum(amfField(cash, "value")) || 0;
+        var next = m[1] === "rich" ? now + 1000000 : v;
+        if (!isFinite(next) || next < 0) return;
+        next = Math.min(Math.round(next), 999999999);
+        amfSet(cash, "value", next < 0x10000000 ? { t: "int", v: next } : next);
+        return flashSave(win, s, rec);
+      }
+      if ((m = /^fl:rich:(\d+)$/.exec(id))) {
+        rec = f.saves[+m[1]];
+        amfLeaves({ t: "obj0", props: rec.sol.entries }, "").forEach(function (l) {
+          if (WANTED.test(l.path.join(" "))) l.set(/lives|life/i.test(l.path.join(" ")) ? 99 : 999999);
+        });
+        return flashSave(win, s, rec);
+      }
+      if ((m = /^fl:v:(\d+):(\d+)$/.exec(id)) && isFinite(v)) {
+        rec = f.saves[+m[1]];
+        var leaf = amfLeaves({ t: "obj0", props: rec.sol.entries }, "")[+m[2]];
+        if (!leaf) return;
+        leaf.set(v);
+        return flashSave(win, s, rec);
+      }
+    }
+  };
+
   /* ---------------------------------------- known games: their own API */
 
   /* Some games keep a well-known object on the window. Each entry here
@@ -1986,7 +2465,7 @@
 
   /* ------------------------------------------------------------- public */
 
-  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, unity, dino, cookie, retroBowl,
+  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, flash, unity, dino, cookie, retroBowl,
     g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
     particleClicker, quickClick, devLife, generic];
 

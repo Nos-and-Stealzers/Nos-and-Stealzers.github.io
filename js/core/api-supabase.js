@@ -1558,6 +1558,25 @@
     adminSetMute: function (id, minutes) {
       return rpc("admin_set_mute", { target: id, minutes: minutes });
     },
+    adminWarn: function (id, message) {
+      return rpc("admin_warn", { target: id, message: message });
+    },
+    adminKick: function (id) {
+      return rpc("admin_kick", { target: id });
+    },
+    adminResetProfile: function (id, parts) {
+      return rpc("admin_reset_profile", { target: id, parts: parts });
+    },
+    adminPurgeMessages: function (id, hours) {
+      return rpc("admin_purge_messages", { target: id, hours: hours });
+    },
+    /* Site switches (dev+ to change, anyone to read). */
+    siteFlags: function () {
+      return rpc("site_flags", {}).then(function (f) { return f || {}; });
+    },
+    adminSetFlag: function (flag, value) {
+      return rpc("admin_set_flag", { flag: flag, val: value === undefined ? null : value });
+    },
 
     /* ---- Campus+ : YouTube-link playlists ---- */
     createPlaylist: function (title, description, isPublic) {

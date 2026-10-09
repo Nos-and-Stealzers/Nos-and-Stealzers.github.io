@@ -87,6 +87,8 @@ function curl(url) {
 }
 
 const SIGNS = [
+  /* Flash through Ruffle: the save editor reads Ruffle's SharedObjects. */
+  ["flash", /ruffle(\.min)?\.js|RufflePlayer/i],
   ["clickteam", /MMFCanvas|CRunApp|src\/Runtime\.js/i],
   ["construct", /c2runtime|cr_createRuntime|c3runtime|c3main|scripts\/main\.js|offlineclient\.js/i],
   /* Unity WebGL: its save editor works on any of them. */
@@ -117,6 +119,7 @@ async function main() {
   games.forEach((g) => {
     if (SPECIAL[g.id]) { out[g.id] = SPECIAL[g.id]; return; }
     if (SPECIAL_HOST[g.host]) { out[g.id] = SPECIAL_HOST[g.host]; return; }
+    if (/(^|\/)games\/flash\.html\?/.test(String(g.source || ""))) { out[g.id] = "flash"; return; }
     if (EXCLUDE.has(g.id)) return;
     if (RETAG[g.id]) { out[g.id] = RETAG[g.id]; return; }
     const src = String(g.source || g.direct || "");

@@ -55,3 +55,8 @@ create table if not exists storage.objects (id uuid primary key default gen_rand
 alter table storage.objects enable row level security;
 create or replace function storage.foldername(name text) returns text[]
 language sql as $$ select string_to_array(name, '/') $$;
+
+-- For the ban / sign-out RPCs.
+alter table auth.users add column if not exists banned_until timestamptz;
+create table if not exists auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid);
+create table if not exists auth.refresh_tokens (id bigserial primary key, user_id text);

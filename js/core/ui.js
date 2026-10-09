@@ -72,6 +72,7 @@
      Returns a fragment (possibly empty) so callers can append unconditionally. */
   var ROLE_TAGS = {
     owner: { label: "Owner", icon: "crown", cls: "is-owner" },
+    dev:   { label: "Dev",   icon: "code",  cls: "is-dev" },
     admin: { label: "Admin", icon: "shield", cls: "is-admin" },
     mod:   { label: "Mod",   icon: "shieldCheck", cls: "is-mod" }
   };

@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var RANKS = ["user", "mod", "admin", "owner"];
+  var RANKS = ["user", "mod", "admin", "dev", "owner"];
   function rankOf(role) { return Math.max(0, RANKS.indexOf(role)); }
 
   /* A short, actually-typeable random password for the admin "Generate"
@@ -35,6 +35,7 @@
       }
 
       var isAdmin = window.Session.isAdmin();
+      var isDev = window.Session.isDev();
       var isOwner = window.Session.isOwner();
 
       document.getElementById("console").hidden = false;
@@ -51,6 +52,7 @@
       }
       document.querySelectorAll("[data-owner]").forEach(function (n) { n.hidden = !isOwner; });
       document.querySelectorAll("[data-owner-or-admin]").forEach(function (n) { n.hidden = !isAdmin; });
+      document.querySelectorAll("[data-dev]").forEach(function (n) { n.hidden = !isDev; });
 
       /* ------------------------------------------------------------ tabs */
 
@@ -86,10 +88,11 @@
       /* The tab lives in the URL, so a refresh — or a link someone pastes to
          a colleague — lands where it was rather than back on Overview. */
       /* Hiding the nav button is convenience, not a lock — the data behind every other tab is re-checked on the… */
-      var OWNER_ONLY_TABS = { workbench: true };
+      var DEV_TABS = { workbench: true, games: true };
+      var ADMIN_TABS = { logins: true };
 
       function show(name, force) {
-        if (!TABS[name] || (OWNER_ONLY_TABS[name] && !isOwner)) name = "overview";
+        if (!TABS[name] || (DEV_TABS[name] && !isDev) || (ADMIN_TABS[name] && !isAdmin)) name = "overview";
         active = name;
 
         tabs.querySelectorAll(".admin-nav-link[data-tab]").forEach(function (t) {
@@ -203,6 +206,64 @@
         }).catch(function () { /* non-critical */ });
       }
 
+      /* Site switches (dev+). The server re-checks every change. */
+      function loadFlags() {
+        var host = document.getElementById("flag-rows");
+        if (!host || !API.siteFlags) return;
+        API.siteFlags().then(function (f) {
+          host.innerHTML = "";
+          var maint = f.maintenance && f.maintenance.on;
+          function row(title, note, control) {
+            var r = UI.el("div", "row");
+            r.style.alignItems = "center";
+            r.style.gap = "0.8rem";
+            var txt = UI.el("div");
+            txt.style.flex = "1";
+            txt.appendChild(UI.el("strong", null, title));
+            txt.appendChild(UI.el("p", "tiny dimmer", note));
+            r.appendChild(txt);
+            r.appendChild(control);
+            host.appendChild(r);
+          }
+          var mBtn = UI.el("button", "btn btn-sm" + (maint ? " is-danger" : ""), maint ? "Turn off" : "Turn on");
+          mBtn.type = "button";
+          mBtn.addEventListener("click", function () {
+            var msg = maint ? "" : window.prompt("Message players see while it's on:", "Back soon \u2014 we're fixing something.");
+            if (msg === null) return;
+            busy(mBtn, API.adminSetFlag("maintenance", { on: !maint, message: msg || "" }).then(function () {
+              UI.toast(maint ? "Maintenance mode off" : "Maintenance mode on");
+              loadFlags();
+            }));
+          });
+          row("Maintenance mode" + (maint ? " \u2014 ON" : ""),
+            maint ? "Players see: \u201c" + (f.maintenance.message || "Back soon") + "\u201d. Staff can still use the site."
+                  : "Covers every page with a notice for everyone except staff.", mBtn);
+
+          var closed = f.signups_closed === true;
+          var sBtn = UI.el("button", "btn btn-sm" + (closed ? " is-danger" : ""), closed ? "Reopen" : "Close");
+          sBtn.type = "button";
+          sBtn.addEventListener("click", function () {
+            busy(sBtn, API.adminSetFlag("signups_closed", !closed).then(function () {
+              UI.toast(closed ? "Sign-ups open" : "Sign-ups closed"); loadFlags();
+            }));
+          });
+          row("Sign-ups" + (closed ? " \u2014 CLOSED" : ""),
+            "Closing refuses new accounts at the database. Existing accounts are unaffected.", sBtn);
+
+          var rBtn = UI.el("button", "btn btn-sm", "Reload everyone");
+          rBtn.type = "button";
+          rBtn.addEventListener("click", function () {
+            if (!window.confirm("Make every open tab on the site reload within a minute?")) return;
+            busy(rBtn, API.adminSetFlag("force_reload_at", null).then(function () { UI.toast("Reload sent"); loadFlags(); }));
+          });
+          row("Push an update", "Every open tab reloads within a minute and picks up the newest files" +
+            (f.force_reload_at ? ". Last sent " + UI.formatWhen(Number(f.force_reload_at)) : "."), rBtn);
+        }).catch(function (err) {
+          host.innerHTML = "";
+          host.appendChild(UI.el("p", "tiny dimmer", "Site switches need the dev-role SQL update: " + err.message));
+        });
+      }
+
       function loadAnnouncement() {
         var host = document.getElementById("ann-current");
         if (!host) return;
@@ -254,6 +315,7 @@
       function loadOverview() {
         loadRecentActivity();
         if (isAdmin) loadAnnouncement();
+        if (isDev) loadFlags();
         return API.adminOverview().then(function (d) {
           var q = d.queues || {
             reports: (d.reports && d.reports.open) || 0, tickets: 0, feedback: 0, calls: 0
@@ -381,14 +443,14 @@
              the same rule the server applies: you may act only on someone
              below your own rank. Everything else is a label saying why not. */
           var manageable = u.id !== me.id && u.role !== "owner" &&
-            isAdmin && rankOf(me.role) > rankOf(u.role);
+            rankOf(me.role) > rankOf(u.role);
           if (u.id === me.id) {
             acts.appendChild(UI.el("span", "tiny dimmer", "that's you"));
           } else if (u.role === "owner") {
             acts.appendChild(UI.el("span", "tiny dimmer", "owner"));
-          } else if (!isAdmin || rankOf(me.role) <= rankOf(u.role)) {
+          } else if (rankOf(me.role) <= rankOf(u.role)) {
             acts.appendChild(UI.el("span", "tiny dimmer",
-              isAdmin ? "outranks you" : "admins only"));
+              "outranks you"));
           } else {
             acts.appendChild(UI.icon("back", "admin-chev"));
           }
@@ -455,7 +517,7 @@
           body.appendChild(UI.el("p", "tiny dimmer",
             u.id === me.id ? "That's you." :
             u.role === "owner" ? "The owner can't be managed by anyone." :
-            isAdmin ? "This account outranks you." : "Admins and owners only."));
+            "This account outranks you."));
           return;
         }
 
@@ -465,6 +527,10 @@
           host.appendChild(UI.el("p", "user-detail-empty", "Select an account to manage it."));
           selectedUserId = null;
         }
+
+        /* Mods get the moderation tools; rank, suspension, bans, Campus+,
+           passwords and deletion are admin+. The server enforces the same. */
+        var adm = isAdmin ? body : document.createElement("div");
 
         /* Rank. */
         var rankField = UI.el("div", "field");
@@ -486,7 +552,7 @@
         rankNote.textContent = "You can grant any rank below your own. " +
           "Owner is set by the server and never handed out here.";
         rankField.appendChild(rankNote);
-        body.appendChild(rankField);
+        adm.appendChild(rankField);
 
         var apply = UI.el("button", "btn btn-cta", "Save rank");
         apply.type = "button";
@@ -501,9 +567,9 @@
               loadUsers();
             }));
         });
-        body.appendChild(apply);
+        adm.appendChild(apply);
 
-        body.appendChild(UI.el("hr", "sheet-rule"));
+        adm.appendChild(UI.el("hr", "sheet-rule"));
 
         /* Suspension. */
         var suspended = u.state === "suspended";
@@ -514,7 +580,7 @@
             "not just hidden from them."
           : "Suspending stops friend requests, messages and calls at the database. " +
             "Playing signed out still works.";
-        body.appendChild(stateNote);
+        adm.appendChild(stateNote);
 
         var toggle = UI.el("button", "btn", suspended ? "Restore account" : "Suspend account");
         toggle.type = "button";
@@ -529,7 +595,7 @@
               loadUsers();
             }));
         });
-        body.appendChild(toggle);
+        adm.appendChild(toggle);
 
         /* Ban — the hard version of suspend: blocks sign-in entirely (they
            can't get a session at all), not just social features. Needs a
@@ -542,7 +608,7 @@
             ". They cannot sign in at all."
           : "Banning blocks sign-in completely (harder than suspend). Use for " +
             "serious or repeat offenders.";
-        body.appendChild(banNote);
+        adm.appendChild(banNote);
 
         var banBtn = UI.el("button", "btn" + (banned ? "" : " is-danger"),
           banned ? "Unban account" : "Ban account");
@@ -565,9 +631,9 @@
             }).catch(function (err) { UI.toast(err.message); }));
           }
         });
-        body.appendChild(banBtn);
+        adm.appendChild(banBtn);
 
-        body.appendChild(UI.el("hr", "sheet-rule"));
+        adm.appendChild(UI.el("hr", "sheet-rule"));
 
         /* Mute — refused at the database (a trigger on messages), same way `suspended` already blocks the whole account. */
         var muted = !!(u.mutedUntil && new Date(u.mutedUntil).getTime() > Date.now());
@@ -594,7 +660,9 @@
           var muteRow = UI.el("div", "btn-row");
           muteRow.style.gap = "0.4rem";
           muteRow.style.marginBottom = "0.6rem";
-          [["10 min", 10], ["1 hr", 60], ["1 day", 1440], ["1 week", 10080]].forEach(function (pair) {
+          [["10 min", 10], ["1 hr", 60], ["1 day", 1440], ["1 week", 10080], ["30 days", 43200]].filter(function (pair) {
+            return isAdmin || pair[1] <= 1440;
+          }).forEach(function (pair) {
             var btn = UI.el("button", "btn btn-sm", pair[0]);
             btn.type = "button";
             btn.addEventListener("click", function () {
@@ -608,6 +676,73 @@
           });
           body.appendChild(muteRow);
         }
+
+        /* Moderation: warn, sign out, reset a profile, hide recent messages. */
+        body.appendChild(UI.el("hr", "sheet-rule"));
+        var modWrap = UI.el("div", "field");
+        modWrap.appendChild(UI.el("label", null, "Moderation"));
+
+        var warnRow = UI.el("div", "btn-row");
+        warnRow.style.gap = "0.4rem";
+        warnRow.style.marginBottom = "0.5rem";
+        var warnInput = UI.el("input");
+        warnInput.type = "text";
+        warnInput.maxLength = 240;
+        warnInput.placeholder = "Warning they'll see, e.g. \u201cno spam in chat\u201d";
+        warnInput.style.flex = "1";
+        warnRow.appendChild(warnInput);
+        var warnBtn = UI.el("button", "btn btn-sm", "Warn");
+        warnBtn.type = "button";
+        warnBtn.title = "Sends them a notification and saves it to staff notes";
+        warnBtn.addEventListener("click", function () {
+          var text = warnInput.value.trim();
+          if (text.length < 3) { UI.toast("Say what the warning is for."); return; }
+          busy(warnBtn, API.adminWarn(u.id, text).then(function () {
+            warnInput.value = "";
+            UI.toast("Warned @" + u.username);
+            drawNotes();
+          }));
+        });
+        warnRow.appendChild(warnBtn);
+        modWrap.appendChild(warnRow);
+
+        var modRow = UI.el("div", "btn-row");
+        modRow.style.gap = "0.4rem";
+        modRow.style.flexWrap = "wrap";
+        function modButton(label, title, fn) {
+          var btn = UI.el("button", "btn btn-sm", label);
+          btn.type = "button";
+          btn.title = title;
+          btn.addEventListener("click", function () { fn(btn); });
+          modRow.appendChild(btn);
+        }
+        modButton("Sign out everywhere", "Ends every session; they have to sign in again", function (btn) {
+          if (!window.confirm("Sign @" + u.username + " out on every device?")) return;
+          busy(btn, API.adminKick(u.id).then(function (r) {
+            UI.toast("@" + u.username + " signed out (" + ((r && r.sessions) || 0) + " sessions)");
+          }));
+        });
+        modButton("Reset name", "Puts their display name back to @" + u.username, function (btn) {
+          busy(btn, API.adminResetProfile(u.id, ["name"]).then(function () { UI.toast("Name reset"); loadUsers(); }));
+        });
+        modButton("Clear bio", "Empties their bio", function (btn) {
+          busy(btn, API.adminResetProfile(u.id, ["bio"]).then(function () { UI.toast("Bio cleared"); }));
+        });
+        modButton("Remove picture", "Removes their profile picture", function (btn) {
+          busy(btn, API.adminResetProfile(u.id, ["avatar"]).then(function () { UI.toast("Picture removed"); loadUsers(); }));
+        });
+        [["Hide last hour of messages", 1], ["Hide last 24h of messages", 24]].concat(
+          isAdmin ? [["Hide last 7 days of messages", 168]] : []
+        ).forEach(function (pair) {
+          modButton(pair[0], "Removes what they sent from every chat", function (btn) {
+            if (!window.confirm(pair[0].replace("Hide", "Hide @" + u.username + "'s") + "?")) return;
+            busy(btn, API.adminPurgeMessages(u.id, pair[1]).then(function (r) {
+              UI.toast(((r && r.hidden) || 0) + " messages hidden");
+            }));
+          });
+        });
+        modWrap.appendChild(modRow);
+        body.appendChild(modWrap);
 
         /* Campus+ membership — a staff-granted perk (more playlists + a badge).
            The feature itself is free; this is the "better things" tier. */
@@ -634,7 +769,7 @@
           }).catch(function (err) { UI.toast(err.message); }));
         });
         plusWrap.appendChild(plusBtn);
-        body.appendChild(plusWrap);
+        adm.appendChild(plusWrap);
 
         body.appendChild(UI.el("hr", "sheet-rule"));
 
@@ -776,7 +911,7 @@
         dangerNote.textContent = "Deleting removes the profile, their friends, " +
           "messages and saved progress. It cannot be undone, and it does not " +
           "free the account to be recreated by them.";
-        body.appendChild(dangerNote);
+        adm.appendChild(dangerNote);
 
         var wipe = UI.el("button", "btn btn-flat is-danger", "Delete account");
         wipe.type = "button";
@@ -793,8 +928,8 @@
             loadUsers();
           }));
         });
-        body.appendChild(wipe);
-        rankBox.focus();
+        adm.appendChild(wipe);
+        if (isAdmin) rankBox.focus(); else warnInput.focus();
       }
 
       /* Every action in the pane reports its own failure, rather than
@@ -1375,13 +1510,13 @@
             "Marking one handled tells the reporter it was looked at."],
           ["Feedback", "One-way notes: bugs, ideas, game requests. Unlike a ticket, there is " +
             "no back-and-forth — you set a state and can leave one reply."],
-          ["Logins", "Sign-in history. A run of failures against one account is what a " +
+          ["Logins", "Admins and up. Sign-in history. A run of failures against one account is what a " +
             "break-in attempt looks like. On the Supabase backend only successes are visible; " +
             "the tab says so when that applies."],
-          ["Games", "Owner only. Adds a title to the live catalogue without a commit and a " +
+          ["Games", "Devs and the owner. Adds a title to the live catalogue without a commit and a " +
             "deploy, repoints one whose host moved, or hides one. It stores a pointer, not the " +
             "game files — those still have to be hosted somewhere."],
-          ["Workbench", "Owner only. A link out to a machine you've set up for this, reachable " +
+          ["Workbench", "Devs and the owner. A link out to a machine you've set up for this, reachable " +
             "from any device — full keyboard and mouse, direct and end-to-end encrypted. It " +
             "opens in its own tab; this page has no way to reach into it."],
           ["Game data", "A save editor for whatever a game has stored in <b>your own browser</b>. " +
@@ -1395,7 +1530,8 @@
         host.innerHTML = "";
         TAB_HELP.forEach(function (pair) {
           /* Don't document a tab this account can't open. */
-          if ((pair[0] === "Games" || pair[0] === "Workbench") && !isOwner) return;
+          if ((pair[0] === "Games" || pair[0] === "Workbench") && !isDev) return;
+          if (pair[0] === "Logins" && !isAdmin) return;
           var dt = UI.el("dt", null, pair[0]);
           var dd = UI.el("dd");
           dd.innerHTML = pair[1];        // fixed copy above, not user input
@@ -1429,11 +1565,17 @@
 
         var RANK_HELP = [
           ["user", "The default. No console."],
-          ["mod", "Reports, feedback, support, the live view and the sign-in history. " +
-            "Cannot change anyone's rank or suspend anyone."],
-          ["admin", "Everything a mod has, plus ranks up to mod, suspensions and deletions. " +
-            "Cannot promote anyone to admin — that is the rank rule, not an oversight."],
-          ["owner", "Everything, plus the catalogue editor. Set by the server from the " +
+          ["mod", "Reports, feedback, support, the live view and staff notes. On accounts " +
+            "below them: warn, mute for up to a day, sign out of every device, reset a rule-breaking " +
+            "name, bio or picture, and hide up to 24 hours of their messages. Cannot change ranks, " +
+            "suspend or ban."],
+          ["admin", "Everything a mod has, plus ranks up to mod, suspensions, bans, Campus+, " +
+            "new passwords, deletions, announcements, the sign-in log, and longer mutes and " +
+            "message clean-ups. Cannot promote anyone to admin."],
+          ["dev", "Everything an admin has, plus ranks up to admin (devs manage admins), the " +
+            "game catalogue and workbench, and the site switches: maintenance mode, closing " +
+            "sign-ups, and making every open tab reload. Only the owner makes devs."],
+          ["owner", "Everything. Set by the server from the " +
             "configured owner name, never granted through this panel. The owner cannot be " +
             "demoted, suspended or deleted by anyone, including another owner — it exists so " +
             "there is always one account that a compromised admin cannot lock out."]
@@ -1455,8 +1597,8 @@
             "own rank. That is why a row for another admin offers you nothing.",
           "Suspending is enforced by the database, not the interface: a suspended account " +
             "is refused friend requests, messages and calls even if it keeps a valid session.",
-          "There is no password reset on this hub. If someone forgets theirs, deleting the " +
-            "account is the only thing anyone can do — including you.",
+          "Admins can set a new password for an account below them from the Users tab; " +
+            "the old one can never be shown.",
           "Admins and owners can change the console shortcut in Settings — the " +
             "letter only, " + mod + " is fixed. The picker marks which letters the " +
             "browser already wants, and which of those it will not give up at all.",

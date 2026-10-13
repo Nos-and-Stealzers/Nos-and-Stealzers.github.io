@@ -548,7 +548,361 @@
     });
   }
 
+  /* ------------------------------------------------------ one game
+   *
+   * The origin rows above back up a whole host. On play.<domain> that is
+   * every proxied game at once, sharing one 4 MB row: a big Unity /idbfs or
+   * a Minecraft world crowds the rest out, and those databases silently keep
+   * an old cloud copy. A one-game row ("game.<id>") holds just this game's
+   * keys and rows, compressed, so the Save button always has room.
+   *
+   * Nothing here deletes or empties a cloud row. A save that would replace
+   * another device's newer upload first copies that upload to "<row>.prev".
+   */
+
+  var GAME_SYNC = "ach:gs-game:";
+
+  function gameRowKey(game) {
+    var id = String(game && game.id || "").replace(/[^A-Za-z0-9._-]/g, "-");
+    if (!id) return "";
+    var key = "game." + id;
+    if (key.length > 59) key = key.slice(0, 50) + "." + digest(id).split(":")[0].slice(0, 8);
+    return key;
+  }
+
+  function gameRec(rowKey, origin) {
+    try { return JSON.parse(window.localStorage.getItem(GAME_SYNC + uid() + ":" + rowKey + "@" + hostOf(origin)) || "null"); }
+    catch (e) { return null; }
+  }
+  function setGameRec(rowKey, origin, rec) {
+    try { window.localStorage.setItem(GAME_SYNC + uid() + ":" + rowKey + "@" + hostOf(origin), JSON.stringify(rec)); } catch (e) {}
+  }
+
+  /* Unity caches downloaded assets in IndexedDB; that is not a save. */
+  var NOT_SAVES = /cache/i;
+
+  /* Which of an origin's keys, cookies and databases are this game's. */
+  function gameScope(game, index, info, extra) {
+    info = info || {};
+    var local = index.local || {};
+    var have = {};
+    Object.keys(local).forEach(function (k) { have[k] = true; });
+    (index.cookies || []).forEach(function (c) { have["cookie:" + c] = true; });
+    (index.idb || []).forEach(function (d) { have["idb:" + d] = true; });
+    var mine = window.GameKeys ? window.GameKeys.forGame(game, have) : { watched: [], guessed: [] };
+    var names = mine.watched.concat(mine.guessed);
+    /* Plus whatever this game's cloud save already holds: once a key is
+       part of its save, it stays part of it on every device. */
+    (extra || []).forEach(function (id) {
+      var t = id.charAt(0), rest = id.slice(2);
+      if (t === "l") names.push(rest);
+      else if (t === "c") names.push("cookie:" + rest);
+      else if (t === "r") {
+        try { var db = JSON.parse(rest)[0]; if (db !== "/idbfs") names.push("idb:" + db); } catch (e) {}
+      }
+    });
+
+    var scope = { local: [], cookies: [], idb: {} };
+    names.forEach(function (n) {
+      if (n.indexOf("cookie:") === 0) scope.cookies.push(n.slice(7));
+      else if (n.indexOf("idb:") === 0) {
+        var db = n.slice(4);
+        if (db !== "/idbfs" && !NOT_SAVES.test(db)) scope.idb[db] = true;
+      } else if (Object.prototype.hasOwnProperty.call(local, n) && scope.local.indexOf(n) === -1) scope.local.push(n);
+    });
+    scope.cookies = scope.cookies.filter(function (c, i, all) { return all.indexOf(c) === i; });
+    /* Unity games share one /idbfs per origin; take only this game's folder. */
+    var dirs = (info.unity || []).filter(function (d) { return /^\/idbfs\/[0-9a-f]{32}$/.test(d); });
+    if (dirs.length && (!index.idb || index.idb.indexOf("/idbfs") !== -1)) {
+      scope.idb["/idbfs"] = { prefixes: dirs };
+    }
+    scope.unity = dirs;
+    return scope;
+  }
+
+  function scopeEmpty(scope) {
+    return !scope.local.length && !scope.cookies.length && !Object.keys(scope.idb).length;
+  }
+
+  /* Old bridges ignore `scope` and send the whole origin; trim it here. */
+  function applyScope(res, scope) {
+    if (res.scoped) return res;
+    var out = { data: {}, cookies: {}, idb: {}, idbDropped: [] };
+    scope.local.forEach(function (k) { if (res.data && k in res.data) out.data[k] = res.data[k]; });
+    scope.cookies.forEach(function (k) { if (res.cookies && k in res.cookies) out.cookies[k] = res.cookies[k]; });
+    Object.keys(scope.idb).forEach(function (db) {
+      if ((res.idbDropped || []).indexOf(db) !== -1) out.idbDropped.push(db);
+      var dump = res.idb && res.idb[db];
+      if (!dump) return;
+      var pick = scope.idb[db];
+      if (pick === true) { out.idb[db] = dump; return; }
+      var kept = {};
+      Object.keys(dump).forEach(function (store) {
+        var rows = dump[store].filter(function (row) {
+          return typeof row.k === "string" && pick.prefixes.some(function (p) { return row.k.indexOf(p) === 0; });
+        });
+        if (rows.length) kept[store] = rows;
+      });
+      if (Object.keys(kept).length) out.idb[db] = kept;
+    });
+    return out;
+  }
+
+  /* Row-level entries so two saves of a shared database compare row by row. */
+  function gameEntries(p) {
+    var out = {};
+    Object.keys(p.local || {}).forEach(function (k) { out["l:" + k] = p.local[k]; });
+    Object.keys(p.cookies || {}).forEach(function (k) { out["c:" + k] = p.cookies[k]; });
+    Object.keys(p.idb || {}).forEach(function (db) {
+      Object.keys(p.idb[db] || {}).forEach(function (store) {
+        (p.idb[db][store] || []).forEach(function (row) {
+          out["r:" + JSON.stringify([db, store, row.k])] = row.v;
+        });
+      });
+    });
+    return out;
+  }
+  function gameUnentries(map) {
+    var out = { local: {}, cookies: {}, idb: {} };
+    Object.keys(map).forEach(function (k) {
+      var t = k.charAt(0), rest = k.slice(2);
+      if (t === "l") out.local[rest] = map[k];
+      else if (t === "c") out.cookies[rest] = map[k];
+      else if (t === "r") {
+        var at = JSON.parse(rest);
+        var db = out.idb[at[0]] = out.idb[at[0]] || {};
+        (db[at[1]] = db[at[1]] || []).push({ k: at[2], v: map[k] });
+      }
+    });
+    return out;
+  }
+
+  /* A save made on another mirror has that play host's Unity folder hash;
+     move its rows to this host's folder. */
+  function remapUnity(p, fromDirs, toDirs) {
+    if (!fromDirs || !toDirs || fromDirs.length !== 1 || toDirs.length !== 1 || fromDirs[0] === toDirs[0]) return p;
+    var from = fromDirs[0], to = toDirs[0];
+    var fs = p.idb && p.idb["/idbfs"];
+    if (!fs) return p;
+    Object.keys(fs).forEach(function (store) {
+      fs[store].forEach(function (row) {
+        if (typeof row.k === "string" && row.k.indexOf(from) === 0) row.k = to + row.k.slice(from.length);
+      });
+    });
+    return p;
+  }
+
+  /* gzip + base64 where the browser can; plain JSON otherwise. */
+  function pack(obj) {
+    var text = JSON.stringify(obj);
+    if (typeof CompressionStream !== "function") return Promise.resolve({ j: obj, bytes: text.length });
+    var stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+    return new Response(stream).arrayBuffer().then(function (buf) {
+      var bytes = new Uint8Array(buf), bin = "";
+      for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return { z: btoa(bin), bytes: text.length };
+    });
+  }
+  function unpack(row) {
+    if (!row) return Promise.resolve(null);
+    if (row.j) return Promise.resolve(row.j);
+    if (typeof row.z !== "string") return Promise.resolve(null);
+    if (typeof DecompressionStream !== "function") return Promise.reject(new Error("This browser can't open compressed saves."));
+    var bin = atob(row.z), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Response(stream).text().then(function (t) { return JSON.parse(t); });
+  }
+
+  var MAX_ROW = 4 * 1024 * 1024 - 64 * 1024;
+
+  function indexOf(origin) {
+    return ask(origin, { action: "index" }).then(function (res) {
+      if (res.local) return res;
+      throw new Error("old bridge");
+    }).catch(function (err) {
+      if (err && /blocking game storage/.test(err.message)) throw err;
+      /* Bridge from before "index": names come from a full read. */
+      return ask(origin, { action: "read" }).then(function (res) {
+        var local = {};
+        Object.keys(res.data || {}).forEach(function (k) { local[k] = String(res.data[k]).length; });
+        return {
+          local: local, cookies: Object.keys(res.cookies || {}),
+          idb: Object.keys(res.idb || {}).concat(res.idbDropped || []), full: res
+        };
+      });
+    });
+  }
+
+  function readScoped(origin, scope, index) {
+    var wire = { local: scope.local, cookies: scope.cookies, idb: scope.idb };
+    var read = index.full ? Promise.resolve(index.full) : ask(origin, { action: "read", scope: wire });
+    return read.then(function (res) {
+      var r = applyScope(res, scope);
+      return { local: r.data || {}, cookies: r.cookies || {}, idb: r.idb || {}, dropped: r.idbDropped || [] };
+    });
+  }
+
+  /* Save this one game now. `info` comes from GameCheats.flush (Unity
+     folders); `opts.auto` skips the upload when another device saved since
+     this one last synced, rather than replacing that save. */
+  function saveGame(game, hostOrOrigin, info, opts) {
+    opts = opts || {};
+    if (!uid()) return Promise.reject(new Error("Sign in to save games to your account."));
+    var origin = originFor(hostOrOrigin);
+    var rowKey = gameRowKey(game);
+    if (!origin || !rowKey) return Promise.reject(new Error("This game can't be cloud-saved."));
+    var startUser = uid();
+
+    var known = gameRec(rowKey, origin);
+    if (opts.auto && !known) return Promise.resolve({ skipped: true });
+    var extra = Object.keys((known && known.keys) || {}).concat((info && info.extraKeys) || []);
+    return indexOf(origin).then(function (index) {
+      var scope = gameScope(game, index, info, extra);
+      if (scopeEmpty(scope)) return { empty: true };
+      return readScoped(origin, scope, index).then(function (p) {
+        if (p.dropped.length) throw new Error("this game's save is too big to read in one go");
+        var entries = gameEntries(p);
+        if (!Object.keys(entries).length) return { empty: true };
+        var hash = digest(entries);
+        var rec = gameRec(rowKey, origin);
+        /* Automatic saves only keep up a game someone has saved by hand (or
+           loaded such a save of); everything else stays in the host backup. */
+        if (opts.auto && !rec) return { skipped: true };
+        if (opts.auto && rec.hash === hash) return { unchanged: true };
+        if (opts.toPrev) {
+          /* A backup of this device's copy before a cloud save replaces it. */
+          return pack({ local: p.local, cookies: p.cookies, idb: p.idb, unity: scope.unity,
+            unityPages: (info && info.unityPages) || [] }).then(function (packed) {
+            var row = { v: 2, game: String(game.id), title: String(game.title || ""), savedAt: Date.now(),
+              keys: Object.keys(entries).length, bytes: packed.bytes, from: "device" };
+            if (packed.z) row.z = packed.z; else row.j = packed.j;
+            if (JSON.stringify(row).length > MAX_ROW) return { tooBig: true };
+            return window.API.putGameSave(rowKey + ".prev", row).then(function () { return { uploaded: true, prev: true }; });
+          });
+        }
+
+        return window.API.gameSaveStamp(rowKey).then(function (stamp) {
+          var theirs = stamp && (!rec || stamp > (rec.at || 0));
+          if (theirs && opts.auto) return { newerElsewhere: true };
+          var keepOld = theirs ? window.API.getGameSave(rowKey).then(function (old) {
+            if (!old || !old.payload || (!old.payload.z && !old.payload.j)) return;
+            return window.API.putGameSave(rowKey + ".prev", old.payload);
+          }) : Promise.resolve();
+          return keepOld.then(function () {
+            return pack({ local: p.local, cookies: p.cookies, idb: p.idb, unity: scope.unity,
+              unityPages: (info && info.unityPages) || [] });
+          }).then(function (packed) {
+            var row = {
+              v: 2, game: String(game.id), title: String(game.title || ""), savedAt: Date.now(),
+              keys: Object.keys(entries).length, bytes: packed.bytes
+            };
+            if (packed.z) row.z = packed.z; else row.j = packed.j;
+            if (JSON.stringify(row).length > MAX_ROW) throw new Error("this game's save is too large for a cloud save");
+            if (uid() !== startUser) throw new Error("Account changed during save; not uploading.");
+            return window.API.putGameSave(rowKey, row).then(function () {
+              return window.API.gameSaveStamp(rowKey);
+            }).then(function (at) {
+              setGameRec(rowKey, origin, { at: at, hash: hash, keys: hashes(entries) });
+              return { uploaded: true, keys: row.keys, bytes: row.bytes, at: at };
+            });
+          });
+        });
+      });
+    });
+  }
+
+  /* Bring a game's own cloud save down, before the game starts. Entries
+     untouched here since the last sync take the cloud's copy; if this
+     device changed any of them too, nothing is written and the caller gets
+     `conflict` to ask the player. `force` takes the cloud copy outright. */
+  function loadGame(game, hostOrOrigin, info, force) {
+    if (!uid()) return Promise.resolve({ none: true });
+    var origin = originFor(hostOrOrigin);
+    var rowKey = gameRowKey(game);
+    if (!origin || !rowKey) return Promise.resolve({ none: true });
+
+    return window.API.getGameSave(rowKey).then(function (cloud) {
+      if (!cloud || !cloud.payload || (!cloud.payload.z && !cloud.payload.j)) return { none: true };
+      var rec = gameRec(rowKey, origin);
+      if (!force && rec && rec.at && cloud.updatedAt <= rec.at) return { current: true };
+      return unpack(cloud.payload).then(function (saved) {
+        if (!saved) return { none: true };
+        /* The game hasn't started yet, so this host's Unity folder comes from
+           the page the save was made on, moved onto this origin. */
+        var here = null;
+        var dirOf = window.GameCheats && window.GameCheats.unityDirOf;
+        if (dirOf && saved.unityPages && saved.unityPages.length === 1) {
+          try {
+            var page = new URL(saved.unityPages[0]);
+            here = [dirOf(new URL(origin).origin + page.pathname)];
+          } catch (e) { here = null; }
+        }
+        remapUnity(saved, saved.unity, here);
+        var cloudE = gameEntries(saved);
+        var scope = { local: Object.keys(saved.local || {}), cookies: Object.keys(saved.cookies || {}), idb: {} };
+        Object.keys(saved.idb || {}).forEach(function (db) {
+          if (db === "/idbfs") {
+            var dirs = here || saved.unity || [];
+            if (dirs.length) scope.idb[db] = { prefixes: dirs };
+          } else scope.idb[db] = true;
+        });
+        return ask(origin, { action: "read", scope: scope }).then(function (res) {
+          var r = applyScope(res, scope);
+          var mineE = gameEntries({ local: r.data, cookies: r.cookies, idb: r.idb });
+          var base = rec && rec.keys;
+          var plan = {}, conflicts = 0;
+          Object.keys(cloudE).forEach(function (k) {
+            var ch = digest(cloudE[k]);
+            var mh = mineE[k] === undefined ? undefined : digest(mineE[k]);
+            if (mh === ch) return;
+            if (force || mh === undefined || (base && base[k] === mh)) { plan[k] = cloudE[k]; return; }
+            conflicts++;
+          });
+          var finish = function (written) {
+            setGameRec(rowKey, origin, { at: cloud.updatedAt, hash: written === null ? null : digest(cloudE), keys: hashes(cloudE) });
+          };
+          if (conflicts && !force) {
+            return { conflict: true, savedAt: saved.savedAt || cloud.updatedAt, cloudAt: cloud.updatedAt, title: saved.title || "",
+              info: { unity: here || saved.unity || [], unityPages: saved.unityPages || [], extraKeys: Object.keys(cloudE) } };
+          }
+          var n = Object.keys(plan).length;
+          if (!n) { finish(0); return { written: 0, current: true }; }
+          var todo = gameUnentries(plan);
+          return ask(origin, {
+            action: "write", data: todo.local, cookies: todo.cookies, idb: todo.idb, overwrite: true
+          }).then(function () {
+            finish(n);
+            return { written: n, savedAt: saved.savedAt || cloud.updatedAt };
+          });
+        });
+      });
+    });
+  }
+
+  /* The player chose this device's progress over a different cloud save.
+     That cloud save is kept as "<row>.prev" and the next save replaces it. */
+  function keepLocal(game, hostOrOrigin, cloudAt, ids) {
+    var origin = originFor(hostOrOrigin);
+    var rowKey = gameRowKey(game);
+    if (!uid() || !origin || !rowKey) return Promise.resolve();
+    return window.API.getGameSave(rowKey).then(function (old) {
+      if (!old || !old.payload || (!old.payload.z && !old.payload.j)) return;
+      return window.API.putGameSave(rowKey + ".prev", old.payload);
+    }).then(function () {
+      /* Remember which keys make up this game's save (with no hash, so none
+         counts as "unchanged here"), so the next save includes them. */
+      var keys = {};
+      (ids || []).forEach(function (id) { keys[id] = ""; });
+      setGameRec(rowKey, origin, { at: cloudAt || Date.now(), hash: null, keys: keys });
+    });
+  }
+
   window.GameSaves = {
+    gameRowKey: gameRowKey,
+    keepLocal: keepLocal,
+    saveGame: saveGame,
+    loadGame: loadGame,
     hosts: hostsFromConfig,
     hostKey: keyFor,
     configKey: configKeyFor,

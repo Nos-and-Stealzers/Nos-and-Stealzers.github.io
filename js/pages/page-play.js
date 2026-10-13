@@ -57,7 +57,7 @@
         flush();
         /* Tabbing away is the most common way a session ends, so treat it as
            a save point rather than waiting for the interval. */
-        if (frame) backupProgress("hidden");
+        if (frame) backupProgress("hidden").then(function () { return saveGameNow(false); });
       } else if (frame) {
         since = Date.now();
       }
@@ -242,7 +242,17 @@
 
   function pullThenEmbed() {
     var origin = hostOrigin();
-    if (!canBackup() || !origin) { embed(); return; }
+    if (!origin) { embed(); return; }
+    if (!canBackup()) {
+      /* Auto-backup off: still bring down a save made with the Save button. */
+      if (!window.Session.user || !window.GameSaves || game.unavailable) { embed(); return; }
+      capped(loadOwnSave(origin, false), 9000, null).then(function (own) {
+        takeBaseline();
+        embed();
+        if (own && own.written) markSaved("cloud save loaded", "ok");
+      });
+      return;
+    }
 
     markSaved("checking your save…", "");
 
@@ -250,6 +260,9 @@
     function go(restored) {
       if (settled) return;
       settled = true;
+      /* What the restore just wrote isn't this game's doing; look again so
+         only what the game itself changes gets attributed to it. */
+      takeBaseline();
       embed();
       if (restored) markSaved("cloud save loaded", "ok");
       else if (/checking|moving/.test(($("save-state") || {}).textContent || "")) {
@@ -262,6 +275,13 @@
     var guard = window.setTimeout(function () { go(false); }, 8000);
 
     window.GameSaves.restoreHost(origin, false).then(function (mine) {
+      /* Then this game's own save (the Save button's), which is newer and
+         more complete than its share of the whole-host backup. */
+      return loadOwnSave(origin, settled).then(function (own) {
+        if (own && own.written && mine) { mine.written = (mine.written || 0) + own.written; mine.overwrote = true; }
+        return mine || (own && own.written ? { written: own.written, overwrote: true } : mine);
+      });
+    }).then(function (mine) {
       window.clearTimeout(guard);
       var wrote = !!(mine && mine.written);
       /* Only when nothing here had changed meanwhile — otherwise a restart
@@ -277,6 +297,34 @@
       go(false);
       markSaved("couldn't load cloud save — " + ((err && err.message) || "offline"), "warn");
     });
+  }
+
+  /* This game's own cloud save. If this device has different progress for
+     it, ask which one to keep instead of silently picking. */
+  function loadOwnSave(origin, late) {
+    if (!window.GameSaves.loadGame || late) return Promise.resolve(null);
+    return window.GameSaves.loadGame(game, origin, null, false).then(function (r) {
+      if (!r || !r.conflict) return r;
+      gameConflict = true;
+      var when = r.savedAt ? new Date(r.savedAt).toLocaleString() : "earlier";
+      var ask = window.Dialogs && window.Dialogs.confirm ? window.Dialogs.confirm({
+        title: "Load your cloud save?",
+        body: "You saved " + game.title + " to your account on " + when + ", and this device has different progress. " +
+          "Load the cloud save, or Cancel to keep playing this device's. Whichever you don't pick is kept as a backup in your account.",
+        confirmLabel: "Load cloud save"
+      }) : Promise.resolve(window.confirm("Load your cloud save of " + game.title + " from " + when + "?"));
+      return ask.then(function (yes) {
+        gameConflict = false;
+        if (!yes) {
+          return window.GameSaves.keepLocal(game, origin, r.cloudAt, r.info && r.info.extraKeys).then(function () {
+            markSaved("kept this device's progress", "ok");
+            return null;
+          }, function () { return null; });
+        }
+        return window.GameSaves.saveGame(game, origin, r.info, { toPrev: true }).catch(function () {})
+          .then(function () { return window.GameSaves.loadGame(game, origin, null, true); });
+      });
+    }).catch(function () { return null; });
   }
 
   function embed(restart) {
@@ -489,6 +537,7 @@
 
   /* The game writes its own progress into its origin's storage as you play. */
   var backupTimer = null;
+  var gameSaveTimer = null;
   var lastBackup = 0;
   var backingUp = null;
 
@@ -594,6 +643,146 @@
     backupTimer = window.setInterval(function () {
       if (frame) backupProgress("interval");
     }, 20000);
+    window.clearInterval(gameSaveTimer);
+    gameSaveTimer = window.setInterval(function () {
+      if (frame && !document.hidden) saveGameNow(false);
+    }, 120000);
+  }
+
+  /* ------------------------------------------------------------ save now */
+
+  /* Some games only write their progress now and then, and on play.<domain>
+     every proxied game shares one backup row that big saves crowd out. The
+     Save button asks the game to write what it has, then uploads just this
+     game's data to its own row. The same runs every few minutes on its own. */
+  var gameConflict = false;
+  var savingGame = null;
+  var lastGameSave = 0;
+
+  function capped(p, ms, fallback) {
+    return Promise.race([p, new Promise(function (r) { window.setTimeout(function () { r(fallback); }, ms); })]);
+  }
+
+  /* Games on play.<domain> are another origin; _mods/agent.html, loaded
+     from there, reaches inside them for us. */
+  var flushAgent = null;
+  function agentFlush(where) {
+    var origin = where.origin;
+    if (!flushAgent || flushAgent.url !== where.url || !flushAgent.frame.isConnected) {
+      if (flushAgent) flushAgent.frame.remove();
+      var fr = document.createElement("iframe");
+      fr.src = where.url;
+      fr.setAttribute("aria-hidden", "true");
+      fr.tabIndex = -1;
+      fr.style.cssText = "position:absolute;width:1px;height:1px;left:-9999px;top:-9999px;border:0;";
+      flushAgent = { frame: fr, origin: origin, url: where.url, seq: 1000000, ready: new Promise(function (r) { fr.addEventListener("load", r); }) };
+      document.body.appendChild(fr);
+    }
+    var a = flushAgent;
+    return a.ready.then(function () {
+      return new Promise(function (resolve) {
+        var id = ++a.seq;
+        function on(e) {
+          var m = e.data;
+          if (e.source !== a.frame.contentWindow || e.origin !== a.origin || !m || m.channel !== "ach-mods" || m.reply !== id) return;
+          window.removeEventListener("message", on);
+          resolve(m.data || {});
+        }
+        window.addEventListener("message", on);
+        a.frame.contentWindow.postMessage({ channel: "ach-mods", id: id, action: "flush" }, a.origin);
+      });
+    });
+  }
+
+  function flushGame() {
+    if (!frame || !window.GameCheats || !window.GameCheats.flush) return Promise.resolve({});
+    var w = frame.contentWindow;
+    try {
+      if (w && w.document && w.location.href !== "about:blank") {
+        return capped(window.GameCheats.flush(w), 5000, {});
+      }
+    } catch (e) { /* another origin */ }
+    var where = window.ModMenu && window.ModMenu.agentFor ? window.ModMenu.agentFor(frame.src) : null;
+    if (!where) return Promise.resolve({});
+    return capped(agentFlush(where), 6000, {});
+  }
+
+  /* Learn which keys this game moved since it opened, so its save can be
+     told apart from the other games on the same origin. */
+  function learnKeys() {
+    if (!window.GameKeys || !baseline || !hostOrigin()) return Promise.resolve();
+    return window.GameSaves.readAll(hostOrigin()).then(function (res) {
+      var now = flatten(res);
+      window.GameKeys.learnFromSnapshots(game, res.host, baseline, now);
+      baseline = now;
+    }).catch(function () {});
+  }
+
+  function saveButton(busy) {
+    var b = $("a-save");
+    if (!b) return;
+    b.disabled = !!busy;
+    b.lastChild.textContent = busy ? "Saving…" : "Save";
+  }
+
+  function saveGameNow(manual) {
+    if (!game || game.unavailable) return Promise.resolve();
+    if (!window.Session || !window.Session.user) {
+      if (manual) {
+        markSaved("sign in to save to your account", "warn");
+        window.UI.toast("Sign in to save games to your account");
+      }
+      return Promise.resolve();
+    }
+    if (!frame) {
+      if (manual) window.UI.toast("Start the game first, then save");
+      return Promise.resolve();
+    }
+    if (!hostOrigin() || !window.GameSaves || !window.GameSaves.saveGame) {
+      if (manual) markSaved("this game can't be cloud-saved", "warn");
+      return Promise.resolve();
+    }
+    if (gameConflict) return Promise.resolve();
+    if (savingGame) return savingGame;
+    if (!manual && Date.now() - lastGameSave < 90000) return Promise.resolve();
+    lastGameSave = Date.now();
+
+    if (manual) { saveButton(true); markSaved("saving…", ""); }
+    var info = {};
+    savingGame = flushGame().then(function (got) {
+      info = got || {};
+      /* Give the game a moment to finish writing after being asked. */
+      return new Promise(function (r) { window.setTimeout(r, info.flushed && info.flushed.length ? 400 : 50); });
+    }).then(function () {
+      return canBackup() ? backupProgress(manual ? "manual" : "game") : learnKeys();
+    }).then(function () {
+      return window.GameSaves.saveGame(game, hostOrigin(), info, { auto: !manual });
+    }).then(function (out) {
+      out = out || {};
+      if (out.uploaded) {
+        markSaved("saved to your account " + clock(), "ok");
+        if (manual) window.UI.toast("Saved " + game.title + " to your account");
+      } else if (out.empty) {
+        if (manual) {
+          markSaved("nothing saved yet — play until the game saves", "warn");
+          window.UI.toast("This game hasn't saved anything yet. Play until it saves (finish a level or round), then press Save.");
+        }
+      } else if (out.newerElsewhere) {
+        markSaved("newer save on another device — press Save to replace it", "warn");
+      } else if (out.unchanged && manual) {
+        markSaved("saved to your account " + clock(), "ok");
+      }
+    }).catch(function (err) {
+      var msg = (err && err.message) || "offline";
+      if (manual) {
+        markSaved("couldn't save — " + msg, "warn");
+        window.UI.toast("Couldn't save: " + msg);
+      }
+    }).then(function () {
+      savingGame = null;
+      if (manual) saveButton(false);
+    });
+    return savingGame;
   }
 
   /* --------------------------------------------------------------- actions */
@@ -642,6 +831,14 @@
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && stage().classList.contains("is-pseudo-fullscreen")) exitFullscreen();
     });
+
+    var saveBtn = $("a-save");
+    if (saveBtn) {
+      saveBtn.textContent = "";
+      saveBtn.appendChild(window.UI.icon("save"));
+      saveBtn.appendChild(document.createTextNode("Save"));
+      saveBtn.addEventListener("click", function () { saveGameNow(true); });
+    }
 
     $("a-pin").addEventListener("click", function () {
       var on = window.Store.toggleFavorite(game.id);

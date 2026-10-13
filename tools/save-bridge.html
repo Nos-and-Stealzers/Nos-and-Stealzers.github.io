@@ -99,13 +99,17 @@
     return false;
   }
 
-  function snapshot() {
+  /* `only` (optional) is a list of key names: a one-game save asks for just
+     that game's keys instead of the whole origin. */
+  function snapshot(only) {
     var out = {}, skipped = 0;
+    var want = only ? toSet(only) : null;
     try {
       for (var i = 0; i < localStorage.length; i++) {
         var key = localStorage.key(i);
         if (key === null) continue;
         if (isAppKey(key)) continue;      // never back up the hub's own state
+        if (want && !want[key]) continue;
         var value = localStorage.getItem(key);
         if (value === null) continue;
         if (value.length > MAX_VALUE) { skipped++; continue; }
@@ -113,6 +117,14 @@
       }
     } catch (err) { /* storage disabled */ }
     return { data: out, skipped: skipped };
+  }
+
+  function toSet(list) {
+    var out = {};
+    (Array.isArray(list) ? list : []).forEach(function (k) {
+      if (typeof k === "string") out[k] = true;
+    });
+    return out;
   }
 
   /* Cookies.
@@ -129,8 +141,9 @@
    * showing nothing. HttpOnly cookies are never visible to script at all, but
    * a static game host does not set those.
    */
-  function readCookies() {
+  function readCookies(only) {
     var out = {};
+    var want = only ? toSet(only) : null;
     try {
       String(document.cookie || "").split(";").forEach(function (part) {
         var at = part.indexOf("=");
@@ -138,6 +151,7 @@
         var name = part.slice(0, at).trim();
         var value = part.slice(at + 1).trim();
         if (!name || value.length > MAX_VALUE) return;
+        if (want && !want[name]) return;
         try { out[name] = decodeURIComponent(value); }
         catch (e) { out[name] = value; }        // not percent-encoded
       });
@@ -256,7 +270,21 @@
     });
   }
 
-  function readIdb() {
+  /* A one-game save names the databases it wants, and for a database many
+     games share (Unity's /idbfs) the key prefixes that are this game's own
+     folder. Its budget is larger: the hub compresses it before upload. */
+  var SCOPED_BUDGET = 48 * 1024 * 1024;
+
+  function prefixRanges(prefixes) {
+    var out = [];
+    (prefixes || []).forEach(function (p) {
+      if (typeof p !== "string" || !p) return;
+      try { out.push(IDBKeyRange.bound(p, p + "\uffff")); } catch (e) {}
+    });
+    return out;
+  }
+
+  function readIdb(only) {
     /* indexedDB.databases() is Chromium and Safari only. Firefox has no way
        to enumerate, so there is nothing to snapshot there — say so rather
        than reporting an empty success. */
@@ -269,10 +297,15 @@
       var used = 0;
       var dropped = [];      // DBs skipped because the budget was already full
 
+      var budget = only ? SCOPED_BUDGET : IDB_BUDGET;
       return (list || []).reduce(function (chain, info) {
         return chain.then(function () {
           if (!info.name) return;
-          if (used > IDB_BUDGET) { dropped.push(info.name); return; }
+          var pick = only ? only[info.name] : true;
+          if (!pick) return;
+          var ranges = pick && pick.prefixes ? prefixRanges(pick.prefixes) : null;
+          if (ranges && !ranges.length) return;
+          if (used > budget) { dropped.push(info.name); return; }
           return openDb(info.name).then(function (db) {
             var stores = Array.prototype.slice.call(db.objectStoreNames);
             if (!stores.length) { db.close(); return; }
@@ -284,9 +317,28 @@
 
               stores.forEach(function (storeName) {
                 var store = tx.objectStore(storeName);
+                var pair = {};
+                if (ranges) {
+                  /* Only rows under this game's prefixes, one range at a time. */
+                  var ks = [], vs = [], r = 0;
+                  var next = function () {
+                    if (r >= ranges.length) { pair.keys = ks; pair.values = vs; finish(); return; }
+                    var range = ranges[r++];
+                    var kq = store.getAllKeys(range);
+                    kq.onsuccess = function () {
+                      var vq = store.getAll(range);
+                      vq.onsuccess = function () {
+                        ks = ks.concat(kq.result); vs = vs.concat(vq.result); next();
+                      };
+                      vq.onerror = function () { finish(); };
+                    };
+                    kq.onerror = function () { finish(); };
+                  };
+                  next();
+                  return;
+                }
                 var keysReq = store.getAllKeys();
                 var valsReq = store.getAll();
-                var pair = {};
 
                 keysReq.onsuccess = function () { pair.keys = keysReq.result; done(); };
                 valsReq.onsuccess = function () { pair.values = valsReq.result; done(); };
@@ -299,7 +351,7 @@
                 function finish() {
                   if (pair.recorded) return;
                   pair.recorded = true;
-                  if (pair.keys && pair.values) {
+                  if (pair.keys && pair.values && (!ranges || pair.keys.length)) {
                     dbOut[storeName] = pair.keys.map(function (k, i) {
                       return { k: encode(k), v: encode(pair.values[i]) };
                     });
@@ -307,7 +359,8 @@
                   if (--left === 0) {
                     var text = JSON.stringify(dbOut);
                     used += text.length;
-                    if (used <= IDB_BUDGET) out[info.name] = dbOut;
+                    if (ranges && !Object.keys(dbOut).length) { /* nothing of this game's here */ }
+                    else if (used <= budget) out[info.name] = dbOut;
                     else dropped.push(info.name);
                     db.close();
                     resolve();
@@ -387,13 +440,17 @@
 
     /* The IndexedDB paths are async, so they answer on their own. */
     if (msg.action === "read") {
-      var shot = snapshot();
+      /* `scope` narrows the read to one game: { local: [names],
+         cookies: [names], idb: { db: true | { prefixes: [...] } } }. */
+      var sc = msg.scope && typeof msg.scope === "object" ? msg.scope : null;
+      var shot = snapshot(sc ? (sc.local || []) : null);
       reply.data = shot.data;
       reply.keys = Object.keys(shot.data).length;
       reply.skipped = shot.skipped;
-      reply.cookies = readCookies();
+      reply.cookies = readCookies(sc ? (sc.cookies || []) : null);
       reply.cookiePath = location.pathname;
-      readIdb().then(function (idb) {
+      reply.scoped = !!sc;
+      readIdb(sc ? (sc.idb && typeof sc.idb === "object" ? sc.idb : {}) : null).then(function (idb) {
         reply.idb = idb.data;
         reply.idbUnsupported = idb.unsupported;
         reply.idbBytes = idb.bytes || 0;
@@ -415,9 +472,29 @@
       return;
     }
 
+    /* Names only, no contents: what a one-game save picks its keys from. */
+    if (msg.action === "index") {
+      var names = {};
+      try {
+        for (var n = 0; n < localStorage.length; n++) {
+          var lk = localStorage.key(n);
+          if (lk !== null && !isAppKey(lk)) names[lk] = (localStorage.getItem(lk) || "").length;
+        }
+      } catch (err) {}
+      reply.local = names;
+      reply.cookies = Object.keys(readCookies());
+      var dbs = indexedDB && typeof indexedDB.databases === "function" ? indexedDB.databases() : Promise.resolve(null);
+      dbs.then(function (list) {
+        reply.idb = list ? list.map(function (d) { return d.name; }).filter(Boolean) : null;
+        send(event, reply);
+      }, function () { reply.idb = null; send(event, reply); });
+      return;
+    }
+
     try {
       if (msg.action === "ping") {
         reply.host = location.host;
+        reply.version = 2;
         reply.idbSupported = !!(indexedDB && typeof indexedDB.databases === "function");
         reply.cookiesSupported = navigator.cookieEnabled !== false;
         reply.cookiePath = location.pathname;

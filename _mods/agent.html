@@ -57,6 +57,12 @@
       if (!w) { reply({ error: "The game isn't loaded yet." }); return; }
       hook(w, e.origin);
       /* Some cheats (Unity saves) answer later, as a promise. */
+      /* "flush": the hub's Save button asks the game to write its progress out. */
+      if (m.action === "flush") {
+        Promise.resolve(window.GameCheats.flush ? window.GameCheats.flush(w) : { flushed: [], unity: [] })
+          .then(reply, fail);
+        return;
+      }
       Promise.resolve(m.action === "run" ? window.GameCheats.run(w, String(m.cheat), m.arg) : window.GameCheats.inspect(w))
         .then(reply, fail);
     } catch (err) {

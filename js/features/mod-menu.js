@@ -71,6 +71,27 @@
 
   function timeControl(w) { return window.GameCheats.timeControl(w); }
 
+  /* Where the helper page lives for a game served from another origin:
+     play.<domain> (github.io games, see SITE.gameProxy) and the pinned
+     NEBULA-CDN copy each carry _mods/agent.html next to their games. */
+  function agentFor(src) {
+    var site = window.SITE || {};
+    var at;
+    try { at = new URL(src, location.href); } catch (e) { return null; }
+    var px = site.gameProxy;
+    if (px && px.active) {
+      try {
+        var play = new URL(px.to).origin;
+        if (at.origin === play) return { origin: play, url: play + "/_mods/agent.html" };
+      } catch (e) {}
+    }
+    var neb = String((site.gameHosts || {})["nebula-cdn"] || "").replace(/\/+$/, "");
+    if (neb && at.href.indexOf(neb + "/") === 0) {
+      try { return { origin: new URL(neb).origin, url: neb + "/_mods/agent.html" }; } catch (e) {}
+    }
+    return null;
+  }
+
   /* ---- the menu ---- */
 
   function attach(opts) {
@@ -138,11 +159,6 @@
     var agent = { frame: null, origin: "", seq: 0, waiting: {} };
     var links = { direct: null, agent: null };
 
-    function playOrigin() {
-      var px = window.SITE && window.SITE.gameProxy;
-      if (!px || !px.active) return "";
-      try { return new URL(px.to).origin; } catch (e) { return ""; }
-    }
 
     function link() {
       var f = frame();
@@ -162,20 +178,21 @@
         }
         return links.direct;
       }
-      var origin = playOrigin(), src = "";
-      try { src = new URL(f.src, location.href).origin; } catch (e) {}
-      if (!origin || src !== origin) return null;
+      var where = agentFor(f.src);
+      if (!where) return null;
       if (!links.agent || links.agent.frame !== f) {
-        links.agent = { frame: f, ask: function (action, id, arg) { return askAgent(origin, action, id, arg); } };
+        links.agent = { frame: f, ask: function (action, id, arg) { return askAgent(where, action, id, arg); } };
       }
       return links.agent;
     }
 
-    function askAgent(origin, action, id, arg) {
-      if (!agent.frame || !agent.frame.isConnected || agent.origin !== origin) {
+    function askAgent(where, action, id, arg) {
+      var origin = where.origin;
+      if (!agent.frame || !agent.frame.isConnected || agent.url !== where.url) {
         if (agent.frame) agent.frame.remove();
         var fr = document.createElement("iframe");
-        fr.src = origin + "/_mods/agent.html";
+        fr.src = where.url;
+        agent.url = where.url;
         fr.hidden = true;
         fr.tabIndex = -1;
         fr.title = "Mod menu helper";
@@ -778,6 +795,7 @@
 
   window.ModMenu = {
     attach: attach,
+    agentFor: agentFor,
     looks: LOOKS,
     config: config,
     saveConfig: saveConfig,

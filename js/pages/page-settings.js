@@ -641,7 +641,7 @@
         res.hosts.forEach(function (h) {
           var drop = UI.el("button", "btn btn-sm btn-flat", "Forget");
           drop.type = "button";
-          list.appendChild(listRow("image", h.host, "Backed up " + UI.formatWhen(h.updatedAt), "", drop));
+          list.appendChild(listRow("image", saveLabel(h.host), "Backed up " + UI.formatWhen(h.updatedAt), "", drop));
           drop.addEventListener("click", function () {
             ask("Forget the backup for " + h.host + "?", "The copy in your account is deleted. Progress on this device isn't touched.", "Forget it", true)
               .then(function (yes) { if (yes) return forget(); });
@@ -659,6 +659,15 @@
         if (!keepMessage) say("Last backed up " + UI.formatWhen(
           Math.max.apply(null, res.hosts.map(function (h) { return h.updatedAt; }))) + ".");
       }).catch(function () { say("Could not read your backups."); });
+    }
+
+    /* One-game rows from the Save button are "game.<id>" (and ".prev" for the
+       copy a newer save replaced); show the game's name instead. */
+    function saveLabel(host) {
+      var m = /^game\.(.+?)(\.prev)?$/.exec(host);
+      if (!m) return host;
+      var g = window.Catalog && window.Catalog.byId ? window.Catalog.byId(m[1]) : null;
+      return (g ? g.title : m[1]) + (m[2] ? " (previous save)" : " (saved game)");
     }
 
     function report(results) {

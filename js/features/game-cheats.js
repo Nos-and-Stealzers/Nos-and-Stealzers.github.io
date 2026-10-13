@@ -189,7 +189,11 @@
     /* Unity's older builds are Emscripten too (HEAPU8, _main, #canvas);
        only the sm64 port lacks a Unity loader. */
     detect: function (win) {
-      return !!(win.HEAPU8 && win._main && win.document.getElementById("canvas")) && !unity.detect(win);
+      if (!(win.HEAPU8 && win._main && win.document.getElementById("canvas")) || unity.detect(win)) return false;
+      /* Other Emscripten ports (Pinball, Doom, ...) look the same; only the
+         sm64 build itself gets Mario's cheats. */
+      if (/mario\s*64|sm64/i.test(String(win.document.title || ""))) return true;
+      return Array.prototype.some.call(win.document.scripts, function (sc) { return /sm64/i.test(sc.src || ""); });
     },
     items: function (win, s) {
       var a = findMario(win, s);
@@ -1351,6 +1355,35 @@
     });
   }
 
+  /* Only exact, observed SWF/save pairs get a game-specific menu. */
+  function flashKnown(win, rec) {
+    var swf = flashSwf(win), file = swf && new win.URL(swf).pathname.split("/").pop().toLowerCase();
+    var entries = rec.sol.entries;
+    if (file === "learntofly.swf" && rec.sol.name === "learntofly" &&
+        entries.some(function (e) { return e[0] === "lvlramp"; })) return "ltf1";
+    if (file === "learntofly2.swf" && rec.sol.name === "mainprofile" &&
+        entries.some(function (e) { return e[0] === "profileState"; })) return "ltf2";
+    return "";
+  }
+  function flashKnownFields(win, rec) {
+    var kind = flashKnown(win, rec);
+    var leaves = amfLeaves({ t: "obj0", props: rec.sol.entries }, "");
+    if (kind === "ltf1") return leaves.filter(function (l) { return l.path.join(".") === "cash"; })
+      .map(function (l) { return { id: "ltf1-cash", label: "Cash", group: "Learn to Fly", leaf: l }; });
+    if (kind === "ltf2") {
+      var fields = [];
+      for (var i = 0; i < 4; i++) {
+        var prefix = "saveState" + i;
+        var day = leaves.filter(function (l) { return l.path.join(".") === prefix + ".day"; })[0];
+        var cash = leaves.filter(function (l) { return l.path.join(".") === prefix + ".player_cash"; })[0];
+        if (day && day.value >= 1 && cash) fields.push({ id: "ltf2-cash-" + i, label: "Cash",
+          group: "Learn to Fly 2, " + (i === 0 ? "autosave" : "slot " + i), leaf: cash });
+      }
+      return fields;
+    }
+    return null;
+  }
+
   function flashLoad(win, s) {
     s.flash = { saves: [] };
     var swf = flashSwf(win);
@@ -1394,6 +1427,15 @@
       if (f.error) return { items: [], note: f.error };
       var items = [];
       f.saves.forEach(function (rec, si) {
+        var known = flashKnownFields(win, rec);
+        if (known) {
+          known.forEach(function (field) {
+            items.push({ id: "fl:" + field.id + ":" + si, label: field.label, type: "value",
+              group: field.group, value: field.leaf.value, noLock: true,
+              hint: "Edits this save only; restarts the game. Range: 0–999,999,999." });
+          });
+          return;
+        }
         if (rec.ltf3) {
           var slots = amfField(rec.ltf3, "saveSlots");
           (slots && (slots.items || slots.dense) || []).forEach(function (slot, i) {
@@ -1438,6 +1480,14 @@
         });
         s.restart = true;
         return;
+      }
+      if ((m = /^fl:(ltf1-cash|ltf2-cash-[0-3]):(\d+)$/.exec(id))) {
+        rec = f.saves[+m[2]];
+        var fields = rec && flashKnownFields(win, rec);
+        var field = fields && fields.filter(function (x) { return x.id === m[1]; })[0];
+        if (!field || !arg || arg.value === "" || !isFinite(v) || v < 0) return;
+        field.leaf.set(Math.min(Math.round(v), 999999999));
+        return flashSave(win, s, rec);
       }
       if ((m = /^fl:ltf-(cash|rich):(\d+):(\d+)$/.exec(id))) {
         rec = f.saves[+m[2]];
@@ -1601,6 +1651,9 @@
     try { ls = win.localStorage; } catch (e) { return null; }
     var dir = (String(win.location.pathname).match(/([^\/]+)\/[^\/]*$/) || [])[1];
     var keys = MX_KEYS[dir] ? [MX_KEYS[dir]] : [];
+    /* Many games share one origin (nebula-cdn, play.<domain>): only look
+       for an unlisted Moto save from a page that is actually Moto X3M. */
+    if (!keys.length && !/moto/i.test(String(win.location.pathname) + " " + String(win.document.title || ""))) return null;
     if (!keys.length) {
       for (var i = 0; i < ls.length; i++) {
         var k0 = ls.key(i);
@@ -1867,7 +1920,10 @@
   var templeRun = {
     name: "Temple Run 2",
     detect: function (win) {
-      try { return !!win.localStorage.getItem("TR2_GAME_STATE") && !!win.BABYLON; } catch (e) { return false; }
+      try {
+        return !!win.localStorage.getItem("TR2_GAME_STATE") && !!win.BABYLON &&
+          /temple/i.test(String(win.location.pathname) + " " + String(win.document.title || ""));
+      } catch (e) { return false; }
     },
     items: function (win) {
       var st = JSON.parse(win.localStorage.getItem("TR2_GAME_STATE"));
@@ -2135,6 +2191,25 @@
     try { return typeof ctor === "function" && !NATIVE.test(win.Function.prototype.toString.call(ctor)); }
     catch (e) { return false; }
   }
+  /* Engine and library namespaces whose "gold"/"POINTS" are constants
+     (THREE.ColorKeywords.gold, PIXI.DRAW_MODES.POINTS), not the player's. */
+  var LIB_ROOT = /^(THREE|PIXI|Phaser|createjs|Matter|Box2D|b2.*|p2|planck|Howler|Howl|cc|BABYLON|pc|jQuery|\$|_|Tone|Ammo|CANNON|gsap|TweenMax|TweenLite|TimelineMax|Hammer|Stats|dat|Konva|fabric|paper|Two|zim|Kiwi|ex|me|kaboom|Crafty|Quintus|ig|spine|SAT|io|firebase|gtag|ga|google|adsbygoogle|PokiSDK|CrazyGames|GameDistribution|gdsdk|YaGames|sdk|Sentry|Module|PIXI_.*|Geom|Phaser.*|Laya|laya|egret|Hilo|Cocos.*|Scratch|vm|Blockly|Ruffle.*|RufflePlayer|ga4|dataLayer|FB|Unity.*|unity.*)$/;
+  var NOT_PLAYER = /colou?r|keyword|modes?$|enum|const|types?$|flags?$|blend|settings|config|options|debug|defaults?|keycodes?|keys$|events?$|easing|tween|shader|uniform|^glwrap$|^renderer$|^NAMED_GLOBALS$|^box2d$|^Log$|^_engine$|texture|^\$parent$|^\$stage$|leaderboard|panel/i;
+  /* Minified runtimes (GameMaker's _xp2, _Hp1, _H5) and engine tunables
+     (point sizes, opacity, scaling) are not the player's numbers. */
+  var MINIFIED = /^_+[A-Za-z0-9]{1,3}$|^[A-Za-z]{1,3}\d+$/;
+  var TUNABLE = /(size|ptr|eps|opacity|coeff|ratio|space|scale|width|height|timer|speed|filteringlevel|nestlevel|debuglevel|mapping|whitepoint|cost|input|tt|icon|bar|row|instances|separation|seperation)$|^(pt_shape_|depth_|skin|ccb_)/i;
+  function playerPath(path, k, depth) {
+    if (LIB_ROOT.test(path[0])) return false;
+    if (/^[A-Z0-9_]+$/.test(k) && /[A-Z]/.test(k) && (depth > 0 || /_/.test(k))) return false;   // CONSTANTS
+    if (MINIFIED.test(k) || TUNABLE.test(k)) return false;
+    for (var i = 0; i < path.length; i++) {
+      if (NOT_PLAYER.test(path[i]) || (i > 0 && MINIFIED.test(path[i]))) return false;
+    }
+    if (MINIFIED.test(path[0]) && path.length > 0) return false;
+    return true;
+  }
+
   function genericFields(win) {
     var out = [];
     var seen = [];
@@ -2146,7 +2221,7 @@
       for (var i = 0; i < keys.length && i < 400; i++) {
         var k = keys[i], v;
         try { v = obj[k]; } catch (e) { continue; }
-        if (typeof v === "number" && isFinite(v) && WANTED.test(k) && depth > 0) {
+        if (typeof v === "number" && isFinite(v) && WANTED.test(k) && depth > 0 && playerPath(path, k, depth)) {
           out.push({ path: path.concat(k), label: path.slice(-1).concat(k).join(".") });
         } else if (scriptMade(win, v) && !Array.isArray(v)) {
           walk(v, path.concat(k), depth + 1);
@@ -2155,10 +2230,10 @@
     }
     var roots = {};
     Object.keys(win).forEach(function (k) {
-      if (/^(on|webkit|__ach)/.test(k) || k === "GameCheats") return;
+      if (/^(on|webkit|__ach)/.test(k) || k === "GameCheats" || LIB_ROOT.test(k)) return;
       var v;
       try { v = win[k]; } catch (e) { return; }
-      if (typeof v === "number" && WANTED.test(k)) roots[k] = true;
+      if (typeof v === "number" && WANTED.test(k) && playerPath([k], k, 0)) roots[k] = true;
       else if (scriptMade(win, v)) roots[k] = v;
     });
     Object.keys(roots).forEach(function (k) {
@@ -2174,7 +2249,7 @@
   }
   function pathSet(win, path, v) {
     var o = pathGet(win, path.slice(0, -1));
-    if (o != null) o[path[path.length - 1]] = v;
+    try { if (o != null) o[path[path.length - 1]] = v; } catch (e) { /* read-only */ }
   }
 
   var generic = {
@@ -2592,5 +2667,85 @@
 
   function refresh(win) { return inspect(win, true); }
 
-  window.GameCheats = { inspect: inspect, run: run, refresh: refresh, timeControl: timeControl, keepFocus: keepFocus };
+  /* ------------------------------------------------------- save now */
+
+  /* Many games hold progress in memory and only write it out now and then.
+     Before a manual cloud save, ask the game to write what it has: games
+     with a known save function call it, and Emscripten/Unity games push
+     their in-memory files to IndexedDB (FS.syncfs). Also reports where a
+     Unity game keeps its files, so a one-game save can take just those. */
+  var SAVE_CALLS = [
+    function (w) { if (w.Game && w.Game.WriteSave && w.Game.Objects) { w.Game.WriteSave(); return "Cookie Clicker"; } },
+    function (w) { if (w.Engine && w.Engine.saveGame && w.$SM) { w.Engine.saveGame(); return "A Dark Room"; } },
+    function (w) { if (w.Stats && w.Core && w.Core.save && "money" in w.Stats) { w.Core.save(true); return "devLife"; } },
+    function (w) {
+      var save = lexical(w, "Save");
+      if (w.Clicks && save && save.getSaveData) { save.getSaveData(); return "QuickClick"; }
+    },
+    function (w) {
+      var lab = w.GameObjects && w.ObjectStorage && pcLab(w);
+      if (lab) { w.ObjectStorage.save("lab", lab); return "Particle Clicker"; }
+    }
+  ];
+
+  function emFileSystems(w) {
+    var out = [];
+    function add(fs) { if (fs && typeof fs.syncfs === "function" && out.indexOf(fs) === -1) out.push(fs); }
+    try { add(w.FS); } catch (e) {}
+    try { add(w.Module && w.Module.FS); } catch (e) {}
+    ["unityInstance", "gameInstance", "myGameInstance", "UnityInstance", "unityGame", "instance"].forEach(function (k) {
+      try { var inst = w[k]; if (inst && inst.Module) add(inst.Module.FS); } catch (e) {}
+    });
+    return out;
+  }
+
+  function syncOne(fs) {
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () { resolve(false); }, 4000);
+      try {
+        fs.syncfs(false, function (err) { clearTimeout(t); resolve(!err); });
+      } catch (e) { clearTimeout(t); resolve(false); }
+    });
+  }
+
+  function flush(win) {
+    var info = { flushed: [], unity: [], unityPages: [], frames: [] };
+    var jobs = [];
+    (function walk(w, depth) {
+      var href;
+      try { href = String(w.location.href); if (!w.document) return; } catch (e) { return; }
+      info.frames.push(href.split(/[?#]/)[0]);
+      SAVE_CALLS.forEach(function (fn) {
+        try { var name = fn(w); if (name && info.flushed.indexOf(name) === -1) info.flushed.push(name); } catch (e) {}
+      });
+      var isUnity = false;
+      try { isUnity = unity.detect(w); } catch (e) {}
+      if (isUnity) {
+        var dir = unityDir(w);
+        if (info.unity.indexOf(dir) === -1) {
+          info.unity.push(dir);
+          info.unityPages.push(href.split(/[?#]/)[0]);
+        }
+      }
+      emFileSystems(w).forEach(function (fs) {
+        jobs.push(syncOne(fs).then(function (ok) {
+          if (ok && info.flushed.indexOf("game files") === -1) info.flushed.push("game files");
+        }));
+      });
+      if (depth < 2) {
+        for (var i = 0; i < w.frames.length; i++) {
+          try { if (w.frames[i].document) walk(w.frames[i], depth + 1); } catch (e) {}
+        }
+      }
+    })(win, 0);
+    return Promise.all(jobs).then(function () { return info; });
+  }
+
+  window.GameCheats = { inspect: inspect, run: run, refresh: refresh, timeControl: timeControl, keepFocus: keepFocus, flush: flush,
+    /* The /idbfs folder Unity uses for a page at this URL. */
+    unityDirOf: function (url) {
+      url = String(url).split(/[?#]/)[0];
+      return "/idbfs/" + md5(url.slice(0, url.lastIndexOf("/")));
+    }
+  };
 })();

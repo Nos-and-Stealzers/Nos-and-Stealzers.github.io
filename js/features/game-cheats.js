@@ -1816,6 +1816,146 @@
       col.forEach(function (cell, y) { col[y] = fn(cell, x, y); });
     });
   }
+  /* GameMaker HTML5 games save INI files into localStorage as
+     "<Game>.<id>.<file>", plain [section] key="value" lines (Idle Breakout,
+     Spelunky, Retro Highway...). Only saves whose game name matches this
+     page are offered, since many games share one origin. Games read their
+     INI when they start, so edits restart the game. */
+  function gmRuntime(win) {
+    try {
+      if (win.g_pBuiltIn || win.GameMaker_Init) return true;
+      return Array.prototype.some.call(win.document.scripts, function (sc) { return /\/html5game\//i.test(sc.src || ""); });
+    } catch (e) { return false; }
+  }
+  var GM_VERIFIED = /^breakout\.\d+\.save\.dat$/;
+  function flatWords(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function gmSaves(win) {
+    var out = [];
+    var page = flatWords(decodeURIComponent(String(win.location.pathname)).replace(/\/(index\.html?|html5game)\b/ig, "")) +
+      " " + flatWords(win.document.title);
+    var segs = decodeURIComponent(String(win.location.pathname)).split("/").map(flatWords)
+      .filter(function (x) { return x.length >= 5 && !/^(index|indexhtml|html5game|gameshuge|games)$/.test(x); });
+    try {
+      for (var i = 0; i < win.localStorage.length; i++) {
+        var k = win.localStorage.key(i);
+        if (!k || /^ach[:-]/.test(k)) continue;
+        var v = win.localStorage.getItem(k) || "";
+        if (!/^\s*\[[^\]\r\n]+\]\s*[\r\n]+[^=\r\n]+="[^"\r\n]*"/.test(v)) continue;
+        /* Only saves checked to stick after a restart: other GameMaker games
+           (Retro Highway, Dungeon Deck, Flappy Defense) rewrite their save
+           from memory at start, so an edit there silently vanishes. */
+        if (!GM_VERIFIED.test(k)) continue;
+        var name = flatWords(k.split(".")[0]);
+        if (name.length < 4) continue;
+        var mine = page.indexOf(name) !== -1 || segs.some(function (x) { return name.indexOf(x) !== -1; });
+        if (mine) out.push(k);
+      }
+    } catch (e) {}
+    return out.sort();
+  }
+  function gmParse(text) {
+    var list = [], sec = "";
+    String(text).split(/\r?\n/).forEach(function (line) {
+      var h = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+      if (h) { sec = h[1]; return; }
+      var m = /^([^=]+)="([^"]*)"\s*$/.exec(line);
+      if (m && /^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(m[2])) list.push({ sec: sec, name: m[1], raw: m[2], value: Number(m[2]) });
+    });
+    return list;
+  }
+  function gmFormat(raw, v) {
+    var dec = /\.(\d+)$/.exec(raw);
+    return dec ? Number(v).toFixed(dec[1].length) : String(Math.round(v));
+  }
+  function gmWrite(win, key, changes) {
+    var text = win.localStorage.getItem(key) || "";
+    var backup = "ach:gm-backup:" + key;
+    try { if (!win.localStorage.getItem(backup)) win.localStorage.setItem(backup, text); } catch (e) {}
+    var eol = /\r\n/.test(text) ? "\r\n" : "\n", sec = "";
+    var lines = text.split(/\r?\n/).map(function (line) {
+      var h = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+      if (h) { sec = h[1]; return line; }
+      var m = /^([^=]+)="([^"]*)"(\s*)$/.exec(line);
+      if (!m) return line;
+      var c = changes[sec + "\u0001" + m[1]];
+      if (c === undefined) return line;
+      return m[1] + '="' + gmFormat(m[2], c) + '"' + m[3];
+    });
+    gmSet(win, key, lines.join(eol));
+  }
+  /* Some GameMaker games save from memory as the page unloads, which would
+     write the old numbers back over the edit during the restart. Until this
+     page goes away, the game's own writes to that save are dropped. */
+  function gmSet(win, key, text) {
+    var proto = win.Storage && win.Storage.prototype;
+    if (proto && !win.__achGmGuard) {
+      var orig = proto.setItem;
+      win.__achGmGuard = {};
+      win.__achGmSetItem = orig;
+      proto.setItem = function (k, v) {
+        if (this === win.localStorage && win.__achGmGuard[k]) return;
+        return orig.apply(this, arguments);
+      };
+    }
+    (win.__achGmSetItem || win.localStorage.setItem).call(win.localStorage, key, text);
+    if (win.__achGmGuard) win.__achGmGuard[key] = true;
+  }
+  /* Money-like when the LAST word of the name is one (coins, pup_points),
+     so upgrade levels such as upgCoinBoost are left alone. */
+  var gmMONEY = { test: function (name) {
+    var words = String(name).replace(/([a-z0-9])([A-Z])/g, "$1 $2").split(/[^A-Za-z]+/).filter(Boolean);
+    return /^(money|cash|gold|coins?|gems?|diamonds?|points|credits?|bucks|crystals?|tokens?)$/i.test(words[words.length - 1] || "");
+  } };
+  var gameMaker = {
+    name: "GameMaker saves",
+    detect: function (win) { return gmRuntime(win) && gmSaves(win).length > 0; },
+    items: function (win, s) {
+      var saves = gmSaves(win);
+      var items = [];
+      var cur = saves.indexOf(s.gmKey) !== -1 ? s.gmKey : saves[0];
+      s.gmKey = cur;
+      if (saves.length > 1) saves.forEach(function (k, i) {
+        items.push({ id: "gm-file:" + i, label: k.split(".").slice(2).join(".") || k, type: "toggle", group: "Which save", on: k === cur });
+      });
+      var fields = gmParse(win.localStorage.getItem(cur) || "");
+      s.gmFields = fields;
+      if (fields.some(function (f) { return gmMONEY.test(f.name); })) {
+        items.push({ id: "gm-rich", label: "Max money", type: "button", group: "Stuff",
+          hint: "Money, gold, coins, gems and the like to 999,999,999; restarts the game" });
+      }
+      fields.slice(0, 80).forEach(function (f, i) {
+        items.push({ id: "gm:" + i, label: f.name.replace(/_/g, " "), type: "value", group: f.sec ? "Save: " + f.sec : "Save",
+          value: Math.round(f.value * 100) / 100, noLock: true });
+      });
+      var backed = false;
+      try { backed = !!win.localStorage.getItem("ach:gm-backup:" + cur); } catch (e) {}
+      if (backed) items.push({ id: "gm-undo", label: "Undo my edits", type: "button", group: "Stuff", hint: "Puts the save back how it was before the first edit" });
+      return { items: items, note: "Edits the game's own save file and restart it to load the change." };
+    },
+    action: function (win, s, id, arg) {
+      var key = s.gmKey, m;
+      if (!key) return;
+      if ((m = /^gm-file:(\d+)$/.exec(id))) { s.gmKey = gmSaves(win)[+m[1]] || key; return; }
+      if (id === "gm-undo") {
+        var old = win.localStorage.getItem("ach:gm-backup:" + key);
+        if (old !== null) { gmSet(win, key, old); win.localStorage.removeItem("ach:gm-backup:" + key); s.restart = true; }
+        return;
+      }
+      var fields = gmParse(win.localStorage.getItem(key) || ""), changes = {};
+      if (id === "gm-rich") {
+        fields.forEach(function (f) { if (gmMONEY.test(f.name) && !/temp|total|max|cost|price/i.test(f.name)) changes[f.sec + "\u0001" + f.name] = 999999999; });
+      } else if ((m = /^gm:(\d+)$/.exec(id))) {
+        var f = (s.gmFields || [])[+m[1]];
+        var v = Number(arg && arg.value);
+        if (!f || !isFinite(v)) return;
+        changes[f.sec + "\u0001" + f.name] = v;
+      } else return;
+      if (!Object.keys(changes).length) return;
+      gmWrite(win, key, changes);
+      s.restart = true;
+    }
+  };
+
   var g2048 = {
     name: "2048",
     detect: function (win) {
@@ -2540,7 +2680,7 @@
 
   /* ------------------------------------------------------------- public */
 
-  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, flash, unity, dino, cookie, retroBowl,
+  var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, flash, unity, dino, cookie, retroBowl, gameMaker,
     g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
     particleClicker, quickClick, devLife, generic];
 

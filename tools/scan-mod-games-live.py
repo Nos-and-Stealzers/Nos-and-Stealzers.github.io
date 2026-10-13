@@ -25,7 +25,7 @@ KIND = {
     "Cookie Clicker": "cookie", "Moto X3M": "moto", "Retro Bowl": "retrobowl", "2048": "g2048",
     "Flappy Bird": "flappy", "Temple Run 2": "temple", "Crossy Road": "crossy", "A Dark Room": "darkroom",
     "Bitcoin Clicker": "bitcoin", "Particle Clicker": "particle", "QuickClick": "quickclick",
-    "devLife": "devlife", "Game values": "values",
+    "devLife": "devlife", "Game values": "values", "GameMaker saves": "gamemaker",
 }
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
@@ -94,7 +94,7 @@ async def route_play(route):
             pass
 
 
-async def scan_one(ctx, job, wait):
+async def scan_one(ctx, job, wait, poke=False):
     """Embedded in a hub page, as the site plays it (githack refuses
     top-level navigations with an interstitial)."""
     page = await ctx.new_page()
@@ -110,7 +110,18 @@ async def scan_one(ctx, job, wait):
             await asyncio.sleep(0.5)
         if not frame:
             return {"err": "frame never loaded"}
-        await asyncio.sleep(wait)
+        if poke:
+            # Many games only write a save once played: click in and press a few keys.
+            await asyncio.sleep(wait / 2)
+            for _ in range(3):
+                await page.mouse.click(560, 400)
+                await asyncio.sleep(1.2)
+            for k in ("Enter", "Space", "ArrowRight", "ArrowUp"):
+                await page.keyboard.press(k)
+                await asyncio.sleep(0.4)
+            await asyncio.sleep(wait / 2)
+        else:
+            await asyncio.sleep(wait)
         await frame.add_script_tag(content=CHEATS)
         return await frame.evaluate(PROBE)
     except Exception as e:
@@ -129,6 +140,8 @@ async def main():
     ap.add_argument("--wait", type=float, default=9)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--ids")
+    ap.add_argument("--poke", action="store_true", help="click into the game and press keys before probing")
+    ap.add_argument("--retry", action="store_true", help="scan again the games that showed no engine (slow loaders)")
     a = ap.parse_args()
     jobs = candidates()
     if a.only:
@@ -137,7 +150,9 @@ async def main():
         want = set(a.ids.split(","))
         jobs = [j for j in jobs if j["id"] in want]
     done = json.loads(OUT.read_text()) if OUT.exists() else {}
-    if not a.ids:
+    if a.retry:
+        jobs = [j for j in jobs if j["id"] in done and not done[j["id"]].get("kind")]
+    elif not a.ids:
         jobs = [j for j in jobs if j["id"] not in done]
     if a.limit:
         jobs = jobs[: a.limit]
@@ -146,6 +161,13 @@ async def main():
         browser = await pw.chromium.launch(headless=True, args=["--autoplay-policy=no-user-gesture-required", "--mute-audio"])
         # rawcdn.githack.com shows an interstitial to HeadlessChrome; look like a normal browser.
         ctx = await browser.new_context(service_workers="block", user_agent=UA, viewport={"width": 1150, "height": 800})
+        async def no_popups(p):
+            try:
+                if await p.opener():
+                    await p.close()
+            except Exception:
+                pass
+        ctx.on("page", lambda p: asyncio.ensure_future(no_popups(p)))
         await ctx.route(HUB + "/**", route_hub)
         await ctx.route(PLAY + "/**", route_play)
         q = list(jobs)
@@ -157,7 +179,7 @@ async def main():
             while q:
                 job = q.pop(0)
                 try:
-                    r = await asyncio.wait_for(scan_one(ctx, job, a.wait), 75)
+                    r = await asyncio.wait_for(scan_one(ctx, job, a.wait, a.poke), 90)
                 except asyncio.TimeoutError:
                     r = {"err": "hung"}
                 eng = r.get("engine")

@@ -160,6 +160,8 @@ async function main() {
       if (kind === "mario") return;              // only the real sm64 build, via SPECIAL
       /* Phaser games whose player isn't reachable only get the speed mods. */
       if ((kind === "phaser" || kind === "construct" || kind === "values") && !(live[id].items > 0)) return;
+      /* A GameMaker save with only a flag or two isn't worth listing. */
+      if (kind === "gamemaker" && !(live[id].items >= 3)) return;
       out[id] = kind;
     });
   }

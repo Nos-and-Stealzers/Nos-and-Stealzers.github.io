@@ -127,6 +127,7 @@
       ["dino", "Chrome Dino", "Can't crash, auto-jump, any speed, set the score and high score, night mode."],
       ["moto", "Moto X3M", "Every level open with 3 stars and every bike, in all five Moto X3M games."],
       ["retrobowl", "Retro Bowl", "Coaching credits, salary cap, fans, coach rating and facilities for any save slot, or max them all."],
+      ["gamemaker", "Idle Breakout", "Edit any number in the save (money, gold, levels, upgrades), Max money, and undo."],
       ["temple", "Temple Run 2", "Any number of coins, every ability maxed, the power meter unlocked, and the high score."],
       ["crossy", "Crossy Road", "Set your coins or add 10,000, and set the top score."],
       ["flappy", "Flappy Bird", "Can't die, wide gaps, floaty gravity, and set the score and high score."],

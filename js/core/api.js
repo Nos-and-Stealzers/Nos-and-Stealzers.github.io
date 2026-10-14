@@ -231,6 +231,7 @@
     /* --- admin --- */
     adminOverview: function () { return request("GET", "/admin/overview"); },
     adminUsers: function (q) { return request("GET", "/admin/users" + (q ? "?q=" + encodeURIComponent(q) : "")); },
+    adminCreateUser: function (fields) { return request("POST", "/admin/users", fields); },
     adminUpdateUser: function (id, patch) { return request("PATCH", "/admin/users/" + id, patch); },
     adminDeleteUser: function (id) { return request("DELETE", "/admin/users/" + id); },
     adminSetPassword: function (id, newPassword) {

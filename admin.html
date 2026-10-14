@@ -178,9 +178,18 @@
               <option value="staff">Staff</option>
               <option value="suspended">Suspended</option>
               <option value="reported">Reported</option>
+              <option value="never">Never signed in</option>
+            </select>
+            <label for="user-sort" class="label">Order</label>
+            <select id="user-sort" style="width:auto">
+              <option value="new">Newest first</option>
+              <option value="old">Oldest first</option>
+              <option value="seen">Last seen</option>
+              <option value="name">Name A–Z</option>
             </select>
             <span class="fill"></span>
             <span class="tiny dimmer" id="user-count">—</span>
+            <button class="btn btn-sm btn-cta" type="button" id="user-new" data-owner-or-admin hidden>＋ Create account</button>
           </div>
           <p class="tiny dimmer" style="margin:0.8rem 0 0">
             You can act only on accounts below your own rank, and you can never
@@ -188,6 +197,49 @@
             button here is a convenience rather than the control.
           </p>
         </div>
+        <form class="panel cat-form" id="user-create" hidden style="margin-bottom:1rem" autocomplete="off">
+          <div class="field wide">
+            <strong>Create an account</strong>
+            <p class="tiny dimmer" style="margin:0.3rem 0 0">
+              Makes a ready-to-use account and skips email verification. Leave the
+              email blank and they sign in with the username. Works even while
+              sign-ups are closed. You can only give a rank below your own.
+            </p>
+          </div>
+          <div class="field">
+            <label for="uc-username">Username</label>
+            <input type="text" id="uc-username" maxlength="20" required
+                   pattern="[A-Za-z][A-Za-z0-9_]{2,19}" placeholder="letters, numbers, _"
+                   autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="uc-display">Display name <span class="dimmer">(optional)</span></label>
+            <input type="text" id="uc-display" maxlength="32" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="uc-email">Email <span class="dimmer">(optional)</span></label>
+            <input type="email" id="uc-email" maxlength="254" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="uc-role">Rank</label>
+            <select id="uc-role"></select>
+          </div>
+          <div class="field wide">
+            <label for="uc-password">Password</label>
+            <div class="btn-row" style="gap:0.4rem">
+              <input type="text" id="uc-password" minlength="8" maxlength="72" required
+                     placeholder="At least 8 characters" autocomplete="new-password"
+                     spellcheck="false" style="flex:1">
+              <button class="btn btn-sm" type="button" id="uc-gen">Generate</button>
+            </div>
+          </div>
+          <p class="form-error wide" id="uc-error" hidden></p>
+          <div class="panel wide" id="uc-done" hidden></div>
+          <div class="btn-row wide">
+            <button class="btn btn-cta" type="submit" id="uc-save">Create account</button>
+            <button class="btn btn-flat" type="button" id="uc-cancel">Close</button>
+          </div>
+        </form>
         <div class="two-col-list-wide">
           <div class="rows-scroll"><div class="rows" id="user-rows"></div></div>
           <div class="panel" id="user-detail">

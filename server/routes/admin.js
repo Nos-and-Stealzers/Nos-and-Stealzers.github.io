@@ -4,7 +4,7 @@
 "use strict";
 
 const express = require("express");
-const { db, audit, rankOf, outranks } = require("../db");
+const { db, audit, rankOf, outranks, freshFriendCode, OWNER_USERNAME } = require("../db");
 const A = require("../auth");
 const S = require("../shape");
 const notify = require("../notify");
@@ -74,10 +74,43 @@ router.get("/users", staff, (req, res) => {
             (SELECT MAX(l.at) FROM logins l
               WHERE l.user_id = u.id AND l.outcome = 'ok') AS last_login
        FROM users u ${where}
-      ORDER BY u.created_at DESC LIMIT 200`
+      ORDER BY u.created_at DESC`
   ).all(...args);
 
   res.json({ users: rows.map(S.adminUser) });
+});
+
+/* Admin+ creates an account for someone, at a rank below their own. */
+router.post("/users", adminOnly, (req, res, next) => {
+  try {
+    const name = S.username(req.body.username);
+    const pass = S.password(req.body.password);
+    const display = req.body.displayName
+      ? S.str(req.body.displayName, { field: "Display name", max: 32 })
+      : name;
+    const role = String(req.body.role || "user");
+    if (!["user", "mod", "admin"].includes(role)) throw S.fail("Unknown rank.");
+    if (rankOf(role) >= rankOf(req.user.role)) {
+      return res.status(403).json({ error: "You can only give a rank below your own." });
+    }
+    if (name.toLowerCase() === OWNER_USERNAME) {
+      return res.status(403).json({ error: "That username is reserved." });
+    }
+    const taken = db.prepare("SELECT 1 FROM users WHERE username_lower = ?").get(name.toLowerCase());
+    if (taken) return res.status(409).json({ error: "That username is already taken." });
+
+    const { salt, hash } = A.makePassword(pass);
+    const now = Date.now();
+    const info = db.prepare(
+      `INSERT INTO users (username, username_lower, display_name, pass_hash, pass_salt,
+                          role, created_at, last_seen, friend_code)
+       VALUES (?,?,?,?,?,?,?,?,?)`
+    ).run(name, name.toLowerCase(), display, hash, salt, role, now, now, freshFriendCode());
+
+    audit(req.user.id, "user-create", `${name} as ${role}`);
+    const row = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
+    res.status(201).json({ user: S.adminUser(row) });
+  } catch (err) { next(err); }
 });
 
 /* Role and suspension changes. Guard rails so an install can't lock itself out. */

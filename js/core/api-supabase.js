@@ -1500,7 +1500,8 @@
               reports: Number(r.reports) || 0,
               playing: r.current_game || "",
               lastLogin: ms(r.last_login),
-              mutedUntil: r.muted_until || null
+              mutedUntil: r.muted_until || null,
+              noProfile: !!r.no_profile
             });
           })
         };
@@ -1514,6 +1515,20 @@
         next_role: patch.role === undefined ? null : patch.role,
         next_state: patch.state === undefined ? null : patch.state
       }).then(function (user) { return { user: user }; });
+    },
+
+    /* Admin+ creates an account. No email means they sign in with the username. */
+    adminCreateUser: function (fields) {
+      return rpc("admin_create_user", {
+        new_username: fields.username,
+        new_password: fields.password,
+        new_email: fields.email || null,
+        new_display: fields.displayName || null,
+        new_role: fields.role || "user"
+      }).then(function (row) {
+        if (!row || !row.id) throw fail("Account was not created. Run supabase/admin-accounts.sql first.", 500);
+        return { user: row };
+      });
     },
 
     /* Staff-issued password reset — the account-recovery answer to "I lost access". */

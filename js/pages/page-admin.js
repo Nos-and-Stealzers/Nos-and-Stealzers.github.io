@@ -383,8 +383,82 @@
       var userCache = [];
       var selectedUserId = null;
 
+      var userSort = document.getElementById("user-sort");
       userQ.addEventListener("input", UI.debounce(function () { loadUsers(); }, 240));
       userFilter.addEventListener("change", function () { drawUsers(); });
+      userSort.addEventListener("change", function () { drawUsers(); });
+
+      /* Create account (admin+). The server re-checks rank and every field. */
+      var ucForm = document.getElementById("user-create");
+      var ucRole = document.getElementById("uc-role");
+      var ucErr = document.getElementById("uc-error");
+      var ucDone = document.getElementById("uc-done");
+      if (isAdmin) {
+        RANKS.slice(0, rankOf(me.role)).forEach(function (r) {
+          var o = UI.el("option", null, r);
+          o.value = r;
+          ucRole.appendChild(o);
+        });
+        document.getElementById("user-new").addEventListener("click", function () {
+          ucForm.hidden = !ucForm.hidden;
+          if (!ucForm.hidden) document.getElementById("uc-username").focus();
+        });
+        document.getElementById("uc-cancel").addEventListener("click", function () {
+          ucForm.hidden = true;
+        });
+        document.getElementById("uc-gen").addEventListener("click", function () {
+          document.getElementById("uc-password").value = randomPassword();
+        });
+        ucForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          ucErr.hidden = true;
+          ucDone.hidden = true;
+          var fields = {
+            username: document.getElementById("uc-username").value.trim(),
+            displayName: document.getElementById("uc-display").value.trim(),
+            email: document.getElementById("uc-email").value.trim(),
+            password: document.getElementById("uc-password").value,
+            role: ucRole.value
+          };
+          if (!/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(fields.username)) {
+            ucErr.textContent = "Username must be 3-20 characters: letters, numbers or _, starting with a letter.";
+            ucErr.hidden = false;
+            return;
+          }
+          if (fields.password.length < 8) {
+            ucErr.textContent = "Password must be at least 8 characters.";
+            ucErr.hidden = false;
+            return;
+          }
+          var save = document.getElementById("uc-save");
+          save.disabled = true;
+          API.adminCreateUser(fields).then(function (res) {
+            var made = (res && res.user) || {};
+            ucDone.innerHTML = "";
+            ucDone.appendChild(UI.el("strong", null, "Created @" + (made.username || fields.username)));
+            ucDone.appendChild(UI.el("p", "tiny dimmer",
+              "Give them these now. The password won't be shown again."));
+            var creds = UI.el("pre");
+            creds.style.margin = "0.4rem 0 0";
+            creds.style.whiteSpace = "pre-wrap";
+            creds.textContent = "Sign in: " + (made.email || fields.email || fields.username) +
+              (fields.email ? "  (or " + fields.username + ")" : "") +
+              "\nPassword: " + fields.password +
+              "\nRank: " + (made.role || fields.role);
+            ucDone.appendChild(creds);
+            ucDone.hidden = false;
+            ["uc-username", "uc-display", "uc-email", "uc-password"].forEach(function (id) {
+              document.getElementById(id).value = "";
+            });
+            ucRole.value = "user";
+            UI.toast("@" + (made.username || fields.username) + " created");
+            loadUsers();
+          }).catch(function (err) {
+            ucErr.textContent = (err && err.message) || "Could not create that account.";
+            ucErr.hidden = false;
+          }).then(function () { save.disabled = false; });
+        });
+      }
 
       function loadUsers() {
         return API.adminUsers(userQ.value.trim()).then(function (res) {
@@ -400,7 +474,15 @@
           if (want === "suspended") return u.state === "suspended";
           if (want === "online") return u.online;
           if (want === "reported") return (u.reports || 0) > 0;
+          if (want === "never") return !u.lastLogin;
           return true;
+        });
+        var order = userSort.value;
+        rows.sort(function (a, b) {
+          if (order === "old") return (a.createdAt || 0) - (b.createdAt || 0);
+          if (order === "seen") return (b.lastSeen || 0) - (a.lastSeen || 0);
+          if (order === "name") return String(a.username).localeCompare(String(b.username));
+          return (b.createdAt || 0) - (a.createdAt || 0);
         });
 
         var host = document.getElementById("user-rows");
@@ -432,7 +514,9 @@
           var st = UI.el("span", "admin-pill " + (u.state === "active" ? "is-good" : "is-bad"),
             u.state === "active" ? (u.online ? "Online" : "Active") : u.state);
           meta.appendChild(st);
+          if (u.noProfile) meta.appendChild(UI.el("span", "admin-pill is-bad", "no profile"));
           var stats = UI.el("span", "admin-urow-stats",
+            (u.createdAt ? "joined " + new Date(u.createdAt).toLocaleDateString() + " · " : "") +
             u.friends + " friends · " + u.messages + " msgs" + (u.reports ? " · " + u.reports + " reports" : ""));
           if (u.reports) stats.classList.add("is-bad");
           meta.appendChild(stats);
@@ -442,7 +526,7 @@
           /* One rule decides whether anything is offered at all, and it is
              the same rule the server applies: you may act only on someone
              below your own rank. Everything else is a label saying why not. */
-          var manageable = u.id !== me.id && u.role !== "owner" &&
+          var manageable = u.id !== me.id && u.role !== "owner" && !u.noProfile &&
             rankOf(me.role) > rankOf(u.role);
           if (u.id === me.id) {
             acts.appendChild(UI.el("span", "tiny dimmer", "that's you"));
@@ -517,6 +601,7 @@
           body.appendChild(UI.el("p", "tiny dimmer",
             u.id === me.id ? "That's you." :
             u.role === "owner" ? "The owner can't be managed by anyone." :
+            u.noProfile ? "This sign-in has no profile row yet. Run supabase/admin-accounts.sql to repair it." :
             "This account outranks you."));
           return;
         }
@@ -1498,7 +1583,8 @@
           ["Live", "Who is signed in right now and what they have open. Presence comes from " +
             "the player page, so it lags by up to a minute and stops when someone closes the tab. " +
             "It is not a location log — it only knows the game, not the person."],
-          ["Users", "Search accounts and open one to change its rank, suspend it or delete it. " +
+          ["Users", "Every account ever made on the site, oldest included. Admins and up can create " +
+            "an account here. Search accounts and open one to change its rank, suspend it or delete it. " +
             "A suspension is enforced in the database: friend requests, messages and calls are " +
             "refused, not merely hidden."],
           ["Support", "The ticket queue. “Needs a reply” is waiting on staff; " +
@@ -1569,7 +1655,7 @@
             "below them: warn, mute for up to a day, sign out of every device, reset a rule-breaking " +
             "name, bio or picture, and hide up to 24 hours of their messages. Cannot change ranks, " +
             "suspend or ban."],
-          ["admin", "Everything a mod has, plus ranks up to mod, suspensions, bans, Campus+, " +
+          ["admin", "Everything a mod has, plus creating accounts, ranks up to mod, suspensions, bans, Campus+, " +
             "new passwords, deletions, announcements, the sign-in log, and longer mutes and " +
             "message clean-ups. Cannot promote anyone to admin."],
           ["dev", "Everything an admin has, plus ranks up to admin (devs manage admins), the " +

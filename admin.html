@@ -11,11 +11,12 @@
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
   <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
 </head>
-<body>
+<body class="admin-page">
   <a class="skip-link" href="#main">Skip to content</a>
   <div data-shell="chrome"></div>
 
@@ -33,6 +34,7 @@
     <div id="console" class="admin-shell" hidden>
 
       <nav class="admin-nav" id="tabs" aria-label="Admin sections">
+        <div class="admin-nav-brand"><span class="admin-brand-mark" aria-hidden="true">AC</span><div><strong>Arcade Campus</strong><span>Staff console</span></div></div>
         <span class="admin-nav-label">Monitor</span>
         <button class="admin-nav-link on" type="button" data-tab="overview" aria-current="page" data-icon="grid"><span class="lbl">Overview</span></button>
         <button class="admin-nav-link" type="button" data-tab="live" data-icon="pulse"><span class="lbl">Live</span></button>
@@ -60,30 +62,39 @@
       <div class="admin-main">
 
       <header class="admin-topbar">
-        <div class="admin-title">
-          <h1>Admin</h1>
-          <span class="admin-you" id="admin-you"></span>
+        <div class="admin-heading">
+          <p class="admin-eyebrow">Arcade Campus Hub · Staff console</p>
+          <div class="admin-title">
+            <h1 id="admin-section-title">Overview</h1>
+            <span class="admin-you" id="admin-you"></span>
+          </div>
+          <p id="admin-section-description" class="admin-description">Review the queues, check site activity, and keep the arcade running.</p>
         </div>
         <div class="admin-stats">
           <span class="admin-stat"><b id="r-online">0</b> online</span>
           <span class="admin-stat is-warn"><b id="r-reports">0</b> open reports</span>
           <span class="admin-stat" hidden>you are <b id="r-role">—</b></span>
         </div>
+        <div class="admin-load-line">
+          <span id="admin-load-status" role="status" aria-live="polite">Loading console data…</span>
+          <p id="admin-load-error" role="alert" hidden></p>
+        </div>
       </header>
 
       <!-- overview -->
       <section class="tab-panel" data-panel="overview">
+        <div class="admin-panel-intro"><h2>Staff queue</h2><p>Start with the items that need attention. Select a queue to review it.</p></div>
 
         <div class="block-head"><h2>Waiting on staff</h2><span class="fill"></span></div>
         <div class="metrics queue-metrics" style="margin-bottom:1.4rem">
           <button class="metric" type="button" data-goto="reports">
-            <b id="q-reports">0</b><span>Open reports</span></button>
+            <b id="q-reports">0</b><span>Open reports</span><small>Review reports <span aria-hidden="true">→</span></small></button>
           <button class="metric" type="button" data-goto="support">
-            <b id="q-support">0</b><span>Open tickets</span></button>
+            <b id="q-support">0</b><span>Open tickets</span><small>Reply to tickets <span aria-hidden="true">→</span></small></button>
           <button class="metric" type="button" data-goto="feedback">
-            <b id="q-feedback">0</b><span>New feedback</span></button>
+            <b id="q-feedback">0</b><span>New feedback</span><small>Triage feedback <span aria-hidden="true">→</span></small></button>
           <button class="metric" type="button" data-goto="live">
-            <b id="q-calls">0</b><span>Calls in progress</span></button>
+            <b id="q-calls">0</b><span>Calls in progress</span><small>View live activity <span aria-hidden="true">→</span></small></button>
         </div>
 
         <div class="block-head"><h2>The site</h2><span class="fill"></span></div>
@@ -106,6 +117,7 @@
           </p>
           <div class="rows" id="ann-current" style="border:0;margin-bottom:0.6rem"></div>
           <div class="field" style="margin-bottom:0.5rem">
+            <label for="ann-body">Announcement</label>
             <textarea id="ann-body" rows="2" maxlength="500"
               placeholder="e.g. Scheduled maintenance tonight 10pm–11pm CT."></textarea>
           </div>
@@ -147,6 +159,7 @@
 
       <!-- live -->
       <section class="tab-panel" data-panel="live" hidden>
+        <div class="admin-panel-intro"><h2>Live activity</h2><p>See current presence and active games. Presence may take a minute to update.</p></div>
         <div class="metrics" style="margin-bottom:1rem">
           <div class="metric"><b id="live-online">0</b><span>Signed in</span></div>
           <div class="metric"><b id="live-playing">0</b><span>In a game</span></div>
@@ -164,6 +177,7 @@
 
       <!-- users -->
       <section class="tab-panel" data-panel="users" hidden>
+        <div class="admin-panel-intro"><h2>Account directory</h2><p>Find an account, then select it to review details and permitted actions.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <div class="toolbar" style="position:static;margin:0;border:0;padding:0;background:none">
             <div class="search">
@@ -240,9 +254,9 @@
             <button class="btn btn-flat" type="button" id="uc-cancel">Close</button>
           </div>
         </form>
-        <div class="two-col-list-wide">
-          <div class="rows-scroll"><div class="rows" id="user-rows"></div></div>
-          <div class="panel" id="user-detail">
+        <div class="two-col-list-wide admin-users-layout">
+          <div class="rows-scroll" aria-label="Account list"><div class="rows" id="user-rows"></div></div>
+          <div class="panel" id="user-detail" aria-label="Selected account details">
             <p class="user-detail-empty">Select an account to manage it.</p>
           </div>
         </div>
@@ -250,6 +264,7 @@
 
       <!-- reports -->
       <section class="tab-panel" data-panel="reports" hidden>
+        <div class="admin-panel-intro"><h2>Moderation reports</h2><p>Review reported content and accounts, then record a resolution.</p></div>
         <div class="pills" style="margin-bottom:1rem">
           <button class="pill on" type="button" data-state="open">Open</button>
           <button class="pill" type="button" data-state="closed">Closed</button>
@@ -259,6 +274,7 @@
 
       <!-- feedback -->
       <section class="tab-panel" data-panel="feedback" hidden>
+        <div class="admin-panel-intro"><h2>Community feedback</h2><p>Triage new suggestions and keep their progress up to date.</p></div>
         <div class="pills" style="margin-bottom:1rem" id="fb-filters">
           <button class="pill on" type="button" data-fb="new">New</button>
           <button class="pill" type="button" data-fb="triaged">Looking into it</button>
@@ -270,6 +286,7 @@
 
       <!-- game data -->
       <section class="tab-panel" data-panel="gamedata" hidden>
+        <div class="admin-panel-intro"><h2>Browser save editor</h2><p>Inspect your local game saves. Changes apply only to this browser, not other players.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <p class="tiny dimmer" style="margin:0 0 0.9rem">
             Every value a game has saved in <em>this browser</em>, for whichever host
@@ -298,6 +315,7 @@
 
       <!-- support -->
       <section class="tab-panel" data-panel="support" hidden>
+        <div class="admin-panel-intro"><h2>Support inbox</h2><p>Reply to open tickets and track conversations awaiting a response.</p></div>
         <div class="pills" style="margin-bottom:1rem" id="sup-filters">
           <button class="pill on" type="button" data-sup="open">Needs a reply</button>
           <button class="pill" type="button" data-sup="waiting">Waiting on them</button>
@@ -308,6 +326,7 @@
 
       <!-- logins -->
       <section class="tab-panel" data-panel="logins" hidden>
+        <div class="admin-panel-intro"><h2>Sign-in history</h2><p>Review available account sign-in events and check the backend coverage note.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <p class="tiny dimmer" style="margin:0">
             Sign-in history. A run of failures against one account is what a
@@ -326,6 +345,7 @@
 
       <!-- playlists -->
       <section class="tab-panel" data-panel="playlists" hidden>
+        <div class="admin-panel-intro"><h2>Shared playlists</h2><p>Review public playlists and staff-owned collections. Removal also affects the owner.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <p class="tiny dimmer" style="margin:0">
             Every playlist shared publicly through Campus+. Private playlists stay
@@ -334,6 +354,7 @@
           </p>
         </div>
         <div class="field" style="margin-bottom:1rem">
+          <label for="pl-q">Search playlists</label>
           <input type="text" id="pl-q" placeholder="Search playlists or owners…" autocomplete="off">
         </div>
         <div class="rows" id="pl-rows"></div>
@@ -341,6 +362,7 @@
 
       <!-- games (owner only) -->
       <section class="tab-panel" data-panel="games" hidden>
+        <div class="admin-panel-intro"><h2>Game catalogue</h2><p>Review listings, host availability, and catalogue changes.</p></div>
 
         <div class="metrics" style="margin-bottom:1rem">
           <div class="metric"><b id="cg-k-total">0</b><span>In the catalogue</span></div>
@@ -453,6 +475,7 @@
 
       <!-- workbench (owner only) -->
       <section class="tab-panel" data-panel="workbench" hidden>
+        <div class="admin-panel-intro"><h2>Remote workbench</h2><p>Open your configured remote machine in a separate tab.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <p class="tiny dimmer" style="margin:0">
             Reach a machine you've set up for this from wherever you are — full
@@ -469,6 +492,7 @@
 
       <!-- audit -->
       <section class="tab-panel" data-panel="audit" hidden>
+        <div class="admin-panel-intro"><h2>Staff audit trail</h2><p>Search the append-only record of staff actions and catalogue changes.</p></div>
         <div class="panel" style="margin-bottom:1rem">
           <div class="search">
             <label for="audit-q" class="sr-only">Search the audit trail</label>
@@ -486,6 +510,7 @@
 
       <!-- help -->
       <section class="tab-panel" data-panel="help" hidden>
+        <div class="admin-panel-intro"><h2>Console guide</h2><p>Understand staff ranks, available sections, and keyboard shortcuts.</p></div>
         <div class="help-grid">
 
           <section class="panel">
@@ -502,10 +527,12 @@
               uses a modifier precisely so it still works mid-game.
               All of them can be switched off in <a href="settings.html">Settings</a>.
             </p>
+            <div class="admin-table-scroll" role="region" aria-label="Keyboard shortcut reference" tabindex="0">
             <table class="keys-table">
               <thead><tr><th>Key</th><th>Does</th><th>Where</th></tr></thead>
               <tbody id="help-keys"></tbody>
             </table>
+            </div>
           </section>
 
           <section class="panel">

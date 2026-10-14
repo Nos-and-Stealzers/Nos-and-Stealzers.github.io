@@ -14,11 +14,17 @@
     var digits = "23456789";
     var symbols = "!@#$%*?";
     var all = upper + lower + digits + symbols;
-    function pick(set) { return set[Math.floor(Math.random() * set.length)]; }
+    function randomIndex(length) {
+      var bytes = new Uint32Array(1);
+      var limit = Math.floor(4294967296 / length) * length;
+      do { window.crypto.getRandomValues(bytes); } while (bytes[0] >= limit);
+      return bytes[0] % length;
+    }
+    function pick(set) { return set[randomIndex(set.length)]; }
     var chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
     for (var i = chars.length; i < 12; i++) chars.push(pick(all));
     for (var j = chars.length - 1; j > 0; j--) {
-      var k = Math.floor(Math.random() * (j + 1));
+      var k = randomIndex(j + 1);
       var tmp = chars[j]; chars[j] = chars[k]; chars[k] = tmp;
     }
     return chars.join("");
@@ -70,7 +76,7 @@
         playlists: { load: loadPlaylists },
         games:    { load: loadCatalog },
         workbench: { load: function () {} },
-        gamedata: { load: function () { if (window.initGameData) window.initGameData(); } },
+        gamedata: { load: function () { if (window.initGameData) return window.initGameData(); } },
         audit:    { load: loadAudit },
         help:     { load: loadHelp }
       };
@@ -78,6 +84,77 @@
       var active = "overview";
       var loadedOnce = {};
       var pollTimer = null;
+      var loadState = {};
+      var loadGeneration = {};
+      var listGeneration = {};
+
+      function latestList(name, key, readKey) {
+        var generation = (listGeneration[name] || 0) + 1;
+        listGeneration[name] = generation;
+        return function () { return listGeneration[name] === generation && readKey() === key; };
+      }
+
+      function paintLoadState() {
+        var state = loadState[active] || {};
+        var status = document.getElementById("admin-load-status");
+        var error = document.getElementById("admin-load-error");
+        var panel = document.querySelector('[data-panel="' + active + '"]');
+        if (panel) panel.setAttribute("aria-busy", state.pending ? "true" : "false");
+        if (status) {
+          status.setAttribute("role", "status");
+          status.hidden = !state.pending;
+          status.textContent = state.pending ? "Loading " + active + "…" : "";
+        }
+        if (error) {
+          error.hidden = !state.error;
+          error.setAttribute("role", "alert");
+          error.textContent = "";
+          if (state.error) {
+            error.appendChild(document.createTextNode("Could not load " + active + ": " + state.error + " "));
+            var retry = UI.el("button", "btn btn-sm", "Retry");
+            retry.type = "button";
+            retry.addEventListener("click", function () { runTab(active); });
+            error.appendChild(retry);
+          }
+        }
+      }
+
+      /* Every entry point (including filters and mutation refreshes) reports
+         failure here. A late response never owns a newer request's status. */
+      function trackedLoad(name, fn) {
+        return function () {
+          if ((name === "overview" || name === "live") && loadState[name] && loadState[name].pending) {
+            return loadState[name].promise;
+          }
+          var generation = (loadGeneration[name] || 0) + 1;
+          loadGeneration[name] = generation;
+          var state = loadState[name] || (loadState[name] = {});
+          state.pending = true;
+          state.error = "";
+          paintLoadState();
+          state.promise = Promise.resolve().then(fn).then(function (result) {
+            if (loadGeneration[name] !== generation) return false;
+            state.pending = false;
+            loadedOnce[name] = result !== false;
+            paintLoadState();
+            return result !== false;
+          }, function (err) {
+            if (loadGeneration[name] !== generation) return false;
+            state.pending = false;
+            loadedOnce[name] = false;
+            state.error = (err && err.message) || "Please try again.";
+            paintLoadState();
+            return false;
+          });
+          return state.promise;
+        };
+      }
+
+      function runTab(name) {
+        var state = loadState[name];
+        if (state && state.pending) return state.promise;
+        return TABS[name].load();
+      }
 
       var tabs = document.getElementById("tabs");
       tabs.addEventListener("click", function (event) {
@@ -94,6 +171,13 @@
       function show(name, force) {
         if (!TABS[name] || (DEV_TABS[name] && !isDev) || (ADMIN_TABS[name] && !isAdmin)) name = "overview";
         active = name;
+        var navLabel = tabs.querySelector('[data-tab="' + name + '"] .lbl');
+        var panel = document.querySelector('[data-panel="' + name + '"]');
+        var sectionNote = panel && panel.querySelector('.admin-panel-intro p');
+        setText("admin-section-title", navLabel ? navLabel.textContent : name);
+        setText("admin-section-description", sectionNote ? sectionNote.textContent : "Manage this section of Arcade Campus Hub.");
+        document.title = (navLabel ? navLabel.textContent : name) + " — Admin — Arcade Campus Hub";
+
 
         tabs.querySelectorAll(".admin-nav-link[data-tab]").forEach(function (t) {
           var on = t.dataset.tab === name;
@@ -112,29 +196,31 @@
         pollTimer = null;
 
         var spec = TABS[name];
-        if (force || !loadedOnce[name]) {
-          loadedOnce[name] = true;
-          run(spec.load);
-        }
-        /* Only the tab you are actually looking at is allowed a timer. */
+        var result = force || !loadedOnce[name] ? runTab(name) :
+          Promise.resolve(true);
+        paintLoadState();
+        /* Only the visible tab polls; runTab reuses an unfinished request. */
         if (spec.poll) {
           pollTimer = window.setInterval(function () {
             if (document.hidden) return;
-            run(spec.load);
+            runTab(name);
           }, spec.poll);
         }
+        return result;
       }
 
-      function run(fn) {
-        var out;
-        try { out = fn(); } catch (err) { UI.toast(err.message); return; }
-        if (out && out.catch) out.catch(function (err) { UI.toast(err.message); });
-      }
-
+      var refreshing = false;
       document.getElementById("refresh").addEventListener("click", function () {
-        show(active, true);
-        loadOverview();          // the header counts, whichever tab is open
-        UI.toast("Refreshed");
+        if (refreshing) return;
+        refreshing = true;
+        var button = this;
+        button.disabled = true;
+        var name = active;
+        Promise.all([show(name, true), name === "overview" ? Promise.resolve(true) : runTab("overview")])
+          .then(function (results) {
+            if (results.every(function (ok) { return ok; })) UI.toast("Refreshed");
+            else UI.toast("Refresh incomplete — retry the failed section.");
+          }).then(function () { refreshing = false; button.disabled = false; });
       });
 
       window.addEventListener("hashchange", function () {
@@ -210,7 +296,7 @@
       function loadFlags() {
         var host = document.getElementById("flag-rows");
         if (!host || !API.siteFlags) return;
-        API.siteFlags().then(function (f) {
+        return API.siteFlags().then(function (f) {
           host.innerHTML = "";
           var maint = f.maintenance && f.maintenance.on;
           function row(title, note, control) {
@@ -267,7 +353,7 @@
       function loadAnnouncement() {
         var host = document.getElementById("ann-current");
         if (!host) return;
-        API.currentAnnouncement().then(function (a) {
+        return API.currentAnnouncement().then(function (a) {
           host.innerHTML = "";
           if (!a) {
             host.appendChild(UI.el("p", "tiny dimmer", "Nothing live right now."));
@@ -313,10 +399,10 @@
       }
 
       function loadOverview() {
-        loadRecentActivity();
-        if (isAdmin) loadAnnouncement();
-        if (isDev) loadFlags();
-        return API.adminOverview().then(function (d) {
+        var extras = [loadRecentActivity()];
+        if (isAdmin) extras.push(loadAnnouncement());
+        if (isDev) extras.push(loadFlags());
+        var counts = API.adminOverview().then(function (d) {
           var q = d.queues || {
             reports: (d.reports && d.reports.open) || 0, tickets: 0, feedback: 0, calls: 0
           };
@@ -368,6 +454,12 @@
             host.appendChild(meter);
           });
         });
+        /* Keep the poll in flight until its auxiliary requests settle too,
+           even when the primary count request fails first. */
+        var failure;
+        var failed = false;
+        return Promise.all([counts.catch(function (err) { failed = true; failure = err; })].concat(extras))
+          .then(function () { if (failed) throw failure || new Error("Could not load overview."); });
       }
 
       /* The queue tiles are shortcuts, so a moderator lands on the work
@@ -393,33 +485,53 @@
       var ucRole = document.getElementById("uc-role");
       var ucErr = document.getElementById("uc-error");
       var ucDone = document.getElementById("uc-done");
+      var ucGeneration = 0;
+      function createFields() {
+        return {
+          username: document.getElementById("uc-username").value.trim(),
+          displayName: document.getElementById("uc-display").value.trim(),
+          email: document.getElementById("uc-email").value.trim(),
+          password: document.getElementById("uc-password").value,
+          role: ucRole.value
+        };
+      }
+      function invalidateCreateOffer() {
+        ucGeneration++;
+        ucErr.textContent = "";
+        ucErr.hidden = true;
+        ucDone.textContent = "";
+        ucDone.hidden = true;
+      }
       if (isAdmin) {
+        ucForm.addEventListener("input", invalidateCreateOffer);
+        ucForm.addEventListener("change", invalidateCreateOffer);
+        ucForm.addEventListener("reset", invalidateCreateOffer);
         RANKS.slice(0, rankOf(me.role)).forEach(function (r) {
           var o = UI.el("option", null, r);
           o.value = r;
           ucRole.appendChild(o);
         });
         document.getElementById("user-new").addEventListener("click", function () {
+          invalidateCreateOffer();
           ucForm.hidden = !ucForm.hidden;
           if (!ucForm.hidden) document.getElementById("uc-username").focus();
         });
         document.getElementById("uc-cancel").addEventListener("click", function () {
+          invalidateCreateOffer();
           ucForm.hidden = true;
         });
         document.getElementById("uc-gen").addEventListener("click", function () {
+          invalidateCreateOffer();
           document.getElementById("uc-password").value = randomPassword();
         });
         ucForm.addEventListener("submit", function (event) {
           event.preventDefault();
+          if (document.getElementById("uc-save").disabled) return;
           ucErr.hidden = true;
           ucDone.hidden = true;
-          var fields = {
-            username: document.getElementById("uc-username").value.trim(),
-            displayName: document.getElementById("uc-display").value.trim(),
-            email: document.getElementById("uc-email").value.trim(),
-            password: document.getElementById("uc-password").value,
-            role: ucRole.value
-          };
+          var generation = ++ucGeneration;
+          var fields = createFields();
+          if (!ucForm.reportValidity()) return;
           if (!/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(fields.username)) {
             ucErr.textContent = "Username must be 3-20 characters: letters, numbers or _, starting with a letter.";
             ucErr.hidden = false;
@@ -441,7 +553,7 @@
             var creds = UI.el("pre");
             creds.style.margin = "0.4rem 0 0";
             creds.style.whiteSpace = "pre-wrap";
-            creds.textContent = "Sign in: " + (made.email || fields.email || fields.username) +
+            creds.textContent = "Sign in: " + (fields.email ? (made.email || fields.email) : (made.username || fields.username)) +
               (fields.email ? "  (or " + fields.username + ")" : "") +
               "\nPassword: " + fields.password +
               "\nRank: " + (made.role || fields.role);
@@ -454,19 +566,28 @@
             UI.toast("@" + (made.username || fields.username) + " created");
             loadUsers();
           }).catch(function (err) {
+            if (generation !== ucGeneration || JSON.stringify(createFields()) !== JSON.stringify(fields)) return;
             ucErr.textContent = (err && err.message) || "Could not create that account.";
             ucErr.hidden = false;
             if (fields.email && /already uses that email/i.test(ucErr.textContent) && API.adminReplaceEmailAccount) {
-              offerReplace(fields.email);
+              offerReplace(fields.email, generation, fields);
             }
           }).then(function () { save.disabled = false; });
         });
 
         /* The email belongs to another account: offer to delete that one
            (only if it's below your rank; the server checks) and retry. */
-        function offerReplace(email) {
+        function offerReplace(email, generation, fields) {
+          function current() {
+            return generation === ucGeneration && !ucForm.hidden &&
+              JSON.stringify(createFields()) === JSON.stringify(fields);
+          }
+          function valid() {
+            return current() && /^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(fields.username) &&
+              fields.password.length >= 8 && ucForm.reportValidity();
+          }
           API.adminReplaceEmailAccount(email, false).then(function (who) {
-            if (!who || !who.found) return;
+            if (!current() || !who || !who.found) return;
             var name = who.leftover ? "a leftover login with no profile (from an old deleted account)"
               : "@" + who.username + " (" + who.role + ")";
             ucErr.textContent = "An account already uses that email: " + name + ".";
@@ -476,33 +597,43 @@
             btn.style.display = "block";
             btn.style.marginTop = "0.6rem";
             btn.addEventListener("click", function () {
+              if (btn.disabled || !valid()) return;
+              btn.disabled = true;
               var text = (who.leftover ? "The leftover login" : "@" + who.username + " and everything in it (friends, messages, cloud saves)") +
                 " will be deleted for good, then the new account is created.";
               var ask = window.Dialogs && window.Dialogs.confirm
                 ? window.Dialogs.confirm({ title: "Delete the old account?", body: text, confirmLabel: "Delete it", danger: true })
                 : Promise.resolve(window.confirm(text));
               ask.then(function (ok) {
-                if (!ok) return;
-                btn.disabled = true;
-                API.adminReplaceEmailAccount(email, true).then(function () {
+                if (!ok || !valid()) { btn.disabled = false; return; }
+                return API.adminReplaceEmailAccount(email, true).then(function () {
                   UI.toast("Old account deleted");
+                  if (!valid()) return;
                   ucErr.hidden = true;
                   ucForm.requestSubmit();
                 }, function (e) {
                   btn.disabled = false;
+                  if (!current()) return;
                   ucErr.textContent = (e && e.message) || "Couldn't delete that account.";
                 });
+              }).catch(function (e) {
+                btn.disabled = false;
+                if (current()) { ucErr.textContent = e.message || "Confirmation failed."; ucErr.hidden = false; }
               });
             });
             ucErr.appendChild(btn);
           }, function (e) {
+            if (!current()) return;
             ucErr.textContent += " " + ((e && e.message) || "");
           });
         }
       }
 
       function loadUsers() {
-        return API.adminUsers(userQ.value.trim()).then(function (res) {
+        var query = userQ.value.trim();
+        var current = latestList("users", query, function () { return userQ.value.trim(); });
+        return API.adminUsers(query).then(function (res) {
+          if (!current()) return false;
           userCache = res.users || [];
           drawUsers();
         });
@@ -1017,8 +1148,8 @@
             if (!window.confirm("Set a new password for @" + u.username +
                 "? This signs them out everywhere immediately.")) return;
             busy(pwBtn, API.adminSetPassword(u.id, next).then(function () {
-              UI.toast("Password set for @" + u.username + " — write it down now, it " +
-                "won't be shown again. Sessions cleared.");
+              pwInput.value = "";
+              UI.toast("Password set for @" + u.username + ". Password cleared; sessions cleared.");
             }));
           });
           body.appendChild(pwBtn);
@@ -1055,6 +1186,31 @@
           }));
         });
         adm.appendChild(wipe);
+        /* Move the existing controls, never recreate them: permission gates
+           and every listener above remain attached to their original node. */
+        function detailSection(key, label, nodes, open) {
+          var section = UI.el("details", "admin-detail-section");
+          section.dataset.section = key;
+          section.open = !!open;
+          section.appendChild(UI.el("summary", null, label));
+          var content = UI.el("div", "admin-detail-section-body");
+          nodes.forEach(function (node) { if (node) content.appendChild(node); });
+          section.appendChild(content);
+          body.appendChild(section);
+        }
+        if (isAdmin) {
+          detailSection("rank", "Rank", [rankField, apply], true);
+          detailSection("access", "Account access", [stateNote, toggle, banNote, banBtn, plusWrap]);
+        }
+        detailSection("moderation", "Moderation", [muteNote, muted ? unmute : muteRow, modWrap], !isAdmin);
+        detailSection("notes", "Staff notes", [notesWrap]);
+        if (isAdmin) {
+          detailSection("recovery", "Account recovery", [pwNote, pwField, pwBtn, pwCopyNote]);
+          detailSection("danger", "Danger zone", [dangerNote, wipe]);
+        }
+        Array.prototype.slice.call(body.children).forEach(function (node) {
+          if (node.tagName === "HR") body.removeChild(node);
+        });
         if (isAdmin) rankBox.focus(); else warnInput.focus();
       }
 
@@ -1081,7 +1237,10 @@
       });
 
       function loadReports() {
-        return API.adminReports(reportState).then(function (res) {
+        var state = reportState;
+        var current = latestList("reports", state, function () { return reportState; });
+        return API.adminReports(state).then(function (res) {
+          if (!current()) return false;
           var host = document.getElementById("report-list");
           host.innerHTML = "";
           if (!res.reports.length) {
@@ -1179,7 +1338,10 @@
       var KIND_GLYPH = { bug: "🐞", game: "🎮", idea: "💡", other: "💬" };
 
       function loadFeedback() {
-        return API.adminFeedback(fbState).then(function (res) {
+        var state = fbState;
+        var current = latestList("feedback", state, function () { return fbState; });
+        return API.adminFeedback(state).then(function (res) {
+          if (!current()) return false;
           /* Put the queue depth on the pills so nothing rots unnoticed. */
           document.querySelectorAll("[data-fb]").forEach(function (p) {
             var n = res.counts[p.dataset.fb] || 0;
@@ -1386,7 +1548,10 @@
       /* Campus+ moderation. */
       var plQ = document.getElementById("pl-q");
       function loadPlaylists() {
-        return API.adminListPlaylists(plQ ? plQ.value.trim() : "").then(function (rows) {
+        var query = plQ ? plQ.value.trim() : "";
+        var current = latestList("playlists", query, function () { return plQ ? plQ.value.trim() : ""; });
+        return API.adminListPlaylists(query).then(function (rows) {
+          if (!current()) return false;
           var host = document.getElementById("pl-rows");
           host.innerHTML = "";
 
@@ -1430,7 +1595,7 @@
           });
         });
       }
-      if (plQ) plQ.addEventListener("input", UI.debounce(loadPlaylists, 250));
+      if (plQ) plQ.addEventListener("input", UI.debounce(function () { loadPlaylists(); }, 250));
 
       /* -------------------------------------------------------- support */
 
@@ -1446,7 +1611,10 @@
       });
 
       function loadSupport() {
-        return API.adminTickets(supState).then(function (res) {
+        var state = supState;
+        var current = latestList("support", state, function () { return supState; });
+        return API.adminTickets(state).then(function (res) {
+          if (!current()) return false;
           document.querySelectorAll("[data-sup]").forEach(function (p) {
             var n = res.counts[p.dataset.sup] || 0;
             var label = p.dataset.label || p.textContent.replace(/\s*\(\d+\)$/, "");
@@ -1561,7 +1729,10 @@
          at a glance rather than parsed word by word. Tone map lives beside
          loadRecentActivity() above, which reuses it for the Overview slice. */
       function loadAudit() {
-        return API.adminAudit(auditQ.value.trim()).then(function (res) {
+        var query = auditQ.value.trim();
+        var current = latestList("audit", query, function () { return auditQ.value.trim(); });
+        return API.adminAudit(query).then(function (res) {
+          if (!current()) return false;
           var host = document.getElementById("audit-rows");
           host.innerHTML = "";
 
@@ -1755,6 +1926,7 @@
       }
 
       function catField(id) { return document.getElementById(id); }
+      var idTouched = false;
 
       function fillCatalogForm() {
         var hostBox = catField("cg-host");
@@ -1780,7 +1952,6 @@
         /* Typing a title suggests a slug, but stops the moment the id is
            edited by hand — silently overwriting a deliberate choice is worse
            than making them type it. */
-        var idTouched = false;
         catField("cg-id").addEventListener("input", function () { idTouched = true; preview(); });
         catField("cg-title").addEventListener("input", function () {
           if (!idTouched) {
@@ -1795,6 +1966,11 @@
         });
 
         catField("cat-form").addEventListener("submit", saveEntry);
+        catField("cat-form").addEventListener("reset", function () {
+          idTouched = false;
+          catField("cg-id").readOnly = false;
+          catField("cg-error").hidden = true;
+        });
         catField("cg-reset").addEventListener("click", function () {
           catField("cat-form").reset();
           idTouched = false;
@@ -1849,7 +2025,7 @@
           catField("cat-form").reset();
           hideForm();
           preview();
-          reloadCatalog();
+          return loadCatalog();
         }).catch(function (e2) {
           err.textContent = e2.message || "Could not save that.";
           err.hidden = false;
@@ -1861,25 +2037,48 @@
          has been added here yet. */
 
       var overlay = { added: [], removed: [] };
+      var addedIds = new Set();
+      var removedIds = new Set();
+      var catalogBase = null;
+      var catalogBasePromise = null;
+      var catalogGeneration = 0;
       var LIST_CAP = 60;
       var filtersReady = false;
+
+      function managerGame(entry) {
+        var g = Object.assign({}, entry);
+        g.title = g.title || g.id;
+        g.titleLower = g.title.toLowerCase();
+        g.category = g.category || "other";
+        g.categoryLabel = ((window.SITE.categories || {})[g.category] || {}).label || g.category;
+        g.embeddable = g.embed === true || g.embed === "allowed";
+        g.risk = g.schoolRisk || "unknown";
+        return g;
+      }
+
+      function loadCatalogBase() {
+        if (catalogBasePromise) return catalogBasePromise;
+        /* The public index already discarded cached hidden/replaced games.
+           Read the shipped JSON once to recover their real metadata without
+           mutating the shared Catalog or re-executing a script. Offline and
+           file:// installs can still use the current page's snapshot. */
+        if (typeof window.fetch !== "function") return Promise.resolve(null);
+        catalogBasePromise = window.fetch("data/games.json").then(function (res) {
+          if (!res.ok) throw new Error("Shipped catalogue unavailable");
+          return res.json();
+        }).then(function (entries) {
+          if (!Array.isArray(entries)) throw new Error("Invalid shipped catalogue");
+          return entries.map(managerGame);
+        }).catch(function () { return null; });
+        return catalogBasePromise;
+      }
 
       function loadCatalog() {
         fillCatalogForm();
         fillFilters();
         preview();
 
-        /* Drop the cached overlay so the owner's own next page view shows the
-           edit straight away instead of waiting out the cache window. */
-        if (window.CatalogOverlay) window.CatalogOverlay.invalidate();
-
-        return API.customCatalog().then(function (res) {
-          overlay = { added: res.added || [], removed: res.removed || [] };
-          drawCatalog();
-        }).catch(function (err) {
-          UI.toast(err.message);
-          drawCatalog();            // still show the shipped list
-        });
+        return reloadCatalog();
       }
 
       function fillFilters() {
@@ -1906,8 +2105,8 @@
 
       /* Where a title comes from, and whether it is currently showing. */
       function statusOf(game) {
-        if (overlay.removed.indexOf(game.id) !== -1) return "hidden";
-        if (overlay.added.some(function (g) { return g.id === game.id; })) return "added";
+        if (removedIds.has(game.id)) return "hidden";
+        if (addedIds.has(game.id)) return "added";
         if (game.unavailable) return "gone";
         return "shipped";
       }
@@ -1922,9 +2121,16 @@
         var cat = document.getElementById("cg-filter-cat").value;
         var want = document.getElementById("cg-filter-state").value;
 
-        /* Catalog.all already has the overlay folded in, so a title added
-           here appears exactly as a shipped one does. */
-        var all = window.Catalog.all;
+        /* Catalog.all is a page-load snapshot. Fold the latest overlay into
+           a separate manager view so additions/edits/removals show now. */
+        var byId = new Map();
+        (catalogBase || window.Catalog.all).forEach(function (g) { byId.set(g.id, g); });
+        overlay.added.forEach(function (entry) {
+          var g = managerGame(entry);
+          byId.set(g.id, g);
+        });
+        var all = Array.from(byId.values());
+        var presentIds = new Set(all.map(function (g) { return g.id; }));
         var added = 0, gone = 0;
         all.forEach(function (g) {
           var st = statusOf(g);
@@ -1950,7 +2156,8 @@
         var ghosts = [];
         if (want === "all" || want === "hidden") {
           overlay.removed.forEach(function (id) {
-            if (all.some(function (g) { return g.id === id; })) return;
+            if (presentIds.has(id)) return;
+            if (cat) return; // unknown category; do not match every category
             if (q && id.indexOf(q) === -1) return;
             ghosts.push({ id: id, title: id, category: "—", ghost: true });
           });
@@ -2012,7 +2219,7 @@
           back.type = "button";
           back.addEventListener("click", function () {
             busy(back, API.restoreCatalogEntry(game.id)
-              .then(function () { UI.toast("Back in the catalogue"); reloadCatalog(); }));
+              .then(function () { UI.toast("Back in the catalogue"); return loadCatalog(); }));
           });
           acts.appendChild(back);
         } else {
@@ -2036,7 +2243,7 @@
               ? "Remove " + game.title + "? It was added here, so this deletes it."
               : "Hide " + game.title + " from the catalogue? You can put it back.")) return;
             busy(hide, API.removeCatalogEntry(game.id, hard)
-              .then(function () { UI.toast(hard ? "Removed" : "Hidden"); reloadCatalog(); }));
+              .then(function () { UI.toast(hard ? "Removed" : "Hidden"); return loadCatalog(); }));
           });
           acts.appendChild(hide);
         }
@@ -2047,11 +2254,19 @@
 
       /* A change to the overlay changes what Catalog.all should hold, and that is built once at page load. */
       function reloadCatalog() {
-        return API.customCatalog().then(function (res) {
+        var generation = ++catalogGeneration;
+        return Promise.all([API.customCatalog(), loadCatalogBase()]).then(function (results) {
+          if (generation !== catalogGeneration) return false;
+          var res = results[0];
           overlay = { added: res.added || [], removed: res.removed || [] };
+          addedIds = new Set(overlay.added.map(function (g) { return g.id; }));
+          removedIds = new Set(overlay.removed);
+          if (!catalogBase) {
+            catalogBase = results[1] || window.Catalog.all.filter(function (g) { return !addedIds.has(g.id); });
+          }
           if (window.CatalogOverlay) window.CatalogOverlay.invalidate();
           drawCatalog();
-        }).catch(function (err) { UI.toast(err.message); });
+        });
       }
 
       function showForm(game) {
@@ -2077,6 +2292,9 @@
       }
 
       function intoForm(g) {
+        idTouched = true;
+        catField("cg-id").readOnly = true;
+        catField("cg-error").hidden = true;
         catField("cg-title").value = g.title || "";
         catField("cg-id").value = g.id || "";
         catField("cg-host").value = g.host || "";
@@ -2092,12 +2310,30 @@
 
       /* ----------------------------------------------------------- boot */
 
-      /* The header counts are wanted on every tab, so they load regardless of
-         which one the URL asks for — and marking overview loaded stops it
-         being fetched twice when that is also the tab being shown. */
-      loadedOnce.overview = true;
-      run(loadOverview);
-      show(window.location.hash.slice(1) || "overview");
+      /* Wrap named loaders as well as tab specs so searches and action
+         callbacks use the same status/error path as navigation. */
+      loadOverview = trackedLoad("overview", loadOverview);
+      loadLive = trackedLoad("live", loadLive);
+      loadUsers = trackedLoad("users", loadUsers);
+      loadSupport = trackedLoad("support", loadSupport);
+      loadReports = trackedLoad("reports", loadReports);
+      loadFeedback = trackedLoad("feedback", loadFeedback);
+      loadLogins = trackedLoad("logins", loadLogins);
+      loadPlaylists = trackedLoad("playlists", loadPlaylists);
+      loadCatalog = trackedLoad("games", loadCatalog);
+      loadAudit = trackedLoad("audit", loadAudit);
+      loadHelp = trackedLoad("help", loadHelp);
+      [loadOverview, loadLive, loadUsers, loadSupport, loadReports, loadFeedback,
+        loadLogins, loadPlaylists, loadCatalog, loadAudit, loadHelp].forEach(function (fn, index) {
+        TABS[["overview", "live", "users", "support", "reports", "feedback", "logins",
+          "playlists", "games", "audit", "help"][index]].load = fn;
+      });
+      ["workbench", "gamedata"].forEach(function (name) {
+        TABS[name].load = trackedLoad(name, TABS[name].load);
+      });
+      var initialTab = window.location.hash.slice(1) || "overview";
+      show(initialTab);
+      if (active !== "overview") runTab("overview");
     });
   }
 

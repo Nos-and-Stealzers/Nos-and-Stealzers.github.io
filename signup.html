@@ -97,6 +97,28 @@
 
         <p class="form-error" id="error" hidden></p>
 
+        <div class="replace-box" id="replace" hidden>
+          <p class="replace-title">Is that email yours? Replace the old account</p>
+          <p class="tiny dimmer">This <b>permanently deletes the old account</b> on this email, with its friends,
+            messages and cloud saves, then creates the new one. To prove the old account is yours, use either:</p>
+          <div class="field">
+            <label for="old-password">The old account's password</label>
+            <div class="pw-field">
+              <input type="password" id="old-password" autocomplete="off">
+              <button type="button" class="pw-toggle" id="old-pw-toggle" aria-label="Show password" aria-pressed="false">👁</button>
+            </div>
+          </div>
+          <button class="btn btn-danger" type="button" id="replace-pw" style="width:100%">Delete old account and create mine</button>
+          <p class="replace-or tiny dimmer">or, if you forgot that password</p>
+          <button class="btn" type="button" id="replace-send" style="width:100%">Email me a code</button>
+          <div class="field" id="replace-code-field" hidden style="margin-top:0.75rem">
+            <label for="replace-code">6-digit code from the email</label>
+            <input type="text" id="replace-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+            <button class="btn btn-danger" type="button" id="replace-code-go" style="width:100%;margin-top:0.5rem">Delete old account and create mine</button>
+          </div>
+          <p class="form-error" id="replace-error" hidden></p>
+        </div>
+
         <button class="btn btn-cta" type="submit" id="submit" style="width:100%" disabled>Create account</button>
 
         <p class="tiny dimmer" style="margin:1rem 0 0">

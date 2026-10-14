@@ -219,6 +219,13 @@
     });
   }
 
+  function replaceError(err) {
+    if (err && err.status === 404) {
+      throw fail("Replacing an account isn't switched on yet: the site's database needs its update first.", 404);
+    }
+    throw err;
+  }
+
   function anonFetch(path, opts) {
     return fetch(URL_BASE + path, {
       method: opts.method || "POST",
@@ -591,6 +598,31 @@
       });
     },
 
+    /* Signup found the email taken. These remove that old account, but only
+       with proof it's yours: its password, or a code sent to the email. */
+    replaceAccountWithPassword: function (email, password) {
+      email = String(email || "").trim().toLowerCase();
+      return anonFetch("/auth/v1/token?grant_type=password", { body: { email: email, password: password || "" } })
+        .catch(function (err) {
+          if (err && (err.status === 400 || err.status === 401)) throw fail("That isn't the old account's password.", 401);
+          throw err;
+        })
+        .then(function (body) {
+          if (!body || !body.access_token) throw fail("That isn't the old account's password.", 401);
+          return anonFetch("/rest/v1/rpc/delete_my_account", { token: body.access_token, body: {} });
+        })
+        .then(function () { return { ok: true }; }, replaceError);
+    },
+    requestReplaceCode: function (email) {
+      return anonFetch("/rest/v1/rpc/request_account_replace_code", { body: { p_email: String(email || "").trim() } })
+        .then(function () { return { ok: true }; }, replaceError);
+    },
+    replaceAccountWithCode: function (email, code) {
+      return anonFetch("/rest/v1/rpc/replace_account_with_code",
+        { body: { p_email: String(email || "").trim(), p_code: String(code || "").trim() } })
+        .then(function () { return { ok: true }; }, replaceError);
+    },
+
     login: function (identifier, password) {
       /* Supabase's password grant only takes an email, and the box accepts a
          username too. email_for_login only resolves the address when the
@@ -817,9 +849,13 @@
         if (!row || confirm !== row.username) {
           throw fail("Type your username exactly to confirm.", 400);
         }
-        /* Removing the profile cascades everything owned by it. The auth user
-           itself needs the service role, so it is left orphaned and inert. */
-        return rest("/profiles?id=eq." + session.user.id, { method: "DELETE" });
+        /* delete_my_account removes the login too, which frees the email
+           (supabase/2026-10-14-replace-account.sql). Before that SQL is run,
+           only the profile can go, and the email stays taken. */
+        return rpc("delete_my_account").catch(function (err) {
+          if (err && err.status === 404) return rest("/profiles?id=eq." + session.user.id, { method: "DELETE" });
+          throw err;
+        });
       }).then(function () {
         keepSession(null);
         return { ok: true };

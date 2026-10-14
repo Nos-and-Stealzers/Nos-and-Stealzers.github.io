@@ -26,6 +26,7 @@
 
     window.wirePasswordToggle("password", "pw-toggle");
     window.wirePasswordToggle("confirm", "confirm-toggle");
+    window.wirePasswordToggle("old-password", "old-pw-toggle");
 
     window.Session.ready.then(function (state) {
       if (!state.backend) { offline.hidden = false; return; }
@@ -103,7 +104,76 @@
           window.UI.toast(res.firstAccount ? "Admin account created" : "Welcome, " + username);
           window.location.href = res.firstAccount ? "admin.html" : "verify-email.html";
         })
-        .catch(function (err) { fail(err.message || "Could not create the account."); });
+        .catch(function (err) {
+          fail(err.message || "Could not create the account.");
+          if (err && err.status === 409 && /email/i.test(err.message || "") && window.API.replaceAccountWithPassword) {
+            openReplace(email);
+          }
+        });
+    });
+
+    /* ---- the email is taken: replace that account, with proof it's yours ---- */
+    var replace = document.getElementById("replace");
+    var replaceError = document.getElementById("replace-error");
+    var replaceEmail = "";
+
+    function openReplace(email) {
+      replaceEmail = email.toLowerCase();
+      replaceError.hidden = true;
+      replace.hidden = false;
+      document.getElementById("old-password").focus();
+    }
+    document.getElementById("email").addEventListener("input", function () { replace.hidden = true; });
+
+    function replaceFail(err) {
+      replaceError.textContent = (err && err.message) || "That didn't work.";
+      replaceError.hidden = false;
+      busy(false);
+    }
+    function busy(on) {
+      ["replace-pw", "replace-send", "replace-code-go"].forEach(function (id) { document.getElementById(id).disabled = on; });
+    }
+    function confirmDelete() {
+      var text = "The old account on " + replaceEmail + " and everything in it (friends, messages, cloud saves) " +
+        "will be deleted for good. Then your new account is created.";
+      return window.Dialogs && window.Dialogs.confirm
+        ? window.Dialogs.confirm({ title: "Delete the old account?", body: text, confirmLabel: "Delete it", danger: true })
+        : Promise.resolve(window.confirm(text));
+    }
+    function thenSignup() {
+      replace.hidden = true;
+      window.UI.toast("Old account deleted");
+      busy(false);
+      form.requestSubmit();
+    }
+
+    document.getElementById("replace-pw").addEventListener("click", function () {
+      var pw = document.getElementById("old-password").value;
+      if (!pw) return replaceFail({ message: "Enter the old account's password." });
+      confirmDelete().then(function (ok) {
+        if (!ok) return;
+        busy(true);
+        window.API.replaceAccountWithPassword(replaceEmail, pw).then(thenSignup, replaceFail);
+      });
+    });
+    document.getElementById("replace-send").addEventListener("click", function () {
+      busy(true);
+      window.API.requestReplaceCode(replaceEmail).then(function () {
+        busy(false);
+        replaceError.hidden = true;
+        document.getElementById("replace-code-field").hidden = false;
+        document.getElementById("replace-code").focus();
+        window.UI.toast("If that email has an account, a code is on its way");
+      }, replaceFail);
+    });
+    document.getElementById("replace-code-go").addEventListener("click", function () {
+      var code = document.getElementById("replace-code").value.trim();
+      if (!/^\d{6}$/.test(code)) return replaceFail({ message: "Enter the 6-digit code from the email." });
+      confirmDelete().then(function (ok) {
+        if (!ok) return;
+        busy(true);
+        window.API.replaceAccountWithCode(replaceEmail, code).then(thenSignup, replaceFail);
+      });
     });
   }
 

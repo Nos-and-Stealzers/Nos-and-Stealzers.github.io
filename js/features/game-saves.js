@@ -714,7 +714,9 @@
     return new Response(stream).text().then(function (t) { return JSON.parse(t); });
   }
 
-  var MAX_ROW = 4 * 1024 * 1024 - 64 * 1024;
+  /* One game's row: 16 MB on the server (supabase/2026-10-14-game-save-size.sql).
+     Kept a little under so JSON overhead never trips the server's check. */
+  var MAX_ROW = 16 * 1024 * 1024 - 256 * 1024;
 
   function indexOf(origin) {
     return ask(origin, { action: "index" }).then(function (res) {

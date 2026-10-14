@@ -1180,15 +1180,34 @@ create trigger feedback_notify
 -- put_game_save has never successfully written a row. Renamed to p_host;
 -- dropped first because CREATE OR REPLACE cannot rename a parameter.
 drop function if exists public.put_game_save(text, jsonb);
+-- game.<id> rows (one game, from the Save button) may be 16 MB; whole-site
+-- backups stay at 4 MB; one account holds 64 MB in total. A save no bigger
+-- than the one it replaces is always allowed.
 create or replace function public.put_game_save(p_host text, payload jsonb)
 returns int language plpgsql security definer set search_path = public as $$
-declare n int;
+declare
+  n        int;
+  new_size bigint := pg_column_size(coalesce(payload, '{}'::jsonb));
+  old_size bigint;
+  others   bigint;
+  row_cap  bigint;
 begin
   if auth.uid() is null then raise exception 'Not signed in.'; end if;
   if p_host !~ '^[A-Za-z0-9._-]{1,64}$' then raise exception 'Unknown game host.'; end if;
-  -- 4 MB: IndexedDB saves carry binary (Unity keeps a whole virtual
-  -- filesystem there) and it is base64'd to survive JSON.
-  if pg_column_size(payload) > 4194304 then raise exception 'That host''s saves are too large.'; end if;
+
+  row_cap := case when p_host like 'game.%' then 16777216 else 4194304 end;
+  if new_size > row_cap then raise exception 'That host''s saves are too large.'; end if;
+
+  select pg_column_size(g.payload) into old_size
+    from public.game_saves g where g.user_id = auth.uid() and g.host = p_host;
+
+  if old_size is null or new_size > old_size then
+    select coalesce(sum(pg_column_size(g.payload)), 0) into others
+      from public.game_saves g where g.user_id = auth.uid() and g.host <> p_host;
+    if others + new_size > 67108864 then
+      raise exception 'Your cloud saves are full (64 MB in total), so this game was not saved to your account.';
+    end if;
+  end if;
 
   n := (select count(*) from jsonb_object_keys(coalesce(payload, '{}'::jsonb)));
 

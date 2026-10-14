@@ -34,7 +34,7 @@
 <script>
 (function(){
   "use strict";
-  var DEFAULT_ROM = "games/roms/sm64ds.nds";      // auto-load if present in the repo
+  var DEFAULT_ROM = "../roms/sm64ds.nds";         // games/roms/sm64ds.nds, if present in the repo
   var CORE = "nds";
   var g = document.getElementById("game"), fb = document.getElementById("fallback");
 
@@ -47,13 +47,16 @@
     window.EJS_core = CORE;
     window.EJS_gameUrl = romUrl;
     window.EJS_gameName = "Super Mario 64 DS";
-    window.EJS_pathtodata = "https://cdn.jsdelivr.net/npm/emulatorjs@stable/data/";
+    /* The official EmulatorJS CDN. (The old jsDelivr npm path never existed,
+       so the emulator failed to load at all.) */
+    window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+    window.EJS_CacheLimit = 0;
     window.EJS_startOnLoaded = true;
     // Save states live in IndexedDB on THIS origin, so they persist and sync
     // through the arcade's normal save system.
-    window.EJS_defaultOptions = { "save-state-location": "browser" };
+    window.EJS_defaultOptions = { "save-state-location": "browser", "save-save-interval": "30" };
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/emulatorjs@stable/data/loader.js";
+    s.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
     document.body.appendChild(s);
   }
 
@@ -75,7 +78,7 @@
   });
   document.getElementById("filepick").addEventListener("change", function(e){
     var f = e.target.files && e.target.files[0];
-    if (f) boot(URL.createObjectURL(f));
+    if (f) boot(f);
   });
 })();
 </script>

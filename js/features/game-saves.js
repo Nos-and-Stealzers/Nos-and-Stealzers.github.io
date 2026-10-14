@@ -579,7 +579,7 @@
   }
 
   /* Unity caches downloaded assets in IndexedDB; that is not a save. */
-  var NOT_SAVES = /cache/i;
+  var NOT_SAVES = /cache|^EmulatorJS-(core|roms|bios)$/i;
 
   /* Which of an origin's keys, cookies and databases are this game's. */
   function gameScope(game, index, info, extra) {

@@ -25,7 +25,7 @@
       "waterboy-firegirl": "https://arcadecampushub.github.io/Waterboy-Firegirl",
       "extgames": "https://arcadecampushub.github.io/extgames",
       /* rawcdn caches a branch URL forever; pinned to a commit so updates land. */
-      "nebula-cdn": "https://rawcdn.githack.com/Nos-and-Stealzers/NEBULA-CDN/91cc6c2e731bb162075c912d78fd32dac4eb499c/games",
+      "nebula-cdn": "https://rawcdn.githack.com/Nos-and-Stealzers/NEBULA-CDN/3c78ed25011acd9ea3a4548e16191b8f2092728f/games",
       "polytrack":  "https://arcadecampushub.github.io/polytrack"
     },
 

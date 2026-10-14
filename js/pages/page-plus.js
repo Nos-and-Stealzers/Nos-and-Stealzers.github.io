@@ -132,7 +132,7 @@
       ["crossy", "Crossy Road", "Set your coins or add 10,000, and set the top score."],
       ["flappy", "Flappy Bird", "Can't die, wide gaps, floaty gravity, and set the score and high score."],
       ["g2048", "2048", "Turn the biggest tile into 2048, clear the small tiles, double the board, and set the scores."],
-      ["flash", "Flash games", "A save editor for what the game stores, with Max everything and undo. Learn to Fly 1, 2 and 3 get cash for each save slot."],
+      ["flash", "Flash games", "A save editor for what the game stores, with Max everything and undo. Learn to Fly 1, 2 and 3: cash, upgrade levels, bonus points, and one-click unlocks for every stage, item, mode and song (LTF3 also turns on its own debug menu)."],
       ["darkroom", "A Dark Room", "Fill every store, set any store amount, a roaring fire, the builder ready to build, and huts full of villagers."],
       ["bitcoin", "Bitcoin Clicker", "Set your bitcoins, add a thousand or a billion, and ten free of every miner."],
       ["particle", "Particle Clicker", "Max data, funding and reputation, or set each one, and more data per click."],

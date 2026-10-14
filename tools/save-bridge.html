@@ -284,6 +284,10 @@
     return out;
   }
 
+  /* Downloaded emulator cores, cached ROMs and other caches are not saves,
+     and they are big: a whole-origin backup leaves them out. */
+  var NOT_SAVES = /cache|^EmulatorJS-(core|roms|bios)$/i;
+
   function readIdb(only) {
     /* indexedDB.databases() is Chromium and Safari only. Firefox has no way
        to enumerate, so there is nothing to snapshot there — say so rather
@@ -301,7 +305,7 @@
       return (list || []).reduce(function (chain, info) {
         return chain.then(function () {
           if (!info.name) return;
-          var pick = only ? only[info.name] : true;
+          var pick = only ? only[info.name] : !NOT_SAVES.test(info.name);
           if (!pick) return;
           var ranges = pick && pick.prefixes ? prefixRanges(pick.prefixes) : null;
           if (ranges && !ranges.length) return;

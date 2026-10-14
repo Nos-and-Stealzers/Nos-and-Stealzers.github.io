@@ -85,6 +85,7 @@ window.MOD_GAMES = {
   "flash-jacksmith": "flash",
   "flash-learn-to-fly-2-11967": "flash",
   "flash-learn-to-fly-3": "flash",
+  "flash-learn-to-fly-3-unlocked": "flash",
   "flash-learntofly": "flash",
   "flash-learntofly2": "flash",
   "flash-mario-combat": "flash",

@@ -69,6 +69,8 @@
          title would otherwise surprise you, like Eaglercraft worlds not
          carrying between versions. */
       notice: entry.notice || "",
+      /* Emulator entries: which "How to load a ROM" guide to show (rom-guide.js). */
+      romGuide: entry.romGuide || "",
       /* Titles no repo actually carries. Kept in the index so the catalog
          stays honest, but the player says so instead of showing a dead frame. */
       unavailable: !!entry.unavailable,

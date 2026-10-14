@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>ROM Player</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0c0d10; color: #e8eaed;
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #game { position: fixed; inset: 0; display: none; }
+  body.running #game { display: block; }
+  body.running #setup { display: none; }
+  #setup { box-sizing: border-box; height: 100%; overflow: auto; padding: 22px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #9aa4b2; margin: 0 0 18px; }
+  .card { background: #15171c; border: 1px solid #2a2c33; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .06em; color: #f2b705; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .drop { border: 2px dashed #3a3d46; border-radius: 10px; padding: 18px; text-align: center; cursor: pointer; color: #b8c0cc; }
+  .drop.over, .drop:hover { border-color: #f2b705; color: #fff; }
+  button, select, input[type=text] { font: inherit; border-radius: 8px; border: 1px solid #2f323a; background: #1d2027; color: #e8eaed; padding: 8px 12px; }
+  button { cursor: pointer; }
+  button.go { background: #f2b705; color: #0c0d10; border-color: #f2b705; font-weight: 700; padding: 10px 20px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .file { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; color: #cfd6e0; word-break: break-all; }
+  .ok { color: #5fd38d; } .warn { color: #f5b14c; } .bad { color: #ff7a7a; }
+  .muted { color: #8b93a0; font-size: 12.5px; }
+  .recent button { margin: 4px 6px 0 0; }
+  code { background: #23262d; padding: 1px 5px; border-radius: 4px; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="setup">
+  <div class="wrap">
+    <h1>ROM Player</h1>
+    <p class="sub">Runs ROMs you own in your browser (EmulatorJS), with a built-in ROM hack patcher.
+      Nothing is uploaded: the ROM stays on this device.</p>
+
+    <div class="card">
+      <h2>1 · Game file</h2>
+      <div class="drop" id="romDrop">Drop a ROM here or <u>choose a file</u><br>
+        <span class="muted">.nes .sfc .smc .gb .gbc .gba .nds .n64 .z64 .v64 .md .gen .sms .gg .pce .a26 .a78 .lnx .ws .ngp .vb .cue/.bin (zipped) .chd .pbp .iso .zip .7z</span></div>
+      <input type="file" id="romPick" hidden>
+      <p class="file" id="romInfo"></p>
+      <div class="recent" id="recent"></div>
+    </div>
+
+    <div class="card">
+      <h2>2 · System</h2>
+      <div class="row">
+        <select id="system"></select>
+        <span class="muted" id="sysNote"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3 · ROM hack patch (optional)</h2>
+      <div class="row">
+        <button type="button" id="patchBtn">Choose a .ips / .ups / .bps patch</button>
+        <button type="button" id="patchClear" hidden>Remove patch</button>
+        <input type="file" id="patchPick" accept=".ips,.ups,.bps" hidden>
+      </div>
+      <p class="file" id="patchInfo"></p>
+      <p class="muted">Patch onto the clean, unmodified ROM the hack was made for. UPS and BPS patches carry the
+        base ROM's checksum, so a wrong version is caught here. For <code>.xdelta</code> or <code>.ppf</code> patches,
+        patch with <a href="https://www.marcrobledo.com/RomPatcher.js/" target="_blank" rel="noopener" style="color:#f2b705">Rom Patcher JS</a>
+        first, then load the result above.</p>
+    </div>
+
+    <div class="card">
+      <h2>4 · BIOS (only some systems)</h2>
+      <div class="row">
+        <button type="button" id="biosBtn">Choose a BIOS file</button>
+        <input type="file" id="biosPick" hidden>
+        <span class="file" id="biosInfo"></span>
+      </div>
+      <p class="muted" id="biosNote"></p>
+    </div>
+
+    <div class="row">
+      <button class="go" type="button" id="start" disabled>Start game</button>
+      <button type="button" id="download" disabled>Download patched ROM</button>
+      <span class="muted" id="status"></span>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var CDN = "https://cdn.emulatorjs.org/stable/data/";
+
+  /* EmulatorJS system ids, by file extension. */
+  var SYSTEMS = [
+    ["nes", "NES / Famicom", ["nes", "fds", "unf", "unif"]],
+    ["snes", "Super Nintendo", ["sfc", "smc", "fig", "swc", "bs"]],
+    ["gb", "Game Boy / Game Boy Color", ["gb", "gbc", "sgb", "dmg"]],
+    ["gba", "Game Boy Advance", ["gba", "agb"]],
+    ["nds", "Nintendo DS", ["nds"]],
+    ["n64", "Nintendo 64", ["n64", "z64", "v64"]],
+    ["vb", "Virtual Boy", ["vb", "vboy"]],
+    ["segaMD", "Sega Genesis / Mega Drive", ["md", "gen", "smd"]],
+    ["segaMS", "Sega Master System", ["sms"]],
+    ["segaGG", "Sega Game Gear", ["gg"]],
+    ["segaCD", "Sega CD", []],
+    ["sega32x", "Sega 32X", ["32x"]],
+    ["psx", "PlayStation", ["cue", "pbp", "chd", "m3u", "iso", "img", "ccd"]],
+    ["pce", "PC Engine / TurboGrafx-16", ["pce"]],
+    ["atari2600", "Atari 2600", ["a26"]],
+    ["atari7800", "Atari 7800", ["a78"]],
+    ["lynx", "Atari Lynx", ["lnx"]],
+    ["ngp", "Neo Geo Pocket (Color)", ["ngp", "ngc"]],
+    ["ws", "WonderSwan (Color)", ["ws", "wsc"]],
+    ["coleco", "ColecoVision", ["col"]],
+    ["arcade", "Arcade (FinalBurn Neo)", []]
+  ];
+  var BIOS = {
+    segaCD: "Sega CD needs its BIOS (for example bios_CD_U.bin for US games), or the game won't boot.",
+    lynx: "Atari Lynx needs lynxboot.img.",
+    psx: "Optional. Most games run on the built-in BIOS; a few need a real one (scph5501.bin for US games).",
+    gba: "Optional. The built-in BIOS works for almost every game (gba_bios.bin if a game asks for it).",
+    nds: "Not needed.",
+    arcade: "Some arcade sets need their BIOS zip (neogeo.zip for Neo Geo games)."
+  };
+  var NOTES = {
+    n64: "Needs a fast computer; close other tabs if it stutters.",
+    psx: "Multi-file discs (.cue + .bin): put them in one .zip and load the zip. Multi-disc games: use a .m3u.",
+    nds: "Use the right half of the screen with the mouse for the touch screen.",
+    arcade: "Use the exact MAME/FBNeo romset name (for example sf2.zip). Renamed zips won't load."
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var rom = null;       // { name, bytes, ext, inner }
+  var patch = null;     // { name, bytes }
+  var output = null;    // patched bytes
+  var bios = null;
+
+  SYSTEMS.forEach(function (s) {
+    var o = document.createElement("option");
+    o.value = s[0]; o.textContent = s[1];
+    $("system").appendChild(o);
+  });
+
+  /* ---------------- checksums ---------------- */
+  var CRC_T = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t;
+  })();
+  function crc32(b, end) {
+    var c = 0xFFFFFFFF, n = end === undefined ? b.length : end;
+    for (var i = 0; i < n; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function hex(n) { return ("00000000" + n.toString(16).toUpperCase()).slice(-8); }
+  function u32(b, at) { return (b[at] | (b[at + 1] << 8) | (b[at + 2] << 16) | (b[at + 3] << 24)) >>> 0; }
+
+  /* ---------------- patch formats ---------------- */
+  function readVlq(p, st) {
+    var data = 0, shift = 1;
+    for (;;) {
+      var x = p[st.i++];
+      if (x === undefined) throw new Error("patch file is cut short");
+      data += (x & 0x7f) * shift;
+      if (x & 0x80) break;
+      shift *= 128;
+      data += shift;
+    }
+    return data;
+  }
+  function tag(p, s) { for (var i = 0; i < s.length; i++) if (p[i] !== s.charCodeAt(i)) return false; return true; }
+
+  function applyIps(src, p) {
+    var out = new Uint8Array(Math.max(src.length, 16 * 1024 * 1024));
+    out.set(src);
+    var size = src.length, i = 5;
+    while (i + 3 <= p.length) {
+      if (p[i] === 0x45 && p[i + 1] === 0x4F && p[i + 2] === 0x46) {       // "EOF"
+        if (i + 6 <= p.length) size = (p[i + 3] << 16) | (p[i + 4] << 8) | p[i + 5];   // truncate
+        i = -1; break;
+      }
+      var off = (p[i] << 16) | (p[i + 1] << 8) | p[i + 2];
+      var len = (p[i + 3] << 8) | p[i + 4];
+      i += 5;
+      if (len === 0) {
+        var run = (p[i] << 8) | p[i + 1], val = p[i + 2];
+        i += 3;
+        if (off + run > out.length) out = grow(out, off + run);
+        out.fill(val, off, off + run);
+        size = Math.max(size, off + run);
+      } else {
+        if (off + len > out.length) out = grow(out, off + len);
+        out.set(p.subarray(i, i + len), off);
+        i += len;
+        size = Math.max(size, off + len);
+      }
+    }
+    if (i !== -1) throw new Error("IPS patch has no end marker; the file may be damaged");
+    return { bytes: out.slice(0, size), check: null };
+  }
+  function grow(a, n) { var b = new Uint8Array(Math.max(n, a.length * 2)); b.set(a); return b; }
+
+  function applyUps(src, p) {
+    var st = { i: 4 };
+    var srcSize = readVlq(p, st), dstSize = readVlq(p, st);
+    var want = u32(p, p.length - 12), got = crc32(src);
+    var useSrc = src;
+    if (src.length !== srcSize || got !== want) {
+      var head = stripHeader(src);
+      if (head && head.length === srcSize && crc32(head) === want) useSrc = head;
+      else return { error: wrongBase(want, got, srcSize, src.length) };
+    }
+    var out = new Uint8Array(dstSize), end = p.length - 12, off = 0;
+    for (var j = 0; j < Math.min(dstSize, useSrc.length); j++) out[j] = useSrc[j];
+    while (st.i < end) {
+      off += readVlq(p, st);
+      for (;;) {
+        var x = p[st.i++];
+        if (off < dstSize) out[off] = (off < useSrc.length ? useSrc[off] : 0) ^ x;
+        off++;
+        if (!x) break;
+      }
+    }
+    return finish(out, u32(p, p.length - 8), useSrc !== src);
+  }
+
+  function applyBps(src, p) {
+    var st = { i: 4 };
+    var srcSize = readVlq(p, st), dstSize = readVlq(p, st), metaSize = readVlq(p, st);
+    st.i += metaSize;
+    var want = u32(p, p.length - 12), got = crc32(src);
+    var s = src;
+    if (src.length !== srcSize || got !== want) {
+      var head = stripHeader(src);
+      if (head && head.length === srcSize && crc32(head) === want) s = head;
+      else return { error: wrongBase(want, got, srcSize, src.length) };
+    }
+    var out = new Uint8Array(dstSize), end = p.length - 12, o = 0, sRel = 0, tRel = 0;
+    while (st.i < end) {
+      var d = readVlq(p, st), cmd = d % 4, len = Math.floor(d / 4) + 1, k;
+      if (cmd === 0) { for (k = 0; k < len; k++, o++) out[o] = s[o]; }
+      else if (cmd === 1) { for (k = 0; k < len; k++) out[o++] = p[st.i++]; }
+      else {
+        var e = readVlq(p, st), delta = (e % 2 ? -1 : 1) * Math.floor(e / 2);
+        if (cmd === 2) { sRel += delta; for (k = 0; k < len; k++) out[o++] = s[sRel++]; }
+        else { tRel += delta; for (k = 0; k < len; k++) out[o++] = out[tRel++]; }
+      }
+    }
+    return finish(out, u32(p, p.length - 8), s !== src);
+  }
+
+  function finish(out, wantOut, stripped) {
+    var ok = crc32(out) === wantOut;
+    return { bytes: out, check: ok, stripped: stripped };
+  }
+  /* SNES dumps made with copiers have a 512-byte header that most hacks
+     are not made against. */
+  function stripHeader(b) { return b.length % 1024 === 512 ? b.subarray(512) : null; }
+  function wrongBase(want, got, wantSize, gotSize) {
+    return "This patch was made for a different version of the ROM. It expects a file with CRC32 " + hex(want) +
+      " (" + wantSize.toLocaleString() + " bytes); yours is CRC32 " + hex(got) + " (" + gotSize.toLocaleString() +
+      " bytes). Check the hack's readme for the exact base ROM (region and revision, e.g. \"(USA)\" vs \"(USA) (Rev 1)\").";
+  }
+
+  function runPatch() {
+    output = null;
+    $("download").disabled = true;
+    if (!rom || !patch) { $("patchInfo").textContent = patch ? "Patch ready: " + patch.name + ". Now choose the ROM." : ""; ready(); return; }
+    if (rom.inner) { show("patchInfo", "bad", "Unzip the ROM first: patches apply to the ROM file itself, not to a .zip."); ready(); return; }
+    var p = patch.bytes, r;
+    try {
+      if (tag(p, "PATCH")) r = applyIps(rom.bytes, p);
+      else if (tag(p, "UPS1")) r = applyUps(rom.bytes, p);
+      else if (tag(p, "BPS1")) r = applyBps(rom.bytes, p);
+      else r = { error: "That isn't an IPS, UPS or BPS patch." };
+    } catch (e) { r = { error: "Patching failed: " + e.message }; }
+    if (r.error) { show("patchInfo", "bad", r.error); ready(); return; }
+    output = r.bytes;
+    var msg = "Patched with " + patch.name + " → CRC32 " + hex(crc32(output)) + ". ";
+    if (r.stripped) msg += "Removed the ROM's 512-byte copier header first. ";
+    if (r.check === true) show("patchInfo", "ok", msg + "Checksum matches what the hack expects.");
+    else if (r.check === false) show("patchInfo", "warn", msg + "The result's checksum doesn't match the patch; it may not work.");
+    else show("patchInfo", "warn", msg + "IPS patches can't check the base ROM, so if the game glitches, the base ROM is the wrong version.");
+    $("download").disabled = false;
+    ready();
+  }
+
+  /* ---------------- files ---------------- */
+  function extOf(name) { var m = /\.([a-z0-9]+)$/i.exec(name || ""); return m ? m[1].toLowerCase() : ""; }
+  function systemFor(ext) {
+    for (var i = 0; i < SYSTEMS.length; i++) if (SYSTEMS[i][2].indexOf(ext) !== -1) return SYSTEMS[i][0];
+    return null;
+  }
+  /* The names inside a .zip, from its central directory. */
+  function zipNames(b) {
+    var names = [];
+    for (var e = b.length - 22; e >= Math.max(0, b.length - 65557); e--) {
+      if (u32(b, e) !== 0x06054b50) continue;
+      var count = b[e + 10] | (b[e + 11] << 8), at = u32(b, e + 16);
+      for (var n = 0; n < count && at + 46 <= b.length; n++) {
+        if (u32(b, at) !== 0x02014b50) break;
+        var nl = b[at + 28] | (b[at + 29] << 8), xl = b[at + 30] | (b[at + 31] << 8), cl = b[at + 32] | (b[at + 33] << 8);
+        names.push(new TextDecoder().decode(b.subarray(at + 46, at + 46 + nl)));
+        at += 46 + nl + xl + cl;
+      }
+      break;
+    }
+    return names;
+  }
+  /* Headers that settle ambiguous files (.bin, .iso). */
+  function sniff(b) {
+    var s = function (at, len) { return String.fromCharCode.apply(null, b.subarray(at, at + len)); };
+    if (b.length > 0x110 && /SEGA (MEGA DRIVE|GENESIS|32X)/.test(s(0x100, 16))) return /32X/.test(s(0x100, 16)) ? "sega32x" : "segaMD";
+    if (b.length > 0x20 && /SEGADISCSYSTEM|SEGA SEGASATURN/.test(s(0x10, 16) + s(0, 16))) return "segaCD";
+    if (b.length > 0x9320 && /PLAYSTATION/.test(s(0x9320, 0x40))) return "psx";
+    if (b.length > 0xC0 && b[0xB2] === 0x96) return "gba";
+    if (tag(b, "NES\x1a")) return "nes";
+    return null;
+  }
+
+  function show(id, cls, text) { var el = $(id); el.className = "file " + cls; el.textContent = text; }
+
+  function loadRom(name, bytes) {
+    var ext = extOf(name), inner = null, sys = systemFor(ext);
+    if (ext === "zip") {
+      var names = zipNames(bytes).filter(function (n) { return !/\/$/.test(n); });
+      inner = names.length ? names.join(", ") : "(couldn't read the zip's file list)";
+      for (var i = 0; i < names.length && !sys; i++) sys = systemFor(extOf(names[i]));
+      if (!sys && names.some(function (n) { return /\.bin$/i.test(n); })) sys = names.some(function (n) { return /\.cue$/i.test(n); }) ? "psx" : null;
+    } else if (ext === "7z") {
+      inner = "7z archive";
+    } else if (!sys) {
+      sys = sniff(bytes);
+    }
+    rom = { name: name, bytes: bytes, ext: ext, inner: inner };
+    if (sys) $("system").value = sys;
+    var info = name + " · " + (bytes.length / 1048576).toFixed(2) + " MB · CRC32 " + hex(crc32(bytes));
+    if (inner) info += " · contains: " + inner.slice(0, 200);
+    if (stripHeader(bytes) && $("system").value === "snes") info += " · has a 512-byte copier header";
+    show("romInfo", "", info);
+    $("sysNote").textContent = sys ? "Picked from the file. Change it if that's wrong." : "Couldn't tell from the file: pick the system.";
+    sysChanged();
+    runPatch();
+    remember(name, bytes, $("system").value);
+  }
+
+  function read(file, then) {
+    $("status").textContent = "Reading " + file.name + "…";
+    file.arrayBuffer().then(function (buf) { $("status").textContent = ""; then(new Uint8Array(buf)); },
+      function () { $("status").textContent = "Couldn't read that file."; });
+  }
+
+  $("romDrop").addEventListener("click", function () { $("romPick").click(); });
+  $("romPick").addEventListener("change", function (e) { var f = e.target.files[0]; if (f) read(f, function (b) { loadRom(f.name, b); }); });
+  ["dragover", "dragenter"].forEach(function (t) { $("romDrop").addEventListener(t, function (e) { e.preventDefault(); $("romDrop").classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (t) { $("romDrop").addEventListener(t, function () { $("romDrop").classList.remove("over"); }); });
+  $("romDrop").addEventListener("drop", function (e) {
+    e.preventDefault();
+    var f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (/\.(ips|ups|bps)$/i.test(f.name)) read(f, function (b) { setPatch(f.name, b); });
+    else read(f, function (b) { loadRom(f.name, b); });
+  });
+  function setPatch(name, bytes) {
+    patch = { name: name, bytes: bytes };
+    $("patchClear").hidden = false;
+    runPatch();
+  }
+  $("patchBtn").addEventListener("click", function () { $("patchPick").click(); });
+  $("patchPick").addEventListener("change", function (e) { var f = e.target.files[0]; if (f) read(f, function (b) { setPatch(f.name, b); }); });
+  $("patchClear").addEventListener("click", function () { patch = null; output = null; $("patchClear").hidden = true; $("patchPick").value = ""; $("patchInfo").textContent = ""; $("download").disabled = true; ready(); });
+  $("biosBtn").addEventListener("click", function () { $("biosPick").click(); });
+  $("biosPick").addEventListener("change", function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    bios = { name: f.name, url: URL.createObjectURL(f) };
+    show("biosInfo", "ok", f.name);
+  });
+  $("system").addEventListener("change", sysChanged);
+  function sysChanged() {
+    var s = $("system").value;
+    $("biosNote").textContent = BIOS[s] || "Not needed for this system.";
+    $("sysNote").textContent = NOTES[s] || $("sysNote").textContent;
+    ready();
+  }
+  function ready() {
+    $("start").disabled = !rom || (patch && !output);
+  }
+
+  $("download").addEventListener("click", function () {
+    if (!output) return;
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([output]));
+    a.download = rom.name.replace(/(\.[^.]+)?$/, " (patched)$1");
+    a.click();
+  });
+
+  /* ---------------- recent ROMs (this device only) ----------------
+     Kept in a database whose name says "cache" so cloud saves skip it:
+     the ROM never leaves this device. */
+  var DB = "ach-rom-cache";
+  function db() {
+    return new Promise(function (res, rej) {
+      var q = indexedDB.open(DB, 1);
+      q.onupgradeneeded = function () { q.result.createObjectStore("roms", { keyPath: "name" }); };
+      q.onsuccess = function () { res(q.result); };
+      q.onerror = function () { rej(q.error); };
+    });
+  }
+  function remember(name, bytes, system) {
+    if (bytes.length > 300 * 1048576) return;
+    db().then(function (d) {
+      var tx = d.transaction("roms", "readwrite");
+      tx.objectStore("roms").put({ name: name, bytes: bytes, system: system, at: Date.now() });
+      tx.oncomplete = function () { prune(d); };
+    }).catch(function () {});
+  }
+  function prune(d) {
+    var q = d.transaction("roms").objectStore("roms").getAll();
+    q.onsuccess = function () {
+      var all = q.result.sort(function (a, b) { return b.at - a.at; });
+      var tx = d.transaction("roms", "readwrite");
+      all.slice(6).forEach(function (r) { tx.objectStore("roms").delete(r.name); });
+      tx.oncomplete = function () { listRecent(); };
+    };
+  }
+  function listRecent() {
+    db().then(function (d) {
+      var q = d.transaction("roms").objectStore("roms").getAll();
+      q.onsuccess = function () {
+        var host = $("recent");
+        host.innerHTML = "";
+        var all = q.result.sort(function (a, b) { return b.at - a.at; });
+        if (!all.length) return;
+        host.appendChild(document.createTextNode("Recent on this device: "));
+        all.forEach(function (r) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.textContent = r.name;
+          b.addEventListener("click", function () { loadRom(r.name, new Uint8Array(r.bytes)); if (r.system) { $("system").value = r.system; sysChanged(); } });
+          host.appendChild(b);
+        });
+      };
+    }).catch(function () {});
+  }
+  listRecent();
+
+  /* ---------------- run ---------------- */
+  $("start").addEventListener("click", function () {
+    if (!rom) return;
+    var bytes = output || rom.bytes;
+    var name = rom.name.replace(/\.[^.]+$/, "") + (output ? " (patched)" : "");
+    var fileName = output ? rom.name.replace(/(\.[^.]+)?$/, "-patched$1") : rom.name;
+    document.body.classList.add("running");
+    window.EJS_player = "#game";
+    window.EJS_core = $("system").value;
+    window.EJS_gameName = name;               // in-game saves are named after this
+    window.EJS_gameUrl = new File([bytes], fileName);
+    if (bios) window.EJS_biosUrl = bios.url;
+    window.EJS_pathtodata = CDN;
+    window.EJS_startOnLoaded = true;
+    window.EJS_color = "#f2b705";
+    window.EJS_CacheLimit = 0;                // the recent list above already keeps the ROM
+    /* In-game saves go to IndexedDB on this site every 30 s, so the
+       arcade's Save button can take them to the cloud. */
+    window.EJS_defaultOptions = { "save-state-location": "browser", "save-save-interval": "30" };
+    if (output) remember(fileName, output, $("system").value);
+    var s = document.createElement("script");
+    s.src = CDN + "loader.js";
+    s.onerror = function () {
+      document.body.classList.remove("running");
+      $("status").textContent = "Couldn't download the emulator. Check your connection and try again.";
+    };
+    document.body.appendChild(s);
+  });
+})();
+</script>
+</body>
+</html>

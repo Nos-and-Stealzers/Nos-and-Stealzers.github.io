@@ -127,6 +127,8 @@
 
     counters();
     pinButton(window.Store.isFavorite(game.id));
+
+    if (window.RomGuide && window.RomGuide.render(game, $("rom-guide"))) $("rom-guide-block").hidden = false;
   }
 
   function counters() {

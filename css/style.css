@@ -3659,3 +3659,14 @@ body:not(.is-plus-member) .plus-try { display: none; }
   border: 1px solid var(--line, #2a2f3a); background: var(--panel, #12151c); }
 .site-maint-box strong { display: block; font-size: 1.2rem; margin-bottom: 0.4rem; }
 .site-maint-box p { margin: 0; color: var(--dim, #9aa3b2); }
+
+/* "How to load a ROM" on emulator pages */
+.rom-guide .rom-guide-lead { margin: 0 0 0.8rem; }
+.rom-guide-step { border-top: 1px solid var(--line); padding: 0.55rem 0; }
+.rom-guide-step summary { cursor: pointer; font-weight: 650; color: var(--ink); }
+.rom-guide-step p { margin: 0.55rem 0 0; color: var(--ink-2); line-height: 1.55; }
+.rom-guide-step a, .rom-guide-lead a { color: var(--accent); }
+.rom-guide-step code { font-family: var(--mono); font-size: 0.92em; background: var(--surface-2); padding: 0 0.3em; }
+.rom-guide-table { width: 100%; border-collapse: collapse; margin-top: 0.6rem; font-size: 0.92rem; }
+.rom-guide-table th, .rom-guide-table td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--line); color: var(--ink-2); }
+.rom-guide-table th { color: var(--ink); font-weight: 650; }

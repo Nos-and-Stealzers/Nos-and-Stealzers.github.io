@@ -1359,29 +1359,163 @@
   function flashKnown(win, rec) {
     var swf = flashSwf(win), file = swf && new win.URL(swf).pathname.split("/").pop().toLowerCase();
     var entries = rec.sol.entries;
-    if (file === "learntofly.swf" && rec.sol.name === "learntofly" &&
+    if (/learn-?to-?fly[\w-]*\.swf$/.test(file || "") && rec.sol.name === "learntofly" &&
         entries.some(function (e) { return e[0] === "lvlramp"; })) return "ltf1";
-    if (file === "learntofly2.swf" && rec.sol.name === "mainprofile" &&
+    if (/learn-?to-?fly-?2[\w-]*\.swf$/.test(file || "") && rec.sol.name === "mainprofile" &&
         entries.some(function (e) { return e[0] === "profileState"; })) return "ltf2";
     return "";
   }
+  /* Upgrade levels of Learn to Fly 1, from the game's own tables (srh, srf,
+     sre, sgl, sro, srp): save name, label, highest level. */
+  var LTF1_LEVELS = [
+    ["lvlrh", "Ramp height", 11], ["lvlrf", "Ramp speed", 11], ["lvlre", "Aerodynamics", 11],
+    ["lvlgl", "Glider", 4], ["lvlro", "Rocket", 4], ["lvlrp", "Rocket fuel", 11]
+  ];
+  /* Stages open when enough stage goals are done (2, 6, 10, 16 of 20). */
+  var LTF1_GOALS = ["dis", "alt", "spe", "dur"];
+  var LTF2_UPGRADES = ["upg_sleigh", "upg_glider", "upg_boost", "upg_payload"];
+
+  function propGet(o, name) {
+    if (!o) return undefined;
+    if (o.t === "obj0") {
+      for (var i = 0; i < o.props.length; i++) if (o.props[i][0] === name) return o.props[i][1];
+      return undefined;
+    }
+    return amfField(o, name);
+  }
+  function propSet(o, name, v) {
+    if (!o) return;
+    if (o.t === "obj0") {
+      for (var i = 0; i < o.props.length; i++) if (o.props[i][0] === name) { o.props[i][1] = v; return; }
+      o.props.push([name, v]);
+      return;
+    }
+    amfSet(o, name, v);
+  }
+  /* "0,1,0" style lists the Learn to Fly 2 save uses for owned things. */
+  function csvMap(o, name, fn) {
+    var s = propGet(o, name);
+    if (typeof s !== "string") return;
+    propSet(o, name, s.split(",").map(function (x, i) { return String(fn(x, i)); }).join(","));
+  }
+
   function flashKnownFields(win, rec) {
     var kind = flashKnown(win, rec);
     var leaves = amfLeaves({ t: "obj0", props: rec.sol.entries }, "");
-    if (kind === "ltf1") return leaves.filter(function (l) { return l.path.join(".") === "cash"; })
-      .map(function (l) { return { id: "ltf1-cash", label: "Cash", group: "Learn to Fly", leaf: l }; });
+    var byPath = function (p) { return leaves.filter(function (l) { return l.path.join(".") === p; })[0]; };
+    if (kind === "ltf1") {
+      var out = [];
+      var cash1 = byPath("cash");
+      if (cash1) out.push({ id: "ltf1-cash", label: "Cash", group: "Learn to Fly", leaf: cash1 });
+      LTF1_LEVELS.forEach(function (lv) {
+        var l = byPath(lv[0]);
+        if (l) out.push({ id: "ltf1-" + lv[0], label: lv[1] + " (1–" + lv[2] + ")", group: "Learn to Fly upgrades",
+          leaf: l, min: 1, max: lv[2] });
+      });
+      return out;
+    }
     if (kind === "ltf2") {
       var fields = [];
+      var points = byPath("profileState.test_player_points");
+      if (points) fields.push({ id: "ltf2-points", label: "Bonus points", group: "Learn to Fly 2, profile", leaf: points });
       for (var i = 0; i < 4; i++) {
         var prefix = "saveState" + i;
-        var day = leaves.filter(function (l) { return l.path.join(".") === prefix + ".day"; })[0];
-        var cash = leaves.filter(function (l) { return l.path.join(".") === prefix + ".player_cash"; })[0];
+        var day = byPath(prefix + ".day");
+        var cash = byPath(prefix + ".player_cash");
         if (day && day.value >= 1 && cash) fields.push({ id: "ltf2-cash-" + i, label: "Cash",
           group: "Learn to Fly 2, " + (i === 0 ? "autosave" : "slot " + i), leaf: cash });
       }
       return fields;
     }
     return null;
+  }
+
+  /* One-click unlocks. Each returns false when there was nothing to change. */
+  function flashKnownButtons(win, rec) {
+    var kind = flashKnown(win, rec), root = { t: "obj0", props: rec.sol.entries };
+    if (kind === "ltf1") return [
+      { id: "ltf1-max", label: "Max all upgrades", group: "Learn to Fly upgrades",
+        hint: "Best ramp, glider, rocket and fuel", run: function () {
+          LTF1_LEVELS.forEach(function (lv) { propSet(root, lv[0], lv[2]); });
+        } },
+      { id: "ltf1-stages", label: "Unlock all 5 stages", group: "Learn to Fly",
+        hint: "Marks every stage goal as reached, which is what opens the stages", run: function () {
+          for (var s = 1; s <= 5; s++) LTF1_GOALS.forEach(function (g) { propSet(root, "stage" + g + s + "3", 1); });
+        } }
+    ];
+    if (kind === "ltf2") {
+      var profile = propGet(root, "profileState"), out = [];
+      if (profile) out.push({ id: "ltf2-unlock", label: "Unlock modes, movies and music", group: "Learn to Fly 2, profile",
+        hint: "Classic and Arcade modes, every cutscene, every song; skips the tutorial tips", run: function () {
+          propSet(profile, "modesUnlocked", true);
+          csvMap(profile, "movieUnlocked", function () { return "true"; });
+          csvMap(profile, "tutorialsDone", function () { return "true"; });
+          csvMap(profile, "musicOwn", function (x) { return +x >= 1 ? x : 1; });
+        } });
+      for (var i = 0; i < 4; i++) (function (state, i) {
+        if (!state || !(amfNum(propGet(state, "day")) >= 1)) return;
+        out.push({ id: "ltf2-items-" + i, label: "Own every item", group: "Learn to Fly 2, " + (i === 0 ? "autosave" : "slot " + i),
+          hint: "All sleds, gliders, boosters and payloads; equip them in the shop", run: function () {
+            LTF2_UPGRADES.forEach(function (k) { csvMap(state, k, function (x) { return +x >= 1 ? x : 1; }); });
+          } });
+      })(propGet(root, "saveState" + i), i);
+      return out;
+    }
+    return [];
+  }
+
+  /* Learn to Fly 3 profile: modes, item unlocks and the game's own debug
+     menu (F2), all from the game's code (ProfileState, TesterMenu). */
+  function safeStringVec(profile, name) {
+    var v = amfField(profile, name);
+    if (v && v.t === "vec" && v.m === 16) return v;
+    var fresh = { t: "vec", m: 16, fixed: 0, cls: "SafeString", items: [] };
+    amfSet(profile, name, fresh);
+    return amfField(profile, name) === fresh ? fresh : null;
+  }
+  function safeStringTraits(profile) {
+    var found = null;
+    ["musicBoughtKeys", "hudBoughtKeys", "itemUnlockKeys", "rewardKeys"].some(function (n) {
+      var v = amfField(profile, n);
+      var first = v && v.items && v.items.filter(function (x) { return x && x.t === "obj"; })[0];
+      if (first) found = first.tr;
+      return !!found;
+    });
+    return found || { cls: "SafeString", dynamic: false, sealed: ["value"] };
+  }
+  function addSafeString(profile, list, key) {
+    var vec = safeStringVec(profile, list);
+    if (!vec) return;
+    var have = vec.items.some(function (x) { return amfField(x, "value") === key; });
+    if (!have) vec.items.push({ t: "obj", tr: safeStringTraits(profile), sealed: [key], dyn: [] });
+  }
+  /* Learn to Fly 3 profiles from other copies of the game (another host),
+     so progress can move to the unlocked copy. */
+  function ltf3Others(win, rec) {
+    var out = [];
+    for (var i = 0; i < win.localStorage.length; i++) {
+      var k = win.localStorage.key(i);
+      if (k !== rec.key && LTF3.test(k) && /^[^/]+\/\/#/.test(k)) out.push(k);
+    }
+    return out;
+  }
+  function ltf3Buttons(profile) {
+    var g = "Learn to Fly 3, profile";
+    return [
+      { id: "unlock", label: "Unlock every item", group: g,
+        hint: "Every launcher, body, booster and the items normally sold separately", run: function () {
+          addSafeString(profile, "itemUnlockKeys", "masterUnlock");
+          addSafeString(profile, "itemUnlockKeys", "extraItems");
+        } },
+      { id: "modes", label: "Unlock all game modes", group: g, hint: "Classic, Payload and Sandbox", run: function () {
+          ["modeUnlockedClassic", "modeUnlockedPayload", "modeUnlockedSandbox", "modeUnlockCheatRevealed"]
+            .forEach(function (k) { amfSet(profile, k, true); });
+        } },
+      { id: "debug", label: "Turn on the game's debug menu", group: g,
+        hint: "Press F2 in the shop: set cash, bonus points, fish and powers; Unlock All; Win Game", run: function () {
+          addSafeString(profile, "rewardKeys", "enableTestMenu");
+        } }
+    ];
   }
 
   function flashLoad(win, s) {
@@ -1432,11 +1566,25 @@
           known.forEach(function (field) {
             items.push({ id: "fl:" + field.id + ":" + si, label: field.label, type: "value",
               group: field.group, value: field.leaf.value, noLock: true,
-              hint: "Edits this save only; restarts the game. Range: 0–999,999,999." });
+              hint: field.max ? "Level " + field.min + " to " + field.max + "; restarts the game."
+                : "Edits this save only; restarts the game. Range: 0–999,999,999." });
+          });
+          flashKnownButtons(win, rec).forEach(function (b) {
+            items.push({ id: "fl:kb:" + si + ":" + b.id, label: b.label, type: "button", group: b.group, hint: b.hint });
           });
           return;
         }
         if (rec.ltf3) {
+          var bp = amfField(rec.ltf3, "bonusPoints");
+          if (bp) items.push({ id: "fl:ltf-bp:" + si, label: "Bonus points", type: "value", group: "Learn to Fly 3, profile",
+            value: amfNum(amfField(bp, "value")) || 0, noLock: true, hint: "Spent in the Bonus Shop" });
+          ltf3Buttons(rec.ltf3).forEach(function (b) {
+            items.push({ id: "fl:l3:" + si + ":" + b.id, label: b.label, type: "button", group: b.group, hint: b.hint });
+          });
+          ltf3Others(win, rec).forEach(function (k, oi) {
+            items.push({ id: "fl:l3copy:" + si + ":" + oi, label: "Copy progress from " + k.split("/")[0], type: "button",
+              group: "Learn to Fly 3, profile", hint: "Replaces this copy's progress with the other one; Undo puts it back" });
+          });
           var slots = amfField(rec.ltf3, "saveSlots");
           (slots && (slots.items || slots.dense) || []).forEach(function (slot, i) {
             if (!slot || !amfField(slot, "timeDateString")) return;
@@ -1481,12 +1629,48 @@
         s.restart = true;
         return;
       }
-      if ((m = /^fl:(ltf1-cash|ltf2-cash-[0-3]):(\d+)$/.exec(id))) {
+      if ((m = /^fl:(ltf1-[a-z]+|ltf2-cash-[0-3]|ltf2-points):(\d+)$/.exec(id))) {
         rec = f.saves[+m[2]];
         var fields = rec && flashKnownFields(win, rec);
         var field = fields && fields.filter(function (x) { return x.id === m[1]; })[0];
         if (!field || !arg || arg.value === "" || !isFinite(v) || v < 0) return;
-        field.leaf.set(Math.min(Math.round(v), 999999999));
+        v = Math.min(Math.round(v), field.max || 999999999);
+        field.leaf.set(Math.max(v, field.min || 0));
+        return flashSave(win, s, rec);
+      }
+      if ((m = /^fl:kb:(\d+):([\w-]+)$/.exec(id))) {
+        rec = f.saves[+m[1]];
+        var button = rec && flashKnownButtons(win, rec).filter(function (b) { return b.id === m[2]; })[0];
+        if (!button) return;
+        button.run();
+        return flashSave(win, s, rec);
+      }
+      if ((m = /^fl:l3:(\d+):(\w+)$/.exec(id))) {
+        rec = f.saves[+m[1]];
+        var b3 = rec && rec.ltf3 && ltf3Buttons(rec.ltf3).filter(function (b) { return b.id === m[2]; })[0];
+        if (!b3) return;
+        b3.run();
+        return flashSave(win, s, rec);
+      }
+      if ((m = /^fl:l3copy:(\d+):(\d+)$/.exec(id))) {
+        rec = f.saves[+m[1]];
+        var from = rec && ltf3Others(win, rec)[+m[2]];
+        var data3 = from && win.localStorage.getItem(from);
+        if (!data3) return;
+        var bk = "ach:flash-backup:" + rec.key;
+        try { if (!win.localStorage.getItem(bk)) win.localStorage.setItem(bk, win.localStorage.getItem(rec.key)); } catch (e) {}
+        var put3 = function () { try { win.localStorage.setItem(rec.key, data3); } catch (e) {} };
+        put3();
+        ["beforeunload", "pagehide", "unload"].forEach(function (ev) { win.addEventListener(ev, put3); });
+        s.restart = true;
+        return;
+      }
+      if ((m = /^fl:ltf-bp:(\d+)$/.exec(id))) {
+        rec = f.saves[+m[1]];
+        var bpObj = rec && rec.ltf3 && amfField(rec.ltf3, "bonusPoints");
+        if (!bpObj || !isFinite(v) || v < 0) return;
+        v = Math.min(Math.round(v), 999999999);
+        amfSet(bpObj, "value", v < 0x10000000 ? { t: "int", v: v } : v);
         return flashSave(win, s, rec);
       }
       if ((m = /^fl:ltf-(cash|rich):(\d+):(\d+)$/.exec(id))) {
@@ -2816,6 +3000,10 @@
      Unity game keeps its files, so a one-game save can take just those. */
   var SAVE_CALLS = [
     function (w) { if (w.Game && w.Game.WriteSave && w.Game.Objects) { w.Game.WriteSave(); return "Cookie Clicker"; } },
+    function (w) {
+      var gm = w.EJS_emulator && w.EJS_emulator.started && w.EJS_emulator.gameManager;
+      if (gm && gm.saveSaveFiles) { gm.saveSaveFiles(); return "emulator save"; }
+    },
     function (w) { if (w.Engine && w.Engine.saveGame && w.$SM) { w.Engine.saveGame(); return "A Dark Room"; } },
     function (w) { if (w.Stats && w.Core && w.Core.save && "money" in w.Stats) { w.Core.save(true); return "devLife"; } },
     function (w) {
@@ -2833,6 +3021,7 @@
     function add(fs) { if (fs && typeof fs.syncfs === "function" && out.indexOf(fs) === -1) out.push(fs); }
     try { add(w.FS); } catch (e) {}
     try { add(w.Module && w.Module.FS); } catch (e) {}
+    try { add(w.EJS_emulator && w.EJS_emulator.gameManager && w.EJS_emulator.gameManager.FS); } catch (e) {}
     ["unityInstance", "gameInstance", "myGameInstance", "UnityInstance", "unityGame", "instance"].forEach(function (k) {
       try { var inst = w[k]; if (inst && inst.Module) add(inst.Module.FS); } catch (e) {}
     });

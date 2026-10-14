@@ -22223,6 +22223,21 @@
   "dateAdded": "2026-09-16"
  },
  {
+  "id": "flash-learn-to-fly-3-unlocked",
+  "title": "Learn To Fly 3 (Everything Unlocked)",
+  "category": "arcade",
+  "description": "Learn to Fly 3 with the Black Market open: 999,999 fish, Extra Items, Extended Upgrades, Cheats and Time Warp already bought, and 99 of each power. Works without Kongregate. Open the mod menu to unlock every item and mode, set bonus points, or copy your progress over from the normal Learn To Fly 3.",
+  "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
+  "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-3-unlocked.swf",
+  "direct": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-3-unlocked.swf",
+  "platform": "local",
+  "embed": "allowed",
+  "schoolRisk": "low",
+  "host": "",
+  "flash": true,
+  "dateAdded": "2026-10-14"
+ },
+ {
   "id": "flash-learntofly",
   "title": "Learntofly",
   "category": "arcade",
@@ -22243,8 +22258,8 @@
   "category": "arcade",
   "description": "Classic Flash game, playable in-browser via Ruffle.",
   "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
-  "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly2.swf",
-  "direct": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly2.swf",
+  "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly2.swf%3Ffrom%3Dchat.kongregate.com",
+  "direct": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly2.swf%3Ffrom%3Dchat.kongregate.com",
   "platform": "local",
   "embed": "allowed",
   "schoolRisk": "low",
@@ -23068,8 +23083,8 @@
   "category": "arcade",
   "description": "Classic Flash game, playable in-browser via Ruffle.",
   "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
-  "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-2-11967.swf",
-  "direct": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-2-11967.swf",
+  "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-2-11967.swf%3Ffrom%3Dchat.kongregate.com",
+  "direct": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-2-11967.swf%3Ffrom%3Dchat.kongregate.com",
   "platform": "local",
   "embed": "allowed",
   "schoolRisk": "low",
@@ -27045,6 +27060,18 @@
   "direct": "ninjavsevilcorp/index.html"
  },
  {
+  "id": "original-rom-player",
+  "title": "ROM Player",
+  "category": "emulator",
+  "description": "Play your own ROMs for NES, SNES, Game Boy, GBA, DS, N64, Genesis, PlayStation and more, with a built-in ROM hack patcher (IPS, UPS, BPS) that checks you have the right base ROM. ROMs stay on your device; saves sync with the Save button.",
+  "host": "",
+  "source": "games/originals/rom-player.html",
+  "direct": "games/originals/rom-player.html",
+  "featured": true,
+  "romGuide": "rom-player",
+  "dateAdded": "2026-10-14"
+ },
+ {
   "gradient": "linear-gradient(135deg,#e6002e,#3a0010)",
   "platform": "local",
   "embed": "allowed",
@@ -27058,7 +27085,8 @@
   "host": "",
   "source": "games/originals/sm64ds.html",
   "direct": "games/originals/sm64ds.html",
-  "featured": true
+  "featured": true,
+  "romGuide": "sm64ds"
  },
  {
   "id": "huge-chromedino",
@@ -27148,7 +27176,8 @@
   "embed": "allowed",
   "schoolRisk": "low",
   "icon": "",
-  "dateAdded": "2026-09-18"
+  "dateAdded": "2026-09-18",
+  "romGuide": "emulatorjs"
  },
  {
   "id": "huge-factoryballs",
@@ -27359,7 +27388,8 @@
   "embed": "allowed",
   "schoolRisk": "low",
   "icon": "",
-  "dateAdded": "2026-09-18"
+  "dateAdded": "2026-09-18",
+  "romGuide": "webretro"
  },
  {
   "id": "neb4-1on1soccer",

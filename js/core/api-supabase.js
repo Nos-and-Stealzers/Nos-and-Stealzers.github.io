@@ -186,6 +186,108 @@
   /* PostgREST returns arrays; most of our reads want one row. */
   function one(rows) { return Array.isArray(rows) ? rows[0] || null : rows; }
 
+  /* admin_users used to stop at the newest 200 rows. When a query comes
+     back full, split it into narrower substring searches until every slice
+     fits, and merge by id. The upgraded RPC (admin-accounts.sql) has no cap,
+     so this only does extra work on a database that hasn't been upgraded. */
+  var ADMIN_USERS_CAP = 200;
+  var ADMIN_USERS_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789@._";
+  function allAdminUsers(q) {
+    var seen = {};
+    var out = [];
+    var calls = 0;
+    function add(rows) {
+      (rows || []).forEach(function (r) {
+        if (r && r.id && !seen[r.id]) { seen[r.id] = true; out.push(r); }
+      });
+    }
+    function search(term) {
+      calls++;
+      return rpc("admin_users", { q: term }).then(function (rows) {
+        add(rows);
+        if (!rows || rows.length < ADMIN_USERS_CAP || calls > 1500) return null;
+        var base = term || "";
+        if (base.length >= 6) return null;
+        return Promise.all(ADMIN_USERS_CHARS.split("").map(function (ch) {
+          return search(base + ch);
+        }));
+      });
+    }
+    return search(q).then(function () {
+      out.sort(function (a, b) { return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0); });
+      return out;
+    });
+  }
+
+  function anonFetch(path, opts) {
+    return fetch(URL_BASE + path, {
+      method: opts.method || "POST",
+      headers: Object.assign({
+        apikey: ANON,
+        Authorization: "Bearer " + (opts.token || ANON),
+        "Content-Type": "application/json"
+      }, opts.headers || {}),
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var body = null;
+        if (text) { try { body = JSON.parse(text); } catch (e) { body = text; } }
+        if (!res.ok) throw fail(readError(body, res.status), res.status);
+        return body;
+      });
+    });
+  }
+
+  function createViaSignup(uname, password, email, displayName, role) {
+    if (!/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(uname)) {
+      return Promise.reject(fail("Username must be 3-20 characters: letters, numbers or _, starting with a letter.", 400));
+    }
+    if (!password || password.length < 8) {
+      return Promise.reject(fail("Password must be at least 8 characters.", 400));
+    }
+    var placeholder = !email;
+    var address = email || (uname.toLowerCase() + "@accounts.arcadecampus.invalid");
+    return rest("/profiles?select=id&username=eq." + encodeURIComponent(uname)).then(function (rows) {
+      if (rows && rows.length) throw fail("That username is already taken.", 409);
+      return anonFetch("/auth/v1/signup", {
+        body: {
+          email: address,
+          password: password,
+          data: { username: uname, display_name: displayName || uname, created_by_staff: true }
+        }
+      });
+    }).catch(function (err) {
+      if (err && /profiles_username_key/i.test(err.message || "")) throw fail("That username is already taken.", 409);
+      throw err;
+    }).then(function (body) {
+      var user = body && (body.user || (body.id ? body : null));
+      if (!body || !body.access_token || !user || !user.id) {
+        if (body && Array.isArray(body.identities) && body.identities.length === 0) {
+          throw fail("An account already uses that email.", 409);
+        }
+        throw fail("Sign-up didn't hand back the new account. Is email confirmation turned on?", 502);
+      }
+      var id = user.id;
+      return anonFetch("/rest/v1/profiles?id=eq." + id, {
+        method: "PATCH",
+        token: body.access_token,
+        body: { email_verified: true }
+      }).catch(function () {}).then(function () {
+        anonFetch("/auth/v1/logout", { token: body.access_token }).catch(function () {});
+        if (role === "user") return null;
+        return rpc("admin_set_user", { target: id, next_role: role, next_state: null }).catch(function (err) {
+          throw fail("@" + uname + " was created as a regular user, but setting the rank failed: " +
+            ((err && err.message) || "unknown error"), 500);
+        });
+      }).then(function () {
+        return rpc("admin_add_note", { target: id, note_body: "Account created from the admin console" +
+          (role !== "user" ? " as " + role : "") + "." }).catch(function () {});
+      }).then(function () {
+        return { user: { id: id, username: uname, role: role, email: placeholder ? null : address } };
+      });
+    });
+  }
+
   /* --------------------------------------------------------------- shapes */
 
   var ONLINE_MS = 150000;
@@ -1487,7 +1589,7 @@
     },
 
     adminUsers: function (q) {
-      return rpc("admin_users", { q: q || null }).then(function (rows) {
+      return allAdminUsers(q || null).then(function (rows) {
         return {
           users: (rows || []).map(function (r) {
             return Object.assign(shapeUser(r), {
@@ -1517,17 +1619,29 @@
       }).then(function (user) { return { user: user }; });
     },
 
-    /* Admin+ creates an account. No email means they sign in with the username. */
+    /* Admin+ creates an account. No email means they sign in with the username.
+       Uses the admin_create_user RPC when the database has it; otherwise makes
+       the account through normal sign-up (without touching the admin's own
+       session), marks it verified as the new account, then sets the rank with
+       the admin's own rights through admin_set_user. */
     adminCreateUser: function (fields) {
+      var uname = String(fields.username || "").trim();
+      var email = String(fields.email || "").trim().toLowerCase();
+      var role = fields.role || "user";
       return rpc("admin_create_user", {
-        new_username: fields.username,
+        new_username: uname,
         new_password: fields.password,
-        new_email: fields.email || null,
+        new_email: email || null,
         new_display: fields.displayName || null,
-        new_role: fields.role || "user"
+        new_role: role
       }).then(function (row) {
-        if (!row || !row.id) throw fail("Account was not created. Run supabase/admin-accounts.sql first.", 500);
+        if (!row || !row.id) throw fail("Account was not created.", 500);
         return { user: row };
+      }, function (err) {
+        var missing = err && (err.status === 404 ||
+          /admin_create_user|could not find the function|schema cache/i.test(err.message || ""));
+        if (!missing) throw err;
+        return createViaSignup(uname, fields.password, email, fields.displayName, role);
       });
     },
 

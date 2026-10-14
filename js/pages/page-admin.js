@@ -456,8 +456,49 @@
           }).catch(function (err) {
             ucErr.textContent = (err && err.message) || "Could not create that account.";
             ucErr.hidden = false;
+            if (fields.email && /already uses that email/i.test(ucErr.textContent) && API.adminReplaceEmailAccount) {
+              offerReplace(fields.email);
+            }
           }).then(function () { save.disabled = false; });
         });
+
+        /* The email belongs to another account: offer to delete that one
+           (only if it's below your rank; the server checks) and retry. */
+        function offerReplace(email) {
+          API.adminReplaceEmailAccount(email, false).then(function (who) {
+            if (!who || !who.found) return;
+            var name = who.leftover ? "a leftover login with no profile (from an old deleted account)"
+              : "@" + who.username + " (" + who.role + ")";
+            ucErr.textContent = "An account already uses that email: " + name + ".";
+            var btn = UI.el("button", "btn btn-danger", "Delete " + (who.leftover ? "it" : "@" + who.username) +
+              " and create this account");
+            btn.type = "button";
+            btn.style.display = "block";
+            btn.style.marginTop = "0.6rem";
+            btn.addEventListener("click", function () {
+              var text = (who.leftover ? "The leftover login" : "@" + who.username + " and everything in it (friends, messages, cloud saves)") +
+                " will be deleted for good, then the new account is created.";
+              var ask = window.Dialogs && window.Dialogs.confirm
+                ? window.Dialogs.confirm({ title: "Delete the old account?", body: text, confirmLabel: "Delete it", danger: true })
+                : Promise.resolve(window.confirm(text));
+              ask.then(function (ok) {
+                if (!ok) return;
+                btn.disabled = true;
+                API.adminReplaceEmailAccount(email, true).then(function () {
+                  UI.toast("Old account deleted");
+                  ucErr.hidden = true;
+                  ucForm.requestSubmit();
+                }, function (e) {
+                  btn.disabled = false;
+                  ucErr.textContent = (e && e.message) || "Couldn't delete that account.";
+                });
+              });
+            });
+            ucErr.appendChild(btn);
+          }, function (e) {
+            ucErr.textContent += " " + ((e && e.message) || "");
+          });
+        }
       }
 
       function loadUsers() {

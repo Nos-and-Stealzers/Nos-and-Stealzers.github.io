@@ -1660,6 +1660,18 @@
        the account through normal sign-up (without touching the admin's own
        session), marks it verified as the new account, then sets the rank with
        the admin's own rights through admin_set_user. */
+    /* Which account uses this email (confirm=false), or delete it so the
+       email can be reused (confirm=true). Rank rules are enforced in SQL. */
+    adminReplaceEmailAccount: function (email, confirm) {
+      return rpc("admin_replace_email_account", { p_email: String(email || "").trim(), p_confirm: !!confirm })
+        .catch(function (err) {
+          if (err && err.status === 404) {
+            throw fail("Replacing isn't switched on yet: the site's database needs its update first.", 404);
+          }
+          throw err;
+        });
+    },
+
     adminCreateUser: function (fields) {
       var uname = String(fields.username || "").trim();
       var email = String(fields.email || "").trim().toLowerCase();

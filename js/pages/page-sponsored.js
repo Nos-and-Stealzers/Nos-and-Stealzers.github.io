@@ -11,13 +11,18 @@
     var controller = new AbortController();
     var timeout = setTimeout(function () { controller.abort(); }, 8000);
     try {
-      var response = await fetch('https://pepersfight.stealzerslab.fun/status', { cache: 'no-store', signal: controller.signal });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      var server = await response.json();
-      if (!server.ready || !Number.isFinite(server.players) || !Number.isFinite(server.max)) throw new Error('Server starting');
+      var hosts = ['s1', 's2', 's3', 's4'];
+      var results = await Promise.all(hosts.map(function (h) {
+        return fetch('https://' + h + '.pepers.online/status', { cache: 'no-store', signal: controller.signal })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .catch(function () { return null; });
+      }));
+      var up = results.filter(function (s) { return s && s.ready && Number.isFinite(s.players); });
+      if (!up.length) throw new Error('No servers');
+      var players = up.reduce(function (n, s) { return n + s.players; }, 0);
       dot.className = 'sp-dot on';
-      label.textContent = 'online · ' + server.players + '/' + server.max + ' players · ' + server.phase;
-      label.title = 'Game server build ' + server.build + '. Joining is verified by the game, not this status request.';
+      label.textContent = up.length + '/' + hosts.length + ' servers online · ' + players + ' playing';
+      label.title = 'Game build ' + up[0].build + '. Every match has a 120-second warmup; bots join with 30 seconds left.';
     } catch (e) {
       dot.className = 'sp-dot off';
       label.textContent = 'status unavailable';

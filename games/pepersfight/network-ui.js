@@ -1,10 +1,11 @@
 (() => {
   'use strict';
-  const build = '2.0.2';
+  const build = '2.1.0';
+  const servers = ['s1', 's2', 's3', 's4'].map(s => 'https://' + s + '.pepers.online/status');
   const lines = [];
   const panel = document.createElement('details');
   panel.id = 'network-panel';
-  panel.innerHTML = '<summary>Connection & help</summary><strong>Pepersfight ' + build + '</strong><p id="pf-health">Checking public server…</p><p id="pf-session">Not connected to a match</p><div class="network-actions"><button id="pf-test">Test connection</button><button id="pf-copy">Copy report</button><button id="pf-invite">Copy public lobby link</button></div><p class="network-note">Friends on different networks: use Play Online on both devices. LAN addresses such as 192.168.x.x are not public servers. Browser joins need WSS.</p><p class="network-note">Appearance: Settings → Appearance. New abilities: see the in-game ability bar.</p><pre id="remote-probe" hidden></pre>';
+  panel.innerHTML = '<summary>Connection & help</summary><strong>Pepersfight ' + build + '</strong><p id="pf-health">Checking game servers…</p><p id="pf-session">Not connected to a match</p><div class="network-actions"><button id="pf-test">Test connection</button><button id="pf-copy">Copy report</button><button id="pf-invite">Copy public lobby link</button></div><p class="network-note">Play Online puts friends on the same server automatically. Every match has a 120-second playable warmup; bots join with 30 seconds left. Press Esc in a match for the menu.</p><pre id="remote-probe" hidden></pre>';
   document.body.appendChild(panel);
   const health = panel.querySelector('#pf-health');
   const session = panel.querySelector('#pf-session');
@@ -31,30 +32,36 @@
     constructor(url, ...args) {
       super(url, ...args);
       const safe = new URL(url, location.href);
-      const target = safe.protocol + '//' + safe.host + safe.pathname;
-      log('Socket connecting ' + target);
+      const n = servers.findIndex(s => new URL(s).host === safe.host);
+      const target = n >= 0 ? 'game server #' + (n + 1) : 'game server';
+      log('Socket connecting to ' + target);
       this.addEventListener('open', () => log('Socket opened ' + target));
       this.addEventListener('error', () => log('Socket failed ' + target));
       this.addEventListener('close', e => log('Socket closed ' + target + ' code=' + e.code + ' clean=' + e.wasClean));
     }
   };
   async function test() {
-    health.textContent = 'Checking public server…';
+    health.textContent = 'Checking game servers…';
     const start = performance.now();
-    try {
-      const response = await fetch('https://pepersfight.stealzerslab.fun/status', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
-      if (!response.ok) throw new Error('Status HTTP ' + response.status);
-      const data = await response.json();
-      if (!data.ready) throw new Error('Server is starting');
-      const ms = Math.round(performance.now() - start);
-      health.textContent = data.name + ': ' + data.players + '/' + data.max + ' players · ' + data.phase + ' · status ' + ms + ' ms';
-      health.dataset.state = data.build === build ? 'ok' : 'error';
-      if (data.build !== build) health.textContent += ' · New build available: reload this page';
-      log('Health ' + JSON.stringify(data) + ' HTTP duration=' + ms + 'ms');
-    } catch (error) {
-      health.textContent = 'Server status unreachable from this browser. Check the report; a network filter may block the hostname.';
+    const results = await Promise.all(servers.map(async (url, i) => {
+      try {
+        const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        log('Server #' + (i + 1) + ' ' + data.phase + ' players=' + data.players + ' bots=' + data.bots + ' build=' + data.build);
+        return data.ready ? data : null;
+      } catch (error) { log('Server #' + (i + 1) + ' status failed: ' + error.message); return null; }
+    }));
+    const ms = Math.round(performance.now() - start);
+    const up = results.filter(Boolean);
+    const players = up.reduce((n, d) => n + d.players, 0);
+    if (!up.length) {
+      health.textContent = 'Game servers unreachable from this browser. Check your connection; a network filter may block them.';
       health.dataset.state = 'error';
-      log('Health failed: ' + error.message);
+    } else {
+      health.textContent = up.length + '/' + servers.length + ' servers online · ' + players + ' playing · ' + ms + ' ms';
+      health.dataset.state = up.every(d => d.build === build) ? 'ok' : 'error';
+      if (up.some(d => d.build !== build)) health.textContent += ' · New version available: reload this page';
     }
   }
   panel.querySelector('#pf-test').onclick = test;

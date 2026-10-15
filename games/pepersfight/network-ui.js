@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const build = '2.0.1';
+  const build = '2.0.2';
   const lines = [];
   const panel = document.createElement('details');
   panel.id = 'network-panel';

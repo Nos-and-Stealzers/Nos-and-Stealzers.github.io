@@ -55,6 +55,10 @@ const HUB_ORIGINS = new Set([
   "https://www.securlyflex.space",
   "https://geminii.site",
   "https://www.geminii.site",
+  "https://arcadecampushubnew.online",
+  "https://www.arcadecampushubnew.online",
+  "https://arcadecampushubnew.site",
+  "https://www.arcadecampushubnew.site",
   "https://arcade.stealzerslab.fun",
   "https://websitegames-topaz.vercel.app"
 ]);

@@ -14,16 +14,6 @@
   #bar { width: min(420px, 80vw); height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
   #fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff7a59, #ffd23f); transition: width .2s; }
   #err { color: #ff8a80; max-width: 520px; text-align: center; font-size: 14px; display: none; }
-  #network-panel { position: fixed; left: 10px; top: 10px; z-index: 4; max-width: min(420px, calc(100vw - 44px)); color: #eee9ff; font-size: 13px; background: #19152deb; border: 1px solid #514663; border-radius: 12px; padding: 10px 12px; }
-  #network-panel summary { cursor: pointer; color: #ffd23f; }
-  #network-panel[open] summary { margin-bottom: 12px; }
-  #network-panel p { line-height: 1.5; }
-  .network-note { color: #b8b0cc; }
-  .network-actions { display:flex; gap:8px; flex-wrap:wrap; }
-  .network-actions button { color: #fff; background: #3b3157; border: 1px solid #77648f; border-radius: 6px; padding: 8px; cursor:pointer; }
-  .network-actions button:focus-visible, summary:focus-visible { outline: 2px solid #ffd23f; outline-offset: 3px; }
-  [data-state="ok"] { color: #9cecac; } [data-state="error"] { color: #ffb0a7; }
-  #remote-probe { max-height:200px; overflow:auto; white-space:pre-wrap; word-break:break-word; }
   #loader { z-index:5; }
 </style>
 </head>
@@ -35,14 +25,14 @@
   <p id="status">Loading the island…</p>
   <div id="err"></div>
 </div>
-<script src="network-ui.js?v=2.1.0"></script>
+<script src="network-ui.js?v=2.2.0"></script>
 <script>
   var canvas = document.getElementById("unity-canvas");
   var fill = document.getElementById("fill");
   var config = {
-    dataUrl: "Build/WebGL.data.unityweb?v=2.1.0",
-    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=2.1.0",
-    codeUrl: "Build/WebGL.wasm.unityweb?v=2.1.0",
+    dataUrl: "Build/WebGL.data.unityweb?v=2.2.0",
+    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=2.2.0",
+    codeUrl: "Build/WebGL.wasm.unityweb?v=2.2.0",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Pepers",
     productName: "Pepersfight",
@@ -50,7 +40,7 @@
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5)
   };
   var s = document.createElement("script");
-  s.src = "Build/WebGL.loader.js?v=2.1.0";
+  s.src = "Build/WebGL.loader.js?v=2.2.0";
   s.onload = function () {
     createUnityInstance(canvas, config, function (p) { fill.style.width = Math.round(p * 100) + "%"; })
       .then(function (inst) { window.unityInstance = inst; document.getElementById("loader").style.display = "none"; canvas.focus(); })
@@ -58,6 +48,12 @@
   };
   document.body.appendChild(s);
   canvas.addEventListener("click", function () { canvas.focus(); });
+  // Right mouse aims down sights: never open the browser menu over the game.
+  canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("contextmenu", function (e) { if (document.pointerLockElement) e.preventDefault(); });
+  // Keep the page from scrolling or zooming under the game with the wheel / middle click.
+  canvas.addEventListener("wheel", function (e) { e.preventDefault(); }, { passive: false });
+  canvas.addEventListener("mousedown", function (e) { if (e.button === 1) e.preventDefault(); });
 </script>
 </body>
 </html>

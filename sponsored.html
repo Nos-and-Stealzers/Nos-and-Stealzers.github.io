@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="noir" data-lite="off">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sponsored: Pepersfight — Arcade Campus Hub</title>
+  <meta name="description" content="Sponsored game: Pepersfight, a birds vs peppers seed royale with online multiplayer, building, vendors and skins. Play in your browser or download for Windows.">
+  <meta name="theme-color" content="#0c0d10">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/core/access-gate.js"></script>
+  <script src="js/core/theme-boot.js"></script>
+  <script src="js/core/consent-gate.js"></script>
+  <style>
+    .sp-hero { position: relative; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 1.6rem; background: var(--surface); }
+    .sp-hero img { display: block; width: 100%; aspect-ratio: 16 / 7; object-fit: cover; }
+    .sp-hero .sp-over { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 0.6rem; padding: clamp(1rem, 3vw, 2rem);
+      background: linear-gradient(180deg, transparent 35%, rgba(8, 8, 12, 0.88)); }
+    .sp-hero h2 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.05; color: #fff; }
+    .sp-hero p { margin: 0; max-width: 46rem; color: rgba(255, 255, 255, 0.85); }
+    .sp-badge { align-self: flex-start; font: 600 0.72rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; padding: 0.35rem 0.55rem; border-radius: 6px; background: var(--accent); color: var(--accent-ink); }
+    .sp-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
+    .sp-status { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .sp-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--ink-3); }
+    .sp-dot.on { background: var(--good, #38e07b); box-shadow: 0 0 0 3px rgba(56, 224, 123, 0.18); }
+    .sp-dot.off { background: var(--warn, #ff8a5c); }
+    .sp-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.8rem; }
+    .sp-shots figure { margin: 0; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+    .sp-shots img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+    .sp-shots figcaption { padding: 0.55rem 0.75rem; color: var(--ink-2); font-size: 0.9rem; }
+    .sp-feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+    @media (max-width: 900px) { .sp-feats { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .sp-feats { grid-template-columns: 1fr; } }
+    .sp-feat { border: 1px solid var(--line); border-radius: var(--r); padding: 0.9rem 1rem; background: var(--surface); }
+    .sp-feat b { display: block; margin-bottom: 0.25rem; color: var(--ink); }
+    .sp-feat span { color: var(--ink-2); font-size: 0.92rem; }
+    .sp-keys { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; color: var(--ink-2); }
+    .sp-keys kbd { font: 600 0.8rem var(--mono); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.15rem 0.4rem; }
+    .sp-note { color: var(--ink-3); font-size: 0.85rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div data-shell="chrome"></div>
+
+  <main class="main" id="main">
+
+    <header class="page-head">
+      <span class="label">Sponsored</span>
+      <h1>Featured partner game</h1>
+      <p>Games we're backing. This one runs on its own servers, so you can jump in with friends right from the hub.</p>
+      <div class="readout">
+        <span class="sp-status"><i class="sp-dot" id="sp-dot"></i> server <b id="sp-server">checking…</b></span>
+        <span>mode <b>battle royale</b></span>
+        <span>players <b>up to 16</b></span>
+      </div>
+    </header>
+
+    <section class="sp-hero" aria-labelledby="sp-title">
+      <img src="assets/sponsored/pepersfight/drop.jpg" alt="Gliding over the Pepersfight island from the Big Bird">
+      <div class="sp-over">
+        <span class="sp-badge">Sponsored</span>
+        <h2 id="sp-title">Pepersfight</h2>
+        <p>Birds vs Peppers seed royale. Drop from the Big Bird, loot sunflower rifles and pumpkin shotguns, build your way out of trouble and be the last bird standing.</p>
+        <div class="sp-actions">
+          <a class="btn btn-cta" href="play.html?id=pepersfight" id="sp-play">Play now in browser</a>
+          <a class="btn" href="https://github.com/Nos-and-Stealzers/pepersfight/releases/latest/download/Pepersfight-Windows.zip" target="_blank" rel="noopener" id="sp-download">Download for Windows</a>
+          <a class="btn btn-flat" href="games/pepersfight/index.html" target="_blank" rel="noopener">Open full screen</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="sp-feat-h">
+      <div class="block-head">
+        <h2 id="sp-feat-h">What's inside</h2>
+        <span class="fill"></span>
+      </div>
+      <div class="sp-feats">
+        <div class="sp-feat"><b>Online multiplayer</b><span>Join the official server from the browser or the desktop build. Bots fill empty slots so matches start fast.</span></div>
+        <div class="sp-feat"><b>13 seed weapons</b><span>Burst millet rifles, melon spitters, corncob gatlings, coconut lobbers and walnut snipers, from common to legendary.</span></div>
+        <div class="sp-feat"><b>Build and harvest</b><span>Chop twigs, pebbles and scrap, then throw up walls, floors, ramps and roofs mid-fight.</span></div>
+        <div class="sp-feat"><b>Seed Vendors</b><span>Spend materials at vending machines around the island for weapons and healing.</span></div>
+        <div class="sp-feat"><b>26 skins and a shop</b><span>Earn seeds every match and unlock birds and peppers in the daily skin shop.</span></div>
+        <div class="sp-feat"><b>Glide and bounce</b><span>Leaf gliders, bouncy mushrooms, a shrinking spice storm and houses you can actually go inside.</span></div>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="sp-shots-h">
+      <div class="block-head">
+        <h2 id="sp-shots-h">Screenshots</h2>
+        <span class="fill"></span>
+      </div>
+      <div class="sp-shots">
+        <figure><img src="assets/sponsored/pepersfight/fight.jpg" alt="Fighting near the sunflower fields" loading="lazy"><figcaption>Sunflower Fields showdown</figcaption></figure>
+        <figure><img src="assets/sponsored/pepersfight/loot.jpg" alt="Looting a seed crate inside a birdhouse" loading="lazy"><figcaption>Cracking a seed crate</figcaption></figure>
+        <figure><img src="assets/sponsored/pepersfight/shop.jpg" alt="The Pepersfight skin shop" loading="lazy"><figcaption>Daily skin shop</figcaption></figure>
+        <figure><img src="assets/sponsored/pepersfight/drop.jpg" alt="Diving onto the island" loading="lazy"><figcaption>Dropping from the Big Bird</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="block" aria-labelledby="sp-keys-h">
+      <div class="block-head">
+        <h2 id="sp-keys-h">Controls</h2>
+        <span class="fill"></span>
+      </div>
+      <div class="sp-keys">
+        <kbd>WASD</kbd><span>Move, Space to jump or open your glider, Shift to sprint, Ctrl to crouch</span>
+        <kbd>Mouse</kbd><span>Left click to fire, right click to aim, R to reload</span>
+        <kbd>1–5, F</kbd><span>Weapon slots and the harvesting trowel</span>
+        <kbd>Q</kbd><span>Build mode: Z wall, X floor, C ramp, V roof, G switch material</span>
+        <kbd>Tab</kbd><span>Inventory with drag and drop</span>
+        <kbd>E</kbd><span>Pick up, open crates and Seed Vendors</span>
+        <kbd>B N J K L</kbd><span>Emotes</span>
+      </div>
+      <p class="sp-note">Sponsored placement. The browser version plays online only; solo vs bots, LAN games and hosting your own server need the Windows download.</p>
+    </section>
+
+    <div data-shell="foot"></div>
+  </main>
+
+  <script src="js/core/config.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/features/catalog-overlay.js"></script>
+  <script src="js/features/catalog.js"></script>
+  <script src="js/features/art.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/api-supabase.js"></script>
+  <script src="js/core/session.js"></script>
+  <script src="js/core/realtime.js"></script>
+  <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
+  <script src="js/features/chat-core.js"></script>
+  <script src="js/features/chat-dock.js"></script>
+  <script src="js/features/call.js"></script>
+  <script src="js/features/game-saves.js"></script>
+  <script src="js/features/shell.js"></script>
+  <script src="js/features/motion-fx.js"></script>
+  <script src="js/features/context-menu.js"></script>
+  <script src="js/pages/page-sponsored.js"></script>
+</body>
+</html>

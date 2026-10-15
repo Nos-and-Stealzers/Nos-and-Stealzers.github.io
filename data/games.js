@@ -14,7 +14,8 @@ window.GAME_CATALOG = [
     "schoolRisk": "low",
     "dateAdded": "2026-10-15",
     "download": "https://github.com/Nos-and-Stealzers/pepersfight/releases/latest/download/Pepersfight-Windows.zip",
-    "downloadLabel": "Download for Windows"
+    "downloadLabel": "Download for Windows",
+    "sponsored": true
   },
   {
     "id": "flash-bleach-vs-naruto",

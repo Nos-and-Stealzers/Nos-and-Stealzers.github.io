@@ -113,6 +113,13 @@
     /* Optional download link (catalog field `download`), e.g. a Windows build
        for games that also ship a desktop version. */
     var rawEntry = (window.GAME_CATALOG || []).filter(function (e) { return e.id === game.id; })[0];
+    if (rawEntry && rawEntry.sponsored) {
+      var sp = document.createElement("a");
+      sp.className = "flag flag-good";
+      sp.href = "sponsored.html";
+      sp.textContent = "Sponsored";
+      flags.appendChild(sp);
+    }
     if (rawEntry && rawEntry.download && /^https:\/\//.test(rawEntry.download)) {
       var dl = document.createElement("a");
       dl.className = "btn";

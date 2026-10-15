@@ -9,6 +9,7 @@
 
   var NAV = [
     { href: "index.html", icon: "◧", label: "Home" },
+    { href: "sponsored.html", icon: "▶", label: "Sponsored", tag: "New" },
     { href: "browse.html", icon: "▤", label: "All games", count: function () { return window.Catalog.all.length; } },
     { href: "categories.html", icon: "◫", label: "Categories", count: function () { return window.Catalog.categories.length; } },
     { href: "library.html", icon: "★", label: "Pinned", count: function () { return window.Store.favorites().length; } },

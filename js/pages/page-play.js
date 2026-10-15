@@ -110,6 +110,21 @@
     flags.appendChild(launch);
     if (game.platform === "local") flags.appendChild(UI.el("span", "flag", "Hosted here"));
 
+    /* Optional download link (catalog field `download`), e.g. a Windows build
+       for games that also ship a desktop version. */
+    var rawEntry = (window.GAME_CATALOG || []).filter(function (e) { return e.id === game.id; })[0];
+    if (rawEntry && rawEntry.download && /^https:\/\//.test(rawEntry.download)) {
+      var dl = document.createElement("a");
+      dl.className = "btn";
+      dl.href = rawEntry.download;
+      dl.target = "_blank";
+      dl.rel = "noopener";
+      dl.id = "a-download";
+      dl.textContent = rawEntry.downloadLabel || "Download";
+      var playBtn = $("a-play");
+      if (playBtn && playBtn.parentNode) playBtn.parentNode.appendChild(dl);
+    }
+
     /* Pre-fills the game on the feedback form, so a broken title takes one
        click to report from the place you noticed it. */
     $("a-report").href = "feedback.html?game=" + encodeURIComponent(game.id);

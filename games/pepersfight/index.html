@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Pepersfight — Birds vs Peppers Seed Royale</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14102a; overflow: hidden; font-family: system-ui, "Segoe UI", sans-serif; }
+  #unity-canvas { width: 100%; height: 100%; display: block; background: #14102a; outline: none; }
+  #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; color: #fff; background: radial-gradient(900px 500px at 50% 0%, #3b2a8c, #14102a 70%); }
+  #loader h1 { margin: 0; font-size: 44px; letter-spacing: 1px; font-weight: 800; }
+  #loader h1 span { color: #ffd23f; }
+  #loader p { margin: 0; opacity: .7; font-size: 14px; }
+  #bar { width: min(420px, 80vw); height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
+  #fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff7a59, #ffd23f); transition: width .2s; }
+  #err { color: #ff8a80; max-width: 520px; text-align: center; font-size: 14px; display: none; }
+</style>
+</head>
+<body>
+<canvas id="unity-canvas" tabindex="-1"></canvas>
+<div id="loader">
+  <h1>PEPERS <span>FIGHT</span></h1>
+  <div id="bar"><div id="fill"></div></div>
+  <p id="status">Loading the island…</p>
+  <div id="err"></div>
+</div>
+<script>
+  var canvas = document.getElementById("unity-canvas");
+  var fill = document.getElementById("fill");
+  var config = {
+    dataUrl: "Build/WebGL.data.unityweb",
+    frameworkUrl: "Build/WebGL.framework.js.unityweb",
+    codeUrl: "Build/WebGL.wasm.unityweb",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "Pepers",
+    productName: "Pepersfight",
+    productVersion: "1.0",
+    devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5)
+  };
+  var s = document.createElement("script");
+  s.src = "Build/WebGL.loader.js";
+  s.onload = function () {
+    createUnityInstance(canvas, config, function (p) { fill.style.width = Math.round(p * 100) + "%"; })
+      .then(function (inst) { window.unityInstance = inst; document.getElementById("loader").style.display = "none"; canvas.focus(); })
+      .catch(function (e) { var el = document.getElementById("err"); el.style.display = "block"; el.textContent = "Couldn't start the game: " + e; });
+  };
+  document.body.appendChild(s);
+  canvas.addEventListener("click", function () { canvas.focus(); });
+</script>
+</body>
+</html>

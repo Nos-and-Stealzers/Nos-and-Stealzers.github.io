@@ -2,6 +2,21 @@
    catalog works over file:// as well as http(s) with zero fetch latency. */
 window.GAME_CATALOG = [
   {
+    "id": "pepersfight",
+    "title": "Pepersfight",
+    "category": "shooter",
+    "description": "Birds vs Peppers seed royale: drop from the Big Bird, loot seed-themed weapons (sunflower rifles, pumpkin shotguns, coconut lobbers), build, buy gear from Seed Vendors and be the last bird standing. Online multiplayer on the official server with bots, skins and a skin shop. Want solo vs bots, LAN or your own server? Grab the Windows download.",
+    "gradient": "linear-gradient(135deg, #ff7a59, #3b2a8c)",
+    "source": "games/pepersfight/index.html",
+    "direct": "games/pepersfight/index.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "dateAdded": "2026-10-15",
+    "download": "https://github.com/Nos-and-Stealzers/pepersfight/releases/latest/download/Pepersfight-Windows.zip",
+    "downloadLabel": "Download for Windows"
+  },
+  {
     "id": "flash-bleach-vs-naruto",
     "title": "Bleach vs Naruto",
     "category": "fighting",

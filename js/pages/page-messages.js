@@ -168,10 +168,10 @@
         var acts = el("div", "msgs-head-acts");
         if (window.Calls && window.Calls.supported && window.Calls.supported()) {
           acts.appendChild(headBtn("phone", "Voice call", function () {
-            window.Calls.start({ threadId: current.id, kind: "audio" });
+            window.Calls.start({ threadId: current.id, kind: "audio" }).catch(function () {});
           }, "is-call"));
           acts.appendChild(headBtn("video", "Video call", function () {
-            window.Calls.start({ threadId: current.id, kind: "video" });
+            window.Calls.start({ threadId: current.id, kind: "video" }).catch(function () {});
           }, "is-call"));
         }
         var infoBtn = headBtn("info", "Details", function () {

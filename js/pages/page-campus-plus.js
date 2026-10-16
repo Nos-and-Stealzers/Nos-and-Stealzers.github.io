@@ -265,7 +265,7 @@
       var src = sourceOf(item.videoId);
       delete player.dataset.ended;
       /* A video and a song at once is noise: pause the music player. */
-      if (window.Music && window.Music.state().playing) window.Music.pause();
+      if (window.Music && window.Music.hush) window.Music.hush();
       player.src = embedUrl(item.videoId, start || 0);
       frameBox.classList.toggle("is-vertical", src !== "youtube");
       frameBox.dataset.source = src;

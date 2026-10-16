@@ -204,15 +204,19 @@
     s.top = y + "px";
   }
 
+  /* The show/hide-video button always says what it will do next. */
+  function syncToggle(open) {
+    var toggle = bar.querySelector(".callbar-toggle");
+    if (!toggle) return;
+    toggle.title = open ? "Hide video" : "Show video";
+    toggle.setAttribute("aria-label", toggle.title);
+    toggle.replaceChild(window.UI.icon(open ? "shrink" : "expand"), toggle.firstChild);
+  }
+
   function setExpanded(open) {
     if (!bar) return;
     bar.classList.toggle("is-expanded", !!open);
-    var toggle = bar.querySelector(".callbar-toggle");
-    if (toggle) {
-      toggle.title = open ? "Hide video" : "Show video";
-      toggle.setAttribute("aria-label", toggle.title);
-      toggle.replaceChild(window.UI.icon(open ? "shrink" : "expand"), toggle.firstChild);
-    }
+    syncToggle(!!open);
     if (!open && bar.classList.contains("is-big")) setBig(false);
     applyGeo();
     closeSettings();
@@ -228,14 +232,7 @@
       b.title = big ? "Exit full screen" : "Full screen";
       b.setAttribute("aria-label", b.title);
     }
-    if (big) {
-      var toggle = bar.querySelector(".callbar-toggle");
-      if (toggle) {
-        toggle.title = "Hide video";
-        toggle.setAttribute("aria-label", "Hide video");
-        toggle.replaceChild(window.UI.icon("shrink"), toggle.firstChild);
-      }
-    }
+    if (big) syncToggle(true);
     applyGeo();
   }
 
@@ -330,7 +327,12 @@
 
     /* Esc leaves big mode. */
     document.addEventListener("keydown", function (e) {
-      if (e.key !== "Escape" || !bar || bar.hidden) return;
+      if (e.key !== "Escape" || !bar || bar.hidden || e.defaultPrevented) return;
+      /* Leave Escape to whatever has focus outside the call (chat, dialogs),
+         unless the call has the screen to itself. */
+      var inCall = bar.contains(document.activeElement);
+      if (!inCall && !bar.classList.contains("is-big")) return;
+      if (!inCall && document.querySelector(".sheet:not([hidden]), dialog[open], .cdock.is-open")) return;
       if (settingsEl && !settingsEl.hidden) { closeSettings(); return; }
       if (bar.classList.contains("is-big")) setBig(false);
     });
@@ -371,8 +373,10 @@
     drawSettings();
   }
 
+  var settingsGen = 0;
   function drawSettings() {
     var box = settingsEl;
+    var gen = ++settingsGen;
     box.innerHTML = "";
     var headRow = el("div", "callset-head");
     headRow.appendChild(el("strong", null, "Call settings"));
@@ -387,6 +391,7 @@
     var md = navigator.mediaDevices;
     var list = md && md.enumerateDevices ? md.enumerateDevices() : Promise.resolve([]);
     list.then(function (devices) {
+      if (gen !== settingsGen || box.hidden) return;   // reopened or closed meanwhile
       function picker(label, kind, current, onPick) {
         var opts = devices.filter(function (d) { return d.kind === kind; });
         var row = el("label", "callset-row");
@@ -413,14 +418,17 @@
       var cam = state.local && state.local.getVideoTracks()[0];
       picker("Microphone", "audioinput", mic && mic.getSettings ? mic.getSettings().deviceId : "", function (id) { switchDevice("audio", id); });
       picker("Camera", "videoinput", cam && cam.getSettings ? cam.getSettings().deviceId : "", function (id) { switchDevice("video", id); });
+      function eachRemoteAudio(fn) {
+        Object.keys(state.peers).forEach(function (k) {
+          var a = state.peers[k].el && state.peers[k].el._audio;
+          if (a) fn(a);
+        });
+      }
       var probe = document.createElement("audio");
       if (typeof probe.setSinkId === "function") {
         picker("Speaker", "audiooutput", state.sink || "default", function (id) {
           state.sink = id;
-          Object.keys(state.peers).forEach(function (k) {
-            var a = state.peers[k].el && state.peers[k].el._audio;
-            if (a && a.setSinkId) a.setSinkId(id).catch(function () {});
-          });
+          eachRemoteAudio(function (a) { if (a.setSinkId) a.setSinkId(id).catch(function () {}); });
         });
       }
 
@@ -432,10 +440,7 @@
       range.value = String(state.volume);
       range.addEventListener("input", function () {
         state.volume = Number(range.value);
-        Object.keys(state.peers).forEach(function (k) {
-          var a = state.peers[k].el && state.peers[k].el._audio;
-          if (a) a.volume = state.volume;
-        });
+        eachRemoteAudio(function (a) { a.volume = state.volume; });
       });
       vol.appendChild(range);
       box.appendChild(vol);
@@ -452,12 +457,25 @@
   /* Swap the microphone or camera mid-call without renegotiating. */
   function switchDevice(kind, deviceId) {
     if (!state.local || !navigator.mediaDevices) return;
+    /* Picking a camera while it's off only remembers the choice; it's used
+       the next time the camera goes on, rather than switching it on now. */
+    if (kind === "video" && (state.camOff || !state.local.getVideoTracks().length)) {
+      state.camDevice = deviceId;
+      window.UI.toast("Camera chosen. It's used when you turn your camera on.");
+      return;
+    }
+    var callAtStart = state.call;
     var c = kind === "audio"
       ? { audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
       : { video: { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 360 } } };
     navigator.mediaDevices.getUserMedia(c).then(function (s) {
       var track = kind === "audio" ? s.getAudioTracks()[0] : s.getVideoTracks()[0];
-      if (!track) return;
+      /* The call may have ended (or another begun) while the device opened. */
+      if (!track || !state.local || state.call !== callAtStart) {
+        s.getTracks().forEach(function (t) { t.stop(); });
+        return;
+      }
+      if (kind === "video") state.camDevice = deviceId;
       var old = kind === "audio" ? state.local.getAudioTracks() : state.local.getVideoTracks();
       old.forEach(function (t) { state.local.removeTrack(t); t.stop(); });
       state.local.addTrack(track);
@@ -472,8 +490,6 @@
         });
         watchSpeaking(state.self, state.local);
       } else {
-        state.camOff = false;
-        mark("cam", true);
         if (!state.screen) publishVideo(track);
         var tile = tileFor(state.self, "You");
         if (!state.screen) {
@@ -541,6 +557,8 @@
     Object.keys(speak.meters).forEach(unwatchSpeaking);
     window.clearInterval(speak.timer);
     speak.timer = null;
+    /* Free the audio device between calls; a new call makes a fresh one. */
+    if (speak.ctx) { try { speak.ctx.close(); } catch (e) {} speak.ctx = null; }
   }
 
   /* ------------------------------------------------------------ spotlight */
@@ -861,7 +879,9 @@
     }
 
     /* Started audio-only: acquire a camera now and push it to every peer. */
-    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 } } })
+    var camWant = { width: { ideal: 640 }, height: { ideal: 360 } };
+    if (state.camDevice) camWant.deviceId = { ideal: state.camDevice };
+    navigator.mediaDevices.getUserMedia({ video: camWant })
       .then(function (cam) {
         var track = cam.getVideoTracks()[0];
         state.local.addTrack(track);
@@ -1295,12 +1315,12 @@
     stopRinging();
     state.ringing = null;
     /* Music from the built-in player would talk over the call. */
-    if (window.Music && window.Music.state().playing) window.Music.pause();
+    if (window.Music && window.Music.hush) window.Music.hush();
     root.hidden = false;
     bar.hidden = false;
     ringEl.hidden = true;
     bar.dataset.kind = call && call.kind === "video" ? "video" : "audio";
-    if (call && call.kind === "video") setExpanded(true);
+    if (call && call.kind === "video") { setExpanded(true); bar._autoExpanded = true; }
     applyGeo();
     status(call && call.state === "ringing" ? "Ringing…" : "Connecting…");
     if (timerEl) timerEl.textContent = "";

@@ -270,7 +270,7 @@
     channel.onmessage = function (e) {
       var m = e.data || {};
       if (m.from === TAB) return;
-      if (m.t === "claim" || m.t === "playing") yieldTo();
+      if (m.t === "claim" || m.t === "playing" || m.t === "hush") yieldTo();
       else if (m.t === "who" && owner && !audio.paused) announce("me");
       else if (m.t === "me" && waitingWho) { waitingWho(true); }
     };
@@ -883,6 +883,11 @@
     jump: jump,
     play: play,
     pause: pause,
+    /* Silence music in every tab (a call starting, a video playing). */
+    hush: function () {
+      if (!audio.paused) pause();
+      announce("hush");
+    },
     toggle: toggle,
     next: function () { next(false); },
     prev: prev,

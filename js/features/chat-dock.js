@@ -74,7 +74,8 @@
       var b = iconBtn(spec[0], spec[1], "cdock-call");
       b.hidden = true;
       b.addEventListener("click", function () {
-        if (current && window.Calls) window.Calls.start({ threadId: current.id, kind: spec[2] });
+        /* Calls.start shows its own toast on failure; don't leave the rejection unhandled. */
+        if (current && window.Calls) window.Calls.start({ threadId: current.id, kind: spec[2] }).catch(function () {});
       });
       head.appendChild(b);
       callBtns.push(b);
@@ -268,6 +269,7 @@
       }
 
       document.addEventListener("session:badges", function (e) {
+        if (!root) return;
         var n = (e.detail && e.detail.messages) || 0;
         badge.textContent = n > 99 ? "99+" : String(n);
         badge.hidden = n === 0;
@@ -275,7 +277,17 @@
         if (open && !current) loadList();
       });
       document.addEventListener("session:change", function (e) {
-        if (!(e.detail && e.detail.user) && root) { convo.close(); root.remove(); }
+        if (!(e.detail && e.detail.user) && root) {
+          /* Signed out: take the dock down completely, timer included, so it
+             stops polling and ChatDock.openThread falls back to messages.html. */
+          window.clearInterval(listTimer);
+          listTimer = null;
+          convo.close();
+          root.remove();
+          root = null;
+          open = false;
+          current = null;
+        }
       });
     });
   }

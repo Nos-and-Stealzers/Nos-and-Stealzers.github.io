@@ -358,7 +358,7 @@
     frame = document.createElement("iframe");
     frame.src = url;
     frame.title = game.title;
-    frame.allow = "autoplay; fullscreen; gamepad; clipboard-write";
+    frame.allow = "autoplay; fullscreen; gamepad; clipboard-write; microphone";
     frame.setAttribute("allowfullscreen", "");
     if (game.sandbox) frame.setAttribute("sandbox", game.sandbox);
 

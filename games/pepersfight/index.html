@@ -25,14 +25,14 @@
   <p id="status">Loading the island…</p>
   <div id="err"></div>
 </div>
-<script src="network-ui.js?v=2.4.0"></script>
+<script src="network-ui.js?v=3.0.0"></script>
 <script>
   var canvas = document.getElementById("unity-canvas");
   var fill = document.getElementById("fill");
   var config = {
-    dataUrl: "Build/WebGL.data.unityweb?v=2.4.0",
-    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=2.4.0",
-    codeUrl: "Build/WebGL.wasm.unityweb?v=2.4.0",
+    dataUrl: "Build/WebGL.data.unityweb?v=3.0.0",
+    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=3.0.0",
+    codeUrl: "Build/WebGL.wasm.unityweb?v=3.0.0",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Pepers",
     productName: "Pepersfight",
@@ -40,7 +40,7 @@
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5)
   };
   var s = document.createElement("script");
-  s.src = "Build/WebGL.loader.js?v=2.4.0";
+  s.src = "Build/WebGL.loader.js?v=3.0.0";
   s.onload = function () {
     createUnityInstance(canvas, config, function (p) { fill.style.width = Math.round(p * 100) + "%"; })
       .then(function (inst) { window.unityInstance = inst; document.getElementById("loader").style.display = "none"; canvas.focus(); })

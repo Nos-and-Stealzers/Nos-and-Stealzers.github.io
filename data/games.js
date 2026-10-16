@@ -798,8 +798,7 @@ window.GAME_CATALOG = [
     "direct": "games/websie/arena-drift.html",
     "platform": "local",
     "embed": "allowed",
-    "schoolRisk": "low",
-    "unavailable": true
+    "schoolRisk": "low"
   },
   {
     "id": "huge-awesome-tanks-2",
@@ -1395,8 +1394,59 @@ window.GAME_CATALOG = [
     "direct": "games/websie/cave-hopper.html",
     "platform": "local",
     "embed": "allowed",
+    "schoolRisk": "low"
+  },
+  {
+    "id": "maze-runner",
+    "title": "Maze Runner",
+    "category": "puzzle",
+    "description": "Slip through the maze, collect three keys and reach the exit while guards patrol.",
+    "gradient": "linear-gradient(135deg, #22c55e, #0f766e)",
+    "source": "games/websie/maze-runner.html",
+    "direct": "games/websie/maze-runner.html",
+    "platform": "local",
+    "embed": "allowed",
     "schoolRisk": "low",
-    "unavailable": true
+    "dateAdded": "2026-10-16"
+  },
+  {
+    "id": "garden-defense",
+    "title": "Garden Defense",
+    "category": "tower",
+    "description": "Compact tower defense: place sprayers and stop every pest before it crosses the garden.",
+    "gradient": "linear-gradient(135deg, #84cc16, #15803d)",
+    "source": "games/websie/garden-defense.html",
+    "direct": "games/websie/garden-defense.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "dateAdded": "2026-10-16"
+  },
+  {
+    "id": "factory-freight",
+    "title": "Factory Freight",
+    "category": "strategy",
+    "description": "Top-down delivery run: pick up crates, dodge the forklifts and reach the loading bay before the shift ends.",
+    "gradient": "linear-gradient(135deg, #f97316, #9a3412)",
+    "source": "games/websie/factory-freight.html",
+    "direct": "games/websie/factory-freight.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "dateAdded": "2026-10-16"
+  },
+  {
+    "id": "shipyard-scramble",
+    "title": "Shipyard Scramble",
+    "category": "shooter",
+    "description": "Survival shooter on the docks: grab fuel pods to keep your ship running while hostiles patrol.",
+    "gradient": "linear-gradient(135deg, #38bdf8, #1e3a8a)",
+    "source": "games/websie/shipyard-scramble.html",
+    "direct": "games/websie/shipyard-scramble.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "dateAdded": "2026-10-16"
   },
   {
     "id": "huge-cluster-rush",

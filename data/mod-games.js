@@ -2,11 +2,13 @@
    cheats in the Campus+ mod menu, and from which engine. */
 window.MOD_GAMES = {
   "alien-invaders-io": "unity",
+  "arena-drift": "original",
   "bloonstd": "flash",
   "bloonstd2": "flash",
   "bloxors": "flash",
   "boxhead2play": "flash",
   "burning-man-2": "unity",
+  "cave-hopper": "original",
   "chromaincident": "values",
   "dino": "dino",
   "eaglercraft-1-12-2": "minecraft",
@@ -43,6 +45,7 @@ window.MOD_GAMES = {
   "ext4-kritikshoot": "values",
   "ext4-neon-night-racer": "values",
   "ext4-pixel-defense": "values",
+  "factory-freight": "original",
   "flash-2048": "flash",
   "flash-billiards": "flash",
   "flash-bitdungeon": "flash",
@@ -152,6 +155,7 @@ window.MOD_GAMES = {
   "fnaf-sl": "clickteam",
   "fnaf-ucn": "clickteam",
   "fnaf-world": "clickteam",
+  "garden-defense": "original",
   "huge-10-minutes-till-dawn": "unity",
   "huge-1v1lol": "unity",
   "huge-achievementunlocked": "flash",
@@ -361,6 +365,7 @@ window.MOD_GAMES = {
   "huge-worlds-hardest-game-2": "values",
   "huge-x-trial-racing": "construct",
   "huge-zombocalypse": "flash",
+  "maze-runner": "original",
   "neb3-60secondssantarun": "flash",
   "neb3-a-dark-room": "darkroom",
   "neb3-abandoned3": "flash",
@@ -1061,5 +1066,6 @@ window.MOD_GAMES = {
   "original-whack-a-mole": "original",
   "original-word-guess": "original",
   "original-word-master": "original",
-  "retro-bowl-plus": "retrobowl"
+  "retro-bowl-plus": "retrobowl",
+  "shipyard-scramble": "original"
 };

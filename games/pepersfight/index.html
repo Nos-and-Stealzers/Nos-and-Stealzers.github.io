@@ -4,48 +4,173 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Pepersfight — Birds vs Peppers Seed Royale</title>
+<meta name="description" content="Pepersfight: a free browser battle royale. Birds vs peppers, seed-themed weapons, building, duos and quads, voice chat.">
 <style>
-  html, body { margin: 0; height: 100%; background: #14102a; overflow: hidden; font-family: system-ui, "Segoe UI", sans-serif; }
-  #unity-canvas { width: 100%; height: 100%; display: block; background: #14102a; outline: none; }
-  #loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; color: #fff; background: radial-gradient(900px 500px at 50% 0%, #3b2a8c, #14102a 70%); }
-  #loader h1 { margin: 0; font-size: 44px; letter-spacing: 1px; font-weight: 800; }
-  #loader h1 span { color: #ffd23f; }
-  #loader p { margin: 0; opacity: .7; font-size: 14px; }
-  #bar { width: min(420px, 80vw); height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; }
-  #fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff7a59, #ffd23f); transition: width .2s; }
-  #err { color: #ff8a80; max-width: 520px; text-align: center; font-size: 14px; display: none; }
-  #loader { z-index:5; }
+  html, body { margin: 0; height: 100%; background: #100c22; overflow: hidden; font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+  #unity-canvas { width: 100%; height: 100%; display: block; background: #100c22; outline: none; }
+  #loader { position: fixed; inset: 0; z-index: 5; display: grid; grid-template-rows: 1fr auto; color: #fff;
+            background: radial-gradient(1100px 620px at 50% 30%, rgba(255,140,64,.16), transparent 70%), linear-gradient(180deg, #2b1e63 0%, #100c22 100%);
+            transition: opacity .45s ease; }
+  #loader.done { opacity: 0; pointer-events: none; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; }
+  h1 { margin: 0; font-size: clamp(44px, 8vw, 96px); font-weight: 900; letter-spacing: .5px; line-height: 1; text-shadow: 0 6px 0 rgba(0,0,0,.25); }
+  h1 span { color: #ffd23f; }
+  .tag { margin: 0; opacity: .65; font-size: 16px; }
+  .seed { width: 56px; height: 56px; border-radius: 50%; border: 5px solid rgba(255,210,63,.25); border-top-color: #ffd23f; animation: spin 0.9s linear infinite; margin: 18px 0 6px; position: relative; }
+  .seed::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 20px; margin: -10px 0 0 -7px; border-radius: 50%; background: #5a3e2b; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .bar { width: min(560px, 82vw); height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); overflow: hidden; position: relative; }
+  #fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #ff7a59, #ffd23f); transition: width .25s ease; }
+  .bar::after { content: ""; position: absolute; inset: 0; width: 120px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent); animation: sheen 1.6s linear infinite; }
+  @keyframes sheen { from { transform: translateX(-120px); } to { transform: translateX(680px); } }
+  .row { width: min(560px, 82vw); display: flex; justify-content: space-between; font-size: 15px; }
+  #status { opacity: .85; } #pct { color: #ffd23f; font-weight: 800; }
+  .tip { margin-top: 26px; max-width: min(760px, 88vw); display: flex; gap: 14px; align-items: center; padding: 14px 18px; border-radius: 14px;
+         background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); font-size: 15px; line-height: 1.4; }
+  .tip b { color: #ffd23f; font-size: 13px; letter-spacing: 1px; }
+  #err { color: #ff9a8b; max-width: 560px; text-align: center; font-size: 15px; display: none; }
+  #err button { margin-top: 10px; padding: 9px 18px; border-radius: 10px; border: 0; background: #ffd23f; font-weight: 800; cursor: pointer; }
+  .foot { display: flex; justify-content: space-between; align-items: flex-end; padding: 14px 18px; font-size: 12px; opacity: .45; }
+  #ad-slot { display: none; justify-content: center; padding: 0 0 10px; min-height: 0; }
+  #ad-slot.on { display: flex; }
+  #ad-label { font-size: 10px; letter-spacing: 1px; opacity: .45; text-align: center; margin-bottom: 4px; }
 </style>
+<script src="ads-config.js?v=3.4.1"></script>
+<script>
+  // Ads: Google AdSense H5 game ads (adBreak) + one display slot on the loading screen.
+  // Nothing loads unless ads-config.js has a publisher id, so the game works the same without ads.
+  (function () {
+    var cfg = window.PEPERS_ADS || {};
+    var client = (cfg.client || "").trim();
+    var on = /^ca-pub-\d{10,20}$/.test(client) && cfg.enabled !== false;
+    var lastBreak = 0, matches = 0;
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adBreak = window.adConfig = function (o) { window.adsbygoogle.push(o); };
+    window.pfAdsEnabled = function () { return on; };
+    if (on) {
+      var s = document.createElement("script");
+      s.async = true; s.crossOrigin = "anonymous";
+      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + encodeURIComponent(client);
+      s.setAttribute("data-ad-client", client);
+      if (cfg.test) s.setAttribute("data-adbreak-test", "on");
+      if (cfg.frequencyHint) s.setAttribute("data-ad-frequency-hint", cfg.frequencyHint);
+      document.head.appendChild(s);
+      window.adConfig({ preloadAdBreaks: "on", sound: "on" });
+    }
+    function setPaused(p) {
+      try { if (window.unityInstance) window.unityInstance.SendMessage("MenuUI", "AdState", p ? "1" : "0"); } catch (e) {}
+    }
+    // type: "preroll" | "next" (between matches). Returns true when a break was requested.
+    window.pfAdBreak = function (type, name) {
+      if (!on) return false;
+      var now = Date.now();
+      if (type === "next") {
+        matches++;
+        var every = Math.max(1, cfg.interstitialEveryMatches || 1);
+        if (matches % every !== 0) return false;
+        if (now - lastBreak < (cfg.minSecondsBetween || 180) * 1000) return false;
+      }
+      lastBreak = now;
+      var o = { type: type, name: name || type, beforeAd: function () { setPaused(true); }, afterAd: function () { setPaused(false); }, adBreakDone: function () { setPaused(false); } };
+      if (type === "preroll") { delete o.beforeAd; delete o.afterAd; }
+      window.adBreak(o);
+      return true;
+    };
+    window.addEventListener("DOMContentLoaded", function () {
+      if (!on || !cfg.loaderSlot) return;
+      var slot = document.getElementById("ad-slot");
+      slot.className = "on";
+      var ins = document.createElement("ins");
+      ins.className = "adsbygoogle";
+      ins.style.display = "inline-block"; ins.style.width = "728px"; ins.style.height = "90px"; ins.style.maxWidth = "96vw";
+      ins.setAttribute("data-ad-client", client);
+      ins.setAttribute("data-ad-slot", cfg.loaderSlot);
+      slot.appendChild(ins);
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+      if (cfg.preroll) window.pfAdBreak("preroll", "game_start");
+    });
+  })();
+</script>
 </head>
 <body>
 <canvas id="unity-canvas" tabindex="-1"></canvas>
 <div id="loader">
-  <h1>PEPERS <span>FIGHT</span></h1>
-  <div id="bar"><div id="fill"></div></div>
-  <p id="status">Loading the island…</p>
-  <div id="err"></div>
+  <div class="center">
+    <h1>PEPERS <span>FIGHT</span></h1>
+    <p class="tag">Birds vs Peppers · Seed Royale</p>
+    <div class="seed" aria-hidden="true"></div>
+    <div class="bar"><div id="fill"></div></div>
+    <div class="row"><span id="status">Downloading the game…</span><span id="pct">0%</span></div>
+    <div id="err"></div>
+    <div class="tip"><b>TIP</b><span id="tip"></span></div>
+  </div>
+  <div>
+    <div id="ad-slot"><div><div id="ad-label">ADVERTISEMENT</div></div></div>
+    <div class="foot"><span>Free to play in your browser · Windows download available</span><span>v3.4.1</span></div>
+  </div>
 </div>
-<script src="network-ui.js?v=3.2.0"></script>
+<script src="network-ui.js?v=3.4.1"></script>
 <script>
   var canvas = document.getElementById("unity-canvas");
-  var fill = document.getElementById("fill");
+  var fill = document.getElementById("fill"), pct = document.getElementById("pct"), statusEl = document.getElementById("status");
+  var tips = [
+    "Press G or middle mouse to ping enemies, loot and places for your squad.",
+    "Pepper Bombs bounce — lob them over walls to flush out campers.",
+    "A Feather Puff cloud blocks sight. Use it to revive a downed teammate.",
+    "Hold P to talk. Proximity voice lets nearby players hear you too.",
+    "Q toggles build mode: Z wall, X floor, C ramp, V cone.",
+    "Nectar Splash heals everyone it hits, so throw it at your squad's feet.",
+    "Peck trees, rocks and crates with your beak to gather materials."
+  ];
+  var tipEl = document.getElementById("tip"), tipIdx = Math.floor(Math.random() * tips.length);
+  function nextTip() { tipEl.textContent = tips[tipIdx++ % tips.length]; }
+  nextTip(); var tipTimer = setInterval(nextTip, 6000);
+  function setProgress(p, text) {
+    p = Math.max(0, Math.min(1, p));
+    fill.style.width = (p * 100).toFixed(1) + "%";
+    pct.textContent = Math.round(p * 100) + "%";
+    if (text) statusEl.textContent = text;
+  }
+  // Called by the game while it builds the island; 1 = ready to play.
+  window.pfLoading = function (p, stage) {
+    setProgress(0.72 + p * 0.28, stage ? stage + "…" : null);
+    if (p >= 1) {
+      var l = document.getElementById("loader");
+      l.className = "done"; clearInterval(tipTimer);
+      setTimeout(function () { l.style.display = "none"; }, 500);
+      canvas.focus();
+    }
+  };
   var config = {
-    dataUrl: "Build/WebGL.data.unityweb?v=3.2.0",
-    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=3.2.0",
-    codeUrl: "Build/WebGL.wasm.unityweb?v=3.2.0",
+    dataUrl: "Build/WebGL.data.unityweb?v=3.4.1",
+    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=3.4.1",
+    codeUrl: "Build/WebGL.wasm.unityweb?v=3.4.1",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Pepers",
     productName: "Pepersfight",
-    productVersion: "1.0",
-    devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5)
+    productVersion: "3.4.1",
+    // Big/retina screens render at a capped resolution; the game scales it further when the frame rate dips.
+    devicePixelRatio: Math.min(window.devicePixelRatio || 1, 1.25),
+    showBanner: function (msg, type) { if (type === "error") console.warn(msg); }
   };
   var s = document.createElement("script");
-  s.src = "Build/WebGL.loader.js?v=3.2.0";
+  s.src = "Build/WebGL.loader.js?v=3.4.1";
   s.onload = function () {
-    createUnityInstance(canvas, config, function (p) { fill.style.width = Math.round(p * 100) + "%"; })
-      .then(function (inst) { window.unityInstance = inst; document.getElementById("loader").style.display = "none"; canvas.focus(); })
-      .catch(function (e) { var el = document.getElementById("err"); el.style.display = "block"; el.textContent = "Couldn't start the game: " + e; });
+    createUnityInstance(canvas, config, function (p) {
+      setProgress(p * 0.7, p < 0.9 ? "Downloading the game…" : "Starting the engine…");
+    }).then(function (inst) {
+      window.unityInstance = inst;
+      setProgress(0.72, "Building the island…");
+    }).catch(function (e) {
+      var el = document.getElementById("err");
+      el.style.display = "block";
+      el.innerHTML = "Couldn't start the game. Try reloading, or use Chrome, Edge or Firefox.<br>";
+      var b = document.createElement("button"); b.textContent = "Reload"; b.onclick = function () { location.reload(); };
+      el.appendChild(b);
+      console.warn(e);
+    });
   };
+  s.onerror = function () { statusEl.textContent = "Download failed — check your connection and reload."; };
   document.body.appendChild(s);
   canvas.addEventListener("click", function () { canvas.focus(); });
   // Right mouse aims down sights: never open the browser menu over the game.

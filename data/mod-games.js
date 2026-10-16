@@ -1067,5 +1067,6 @@ window.MOD_GAMES = {
   "original-word-guess": "original",
   "original-word-master": "original",
   "retro-bowl-plus": "retrobowl",
-  "shipyard-scramble": "original"
+  "shipyard-scramble": "original",
+  "waterboy-firegirl": "original"
 };

@@ -49,7 +49,9 @@ const SPECIAL = {
   "huge-particle-clicker": "particle",
   "huge-particleclicker": "particle",
   "ext-quickclick": "quickclick",
-  "ext2-devlife": "devlife"
+  "ext2-devlife": "devlife",
+  /* Hooked in its own repo: publishes window.ACH_MODS. */
+  "waterboy-firegirl": "original"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 

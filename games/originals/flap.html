@@ -31,6 +31,7 @@
   var GRAV=0.42,FLAP=-7.2,GAP=150,PIPE_W=58,SPEED=2.4;
   var bird,pipes,score,best=+(localStorage.getItem("oflap.best")||0),state,raf,frame;
   document.getElementById("b").textContent=best;
+  var CH={god:false,wide:false,auto:false};
   function reset(){
     bird={x:120,y:H/2,v:0,r:12};pipes=[];score=0;state="ready";frame=0;
     document.getElementById("s").textContent=0;
@@ -56,9 +57,12 @@
         document.getElementById("s").textContent=score;}
       if(p.x+PIPE_W<-10)pipes.splice(i,1);
       if(bird.x+bird.r>p.x&&bird.x-bird.r<p.x+PIPE_W&&
-         (bird.y-bird.r<p.top||bird.y+bird.r>p.top+GAP))die();
+         (bird.y-bird.r<p.top||bird.y+bird.r>p.top+GAP)&&!CH.god)die();
     }
-    if(bird.y+bird.r>H||bird.y-bird.r<0)die();
+    if(CH.auto){var nx=pipes.filter(function(p){return p.x+PIPE_W>bird.x-bird.r;})[0];
+      var target=nx?nx.top+GAP*0.62:H/2;if(bird.y>target&&bird.v>-1)bird.v=FLAP;}
+    if(CH.god){if(bird.y+bird.r>H){bird.y=H-bird.r;bird.v=FLAP;}if(bird.y-bird.r<0){bird.y=bird.r;bird.v=0;}}
+    else if(bird.y+bird.r>H||bird.y-bird.r<0)die();
   }
   function die(){
     if(state==="dead")return;state="dead";
@@ -94,6 +98,13 @@
   cv.addEventListener("touchstart",function(e){flap();e.preventDefault();},{passive:false});
   document.addEventListener("keydown",function(e){if(e.key===" "||e.key==="ArrowUp"){flap();e.preventDefault();}});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Flap",cheats:[
+    {id:"god",label:"Fly through pipes",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"auto",label:"Autopilot",type:"toggle",set:function(on){CH.auto=on;if(on&&state==="ready")state="play";}},
+    {id:"wide",label:"Wide gaps",type:"toggle",set:function(on){GAP=on?240:150;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

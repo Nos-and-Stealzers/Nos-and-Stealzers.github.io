@@ -36,6 +36,7 @@
   document.getElementById("b").textContent=best;
   var ship,bullets,enemies,ebullets,dir,score,wave,running,dead,timer,tick=0,shootCd=0;
   var keys={};
+  var CH={god:false,rapid:false,freeze:false};
 
   function makeWave(){
     enemies=[];
@@ -60,7 +61,7 @@
   function fire(){
     if(shootCd>0||dead)return;
     bullets.push({x:ship.x+ship.w/2-2,y:ship.y-8,w:4,h:10});
-    shootCd=16;
+    shootCd=CH.rapid?3:16;
   }
   function step(){
     tick++;if(shootCd>0)shootCd--;
@@ -69,12 +70,12 @@
     if(keys.left)ship.x-=sp;if(keys.right)ship.x+=sp;
     if(ship.x<0)ship.x=0;if(ship.x>W-ship.w)ship.x=W-ship.w;
     // enemy move
-    var speed=0.4+wave*0.12+(1-aliveFrac())*1.6;
+    var speed=CH.freeze?0:0.4+wave*0.12+(1-aliveFrac())*1.6;
     var edge=false,minX=1e9,maxX=-1e9,maxY=0;
     enemies.forEach(function(e){if(!e.alive)return;e.x+=dir*speed;
       if(e.x<minX)minX=e.x;if(e.x+e.w>maxX)maxX=e.x+e.w;if(e.y+e.h>maxY)maxY=e.y+e.h;});
     if(minX<=6||maxX>=W-6){dir*=-1;enemies.forEach(function(e){e.y+=16;});}
-    if(maxY>=ship.y){endGame();return;}
+    if(maxY>=ship.y&&!CH.god){endGame();return;}
     // enemy fire
     if(tick%Math.max(18,55-wave*4)===0){
       var shooters=enemies.filter(function(e){return e.alive;});
@@ -95,7 +96,7 @@
     });
     bullets=bullets.filter(function(b){return b.y>-12;});
     // ebullet vs ship
-    for(var i=0;i<ebullets.length;i++){if(hit(ebullets[i],ship)){endGame();return;}}
+    for(var i=0;i<ebullets.length;i++){if(!CH.god&&hit(ebullets[i],ship)){endGame();return;}}
     // wave clear
     if(aliveFrac()===0){wave++;document.getElementById("w").textContent=wave;
       makeWave();bullets=[];ebullets=[];score+=50;document.getElementById("s").textContent=score;}
@@ -142,6 +143,14 @@
   document.getElementById("start").addEventListener("click",reset);
   document.getElementById("pause").addEventListener("click",function(){if(!dead)running?stop():run();});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Space Invaders",cheats:[
+    {id:"god",label:"Invincible",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"rapid",label:"Rapid fire",type:"toggle",set:function(on){CH.rapid=on;}},
+    {id:"freeze",label:"Freeze the invaders",type:"toggle",set:function(on){CH.freeze=on;}},
+    {id:"wave",label:"Clear this wave",type:"button",run:function(){if(dead)return;enemies.forEach(function(e){if(e.alive){e.alive=false;score+=(4-e.row)*10;}});document.getElementById("s").textContent=score;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

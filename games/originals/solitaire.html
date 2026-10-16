@@ -279,6 +279,18 @@
   document.getElementById("hintb").onclick=showHint;
   document.getElementById("auto").onclick=autoFinish;
   deal();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Solitaire",cheats:[
+    {id:"flip",label:"Flip every card face up",type:"button",run:function(){pushHistory();tab.forEach(function(col){col.forEach(function(c){c.up=true;});});render();}},
+    {id:"aces",label:"Move the aces home",type:"button",run:function(){pushHistory();
+      [stock,waste].concat(tab).forEach(function(p){for(var i=p.length-1;i>=0;i--)if(p[i].r==="A"){var a=p.splice(i,1)[0];a.up=true;
+        for(var f=0;f<4;f++)if(!found[f].length){found[f].push(a);break;}}});
+      tab.forEach(function(col){if(col.length)col[col.length-1].up=true;});render();}},
+    {id:"win",label:"Win now",type:"button",run:function(){if(won)return;pushHistory();
+      SUITS.forEach(function(s,i){found[i]=RANKS.map(function(r){return {s:s,r:r,up:true};});});
+      stock=[];waste=[];tab=[[],[],[],[],[],[],[]];afterMove();}},
+    {id:"wins",label:"Wins",type:"value",noLock:true,get:function(){return wins;},set:function(v){wins=Math.max(0,v|0);localStorage.setItem("osol.wins",wins);document.getElementById("wn").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

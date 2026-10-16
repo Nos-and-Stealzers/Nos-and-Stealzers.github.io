@@ -111,6 +111,17 @@
   bStand.addEventListener("click",function(){if(over)return;dealerPlay();});
   bDeal.addEventListener("click",deal);
   render();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Blackjack",cheats:[
+    {id:"chips",label:"Chips",type:"value",get:function(){return chips;},
+      set:function(v){chips=Math.max(0,v|0);saveChips();render();if(chips>=bet&&over)bDeal.textContent="Deal (bet "+bet+")";}},
+    {id:"bet",label:"Bet",type:"value",noLock:true,get:function(){return bet;},
+      set:function(v){bet=Math.max(1,v|0);if(over)bDeal.textContent=chips<bet?"New stack":"Deal (bet "+bet+")";}},
+    {id:"peek",label:"See the dealer's card",type:"toggle",hold:true,set:function(on){
+      if(!over){var want=!on;if(hidden!==want){hidden=want;render();}}}},
+    {id:"win",label:"Win this hand",type:"button",run:function(){
+      if(over)return;player=[{s:0,r:0},{s:1,r:12}];dealer=[{s:2,r:9},{s:3,r:6}];endGame();}}
+  ]};
 })();
 </script>
 </body>

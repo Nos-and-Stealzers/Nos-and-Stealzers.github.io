@@ -36,6 +36,7 @@
   var W=cv.width,H=cv.height;
   var COLORS=["#c02a3f","#f78166","#f2b705","#3fb950","#4f8cff"];
   var paddle,ball,bricks,score,lives,level,running,launched,dead,raf,keyL,keyR;
+  var CH={floor:false,wide:false,auto:false};
 
   function makeBricks(lv){
     var rows=Math.min(4+lv,8),cols=10,pad=6,bw=(W-pad*(cols+1))/cols,bh=16,arr=[];
@@ -66,12 +67,14 @@
     return ball.x+ball.r>b.x&&ball.x-ball.r<b.x+b.w&&ball.y+ball.r>b.y&&ball.y-ball.r<b.y+b.h;
   }
   function update(){
+    if(CH.wide)paddle.w=Math.min(W,200);
+    if(CH.auto&&launched)paddle.x=Math.max(0,Math.min(W-paddle.w,ball.x-paddle.w/2));
     if(!launched){ball.x=paddle.x+paddle.w/2;return;}
     ball.x+=ball.vx;ball.y+=ball.vy;
     if(ball.x-ball.r<0){ball.x=ball.r;ball.vx*=-1;}
     if(ball.x+ball.r>W){ball.x=W-ball.r;ball.vx*=-1;}
     if(ball.y-ball.r<0){ball.y=ball.r;ball.vy*=-1;}
-    if(ball.y-ball.r>H){loseLife();return;}
+    if(ball.y-ball.r>H){if(CH.floor){ball.y=H-ball.r;ball.vy=-Math.abs(ball.vy);}else{loseLife();return;}}
     var py=H-24;
     if(ball.y+ball.r>=py&&ball.y+ball.r<=py+paddle.h+8&&ball.x>=paddle.x&&ball.x<=paddle.x+paddle.w&&ball.vy>0){
       var rel=(ball.x-(paddle.x+paddle.w/2))/(paddle.w/2);
@@ -118,6 +121,16 @@
   document.getElementById("pause").addEventListener("click",function(){if(dead)return;
     running=!running;document.getElementById("pause").textContent=running?"Pause":"Resume";});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Breakout",cheats:[
+    {id:"floor",label:"Ball never drops",type:"toggle",set:function(on){CH.floor=on;},hint:"The bottom bounces the ball back"},
+    {id:"wide",label:"Huge paddle",type:"toggle",set:function(on){CH.wide=on;if(!on)paddle.w=78;}},
+    {id:"auto",label:"Autopilot paddle",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"skip",label:"Skip level",type:"button",run:function(){if(!dead){bricks.forEach(function(b){if(b.alive){b.alive=false;score+=10;}});sync();nextLevel();}}},
+    {id:"lives",label:"Lives",type:"value",get:function(){return lives;},set:function(v){lives=Math.max(1,v|0);sync();}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);sync();}},
+    {id:"level",label:"Level",type:"value",noLock:true,get:function(){return level;},set:function(v){level=Math.max(1,(v|0))-1;nextLevel();}}
+  ]};
 })();
 </script>
 </body>

@@ -79,7 +79,9 @@
   }
   function isRed(c){return c.s===1||c.s===2;}
   function label(c){return RANKS[c.r]+SUITS[c.s];}
+  var CH={any:false};
   function canPlay(c){
+    if(CH.any)return true;
     var diff=Math.abs(c.r-found.r);
     return diff===1||diff===12; // 12 wraps A<->K
   }
@@ -135,6 +137,15 @@
   document.getElementById("stock").addEventListener("click",drawStock);
   document.getElementById("new").addEventListener("click",deal);
   deal();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Golf Solitaire",cheats:[
+    {id:"any",label:"Play any card",type:"toggle",set:function(on){CH.any=on;render();}},
+    {id:"more",label:"+5 stock cards",type:"button",run:function(){var d=makeDeck();for(var i=0;i<5;i++)stock.push(d.pop());
+      if(over&&!/win/.test(document.getElementById("msg").className)){over=false;document.getElementById("msg").textContent="";document.getElementById("msg").className="msg";}render();}},
+    {id:"col",label:"Clear a column",type:"button",run:function(){if(over)return;for(var i=0;i<7;i++)if(tableau[i].length){
+      found=tableau[i][0];tableau[i]=[];cleared++;document.getElementById("cleared").textContent=cleared;break;}render();checkEnd();}},
+    {id:"wins",label:"Wins",type:"value",noLock:true,get:function(){return wins;},set:function(v){wins=Math.max(0,v|0);localStorage.setItem("ogolf.wins",wins);document.getElementById("wins").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

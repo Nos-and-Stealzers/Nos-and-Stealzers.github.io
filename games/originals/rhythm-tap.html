@@ -43,6 +43,7 @@
   var best=+(localStorage.getItem("orhythm.best")||0);
   document.getElementById("best").textContent=best;
   var tiles,score,speed,over,raf,spawnT,flash;
+  var CH={auto:false,slow:false,forgive:false};
 
   function reset(){
     tiles=[];score=0;speed=2.6;over=false;spawnT=0;flash=[0,0,0,0];
@@ -62,10 +63,11 @@
     if(spawnT>=gap){spawnT=0;addTile();}
     for(var i=0;i<tiles.length;i++){
       var t=tiles[i];t.y+=speed;
-      if(!t.hit&&t.y>HITY+HITZONE){return end("Missed a tile!");}
+      if(CH.auto&&!t.hit&&t.y+TH>=HITY-10){t.hit=true;score++;document.getElementById("score").textContent=score;flash[t.lane]=12;}
+      if(!t.hit&&t.y>HITY+HITZONE){if(CH.forgive){t.hit=true;continue;}return end("Missed a tile!");}
     }
     tiles=tiles.filter(function(t){return t.y<H+TH;});
-    speed=Math.min(8,2.6+score*0.05);
+    speed=CH.slow?2.6:Math.min(8,2.6+score*0.05);
     draw();
     raf=requestAnimationFrame(loop);
   }
@@ -96,7 +98,7 @@
     if(target){
       target.hit=true;score++;document.getElementById("score").textContent=score;
       flash[lane]=12;
-    }else{
+    }else if(!CH.forgive){
       end("Wrong tap!");
     }
   }
@@ -117,6 +119,13 @@
   window.addEventListener("keydown",function(e){if(e.code in KEYS){e.preventDefault();tap(KEYS[e.code]);}});
   document.getElementById("start").addEventListener("click",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Rhythm Tap",cheats:[
+    {id:"auto",label:"Autoplay",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"forgive",label:"Misses don't end the game",type:"toggle",set:function(on){CH.forgive=on;}},
+    {id:"slow",label:"No speed-up",type:"toggle",set:function(on){CH.slow=on;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("score").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

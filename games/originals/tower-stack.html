@@ -32,6 +32,7 @@
   document.getElementById("best").textContent=best;
   var BH=26; // block height
   var stack,cur,speed,dir,score,over,camY,raf;
+  var CH={perfect:false,slow:false};
 
   function reset(){
     var base={x:W/2-70,w:140,y:H-BH,hue:200};
@@ -51,13 +52,14 @@
   function drop(){
     if(over){reset();return;}
     var top=stack[stack.length-1];
+    if(CH.perfect)cur.x=top.x;
     var left=Math.max(cur.x,top.x),right=Math.min(cur.x+cur.w,top.x+top.w);
     var overlap=right-left;
     if(overlap<=0){gameOver();return;}
     cur.x=left;cur.w=overlap;
     stack.push({x:cur.x,w:cur.w,y:cur.y,hue:cur.hue});
     score++;document.getElementById("score").textContent=score;
-    speed=Math.min(6.5,2.2+score*0.12);
+    speed=CH.slow?1.2:Math.min(6.5,2.2+score*0.12);
     // scroll camera up as tower grows past mid-screen
     if(cur.y-camY<H*0.35)camY=cur.y-H*0.35;
     spawn();
@@ -93,6 +95,13 @@
   cv.addEventListener("pointerdown",act);
   window.addEventListener("keydown",function(e){if(e.code==="Space"){e.preventDefault();drop();}});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Tower Stack",cheats:[
+    {id:"perfect",label:"Every drop is perfect",type:"toggle",set:function(on){CH.perfect=on;}},
+    {id:"slow",label:"Slow blocks",type:"toggle",set:function(on){CH.slow=on;speed=on?1.2:Math.min(6.5,2.2+score*0.12);}},
+    {id:"widen",label:"Reset block width",type:"button",run:function(){if(over)return;stack[stack.length-1].w=140;cur.w=140;}},
+    {id:"score",label:"Height",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("score").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

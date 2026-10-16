@@ -43,6 +43,7 @@
 (function(){
   "use strict";
   var seq=[],step=0,playing=false,accepting=false,strict=false;
+  var CH={forgive:false};
   var best=+(localStorage.getItem("osimon.best")||0);
   document.getElementById("best").textContent=best;
   var pads=[].slice.call(document.querySelectorAll(".btn"));
@@ -82,6 +83,8 @@
       if(step===seq.length){accepting=false;
         document.getElementById("over").textContent="Nice — next round";
         setTimeout(next,700);}
+    } else if(CH.forgive){
+      flash(seq[step],260);
     } else {
       // wrong
       if(seq.length-1>best){best=seq.length-1;localStorage.setItem("osimon.best",best);
@@ -98,6 +101,16 @@
   document.getElementById("strict").addEventListener("click",function(){
     strict=!strict;this.textContent="Strict: "+(strict?"On":"Off");
   });
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Simon",cheats:[
+    {id:"forgive",label:"Wrong pads are ignored",type:"toggle",set:function(on){CH.forgive=on;},hint:"Flashes the right pad instead"},
+    {id:"next",label:"Play the next pad for me",type:"button",run:function(){if(accepting)guess(seq[step]);}},
+    {id:"replay",label:"Show the sequence again",type:"button",run:function(){if(playing&&accepting)playback();}},
+    {id:"round",label:"Jump to round",type:"value",noLock:true,get:function(){return seq.length;},set:function(v){
+      v=Math.max(1,Math.min(99,v|0));while(seq.length<v-1)seq.push((Math.random()*4)|0);seq.length=Math.min(seq.length,v-1);
+      playing=true;next();}},
+    {id:"best",label:"Best",type:"value",noLock:true,get:function(){return best;},set:function(v){best=Math.max(0,v|0);localStorage.setItem("osimon.best",best);document.getElementById("best").textContent=best;}}
+  ]};
 })();
 </script>
 </body>

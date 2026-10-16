@@ -44,6 +44,7 @@
   var sol, state, mode="fill", solved=false;
   var streak=+(localStorage.getItem("ononogram.best")||0);
   var count=0;
+  var CH={safe:false};
   document.getElementById("b").textContent=streak;
 
   function genSolution(){
@@ -106,6 +107,7 @@
     if(mode==="fill"){
       if(state[r][c]===1){state[r][c]=0;}
       else if(sol[r][c]===1){state[r][c]=1;}
+      else if(CH.safe){ state[r][c]=2; }
       else{ mistake(); return; }
     } else {
       state[r][c]=state[r][c]===2?0:2;
@@ -142,6 +144,15 @@
     build();
   });
   build();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Nonogram",cheats:[
+    {id:"safe",label:"Wrong taps don't count",type:"toggle",set:function(on){CH.safe=on;},hint:"A wrong cell gets marked × instead"},
+    {id:"hint",label:"Fill one correct cell",type:"button",run:function(){if(solved)return;
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++)if(sol[r][c]===1&&state[r][c]!==1){state[r][c]=1;paint();checkWin();return;}}},
+    {id:"solve",label:"Solve the puzzle",type:"button",run:function(){if(solved)return;
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++)if(sol[r][c]===1)state[r][c]=1;paint();checkWin();}},
+    {id:"count",label:"Solved in a row",type:"value",noLock:true,get:function(){return count;},set:function(v){count=Math.max(0,v|0);document.getElementById("cnt").textContent=count;}}
+  ]};
 })();
 </script>
 </body>

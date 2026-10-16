@@ -41,6 +41,7 @@
   ];
   var cv=document.getElementById("c"),ctx=cv.getContext("2d");
   var grid,goals,px,py,rows,cols,cell,moves,level=0,history,solved;
+  var CH={ghost:false};
   var best=JSON.parse(localStorage.getItem("osok.progress")||"0");
   if(best&&best<LEVELS.length)level=best;
 
@@ -82,7 +83,8 @@
     var nx=px+dx,ny=py+dy;
     if(ny<0||ny>=rows||nx<0||nx>=cols)return;
     var target=at(nx,ny);
-    if(target==="#")return;
+    if(target==="#"&&!CH.ghost)return;
+    if(target==="#"){history.push(snapshot());px=nx;py=ny;moves++;draw();return;}
     if(target==="$"){
       var bx=nx+dx,by=ny+dy;
       if(by<0||by>=rows||bx<0||bx>=cols)return;
@@ -157,6 +159,15 @@
   document.getElementById("skip").onclick=function(){if(level+1<LEVELS.length)load(level+1);};
   window.addEventListener("resize",function(){resize();draw();});
   load(level);
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Sokoban",cheats:[
+    {id:"ghost",label:"Walk through walls",type:"toggle",set:function(on){CH.ghost=on;}},
+    {id:"solve",label:"Push every crate home",type:"button",run:function(){if(solved)return;history.push(snapshot());
+      for(var y=0;y<rows;y++)for(var x=0;x<cols;x++)if(grid[y][x]==="$")grid[y][x]=" ";
+      goals.forEach(function(i){grid[(i/cols)|0][i%cols]="$";});draw();checkWin();}},
+    {id:"skip",label:"Skip level",type:"button",run:function(){if(level+1<LEVELS.length)load(level+1);}},
+    {id:"level",label:"Level",type:"value",noLock:true,get:function(){return level+1;},set:function(v){load(Math.max(0,Math.min(LEVELS.length-1,(v|0)-1)));}}
+  ]};
 })();
 </script>
 </body>

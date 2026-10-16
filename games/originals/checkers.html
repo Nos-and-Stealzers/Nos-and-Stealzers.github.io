@@ -47,6 +47,7 @@
   var wins=parseInt(localStorage.getItem("ocheckers.wins")||"0",10);
   document.getElementById("wins").textContent=wins;
   var B,sel=null,legal=[],turn=1,locked=false;
+  var CH={kings:false};
   function idx(r,c){return r*8+c;}
   function inb(r,c){return r>=0&&c>=0&&r<8&&c<8;}
   function fresh(){
@@ -123,6 +124,7 @@
     if(mv.cap)B[idx(mv.cap[0],mv.cap[1])]=null;
     // crown
     if(!pc.k&&((player===1&&mv.to[0]===0)||(player===-1&&mv.to[0]===7)))pc.k=true;
+    if(CH.kings&&player===1)pc.k=true;
     render();
     // multi-jump continuation
     if(mv.cap&&!( !pc.k && ((player===1&&mv.to[0]===0)||(player===-1&&mv.to[0]===7)) )){
@@ -175,6 +177,16 @@
   function lose(){locked=true;msg.textContent="Red wins \u2014 try again.";msg.className="msg lose";render();}
   document.getElementById("new").addEventListener("click",fresh);
   fresh();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Checkers",cheats:[
+    {id:"kings",label:"All my pieces are kings",type:"toggle",set:function(on){CH.kings=on;
+      if(on){B.forEach(function(p){if(p&&p.p===1)p.k=true;});render();}}},
+    {id:"zap",label:"Remove a red piece",type:"button",run:function(){if(locked)return;
+      for(var i=0;i<64;i++)if(B[i]&&B[i].p===-1){B[i]=null;break;}sel=null;legal=[];render();checkEnd();}},
+    {id:"win",label:"Win now",type:"button",run:function(){for(var i=0;i<64;i++)if(B[i]&&B[i].p===-1)B[i]=null;win();}},
+    {id:"wins",label:"Wins",type:"value",noLock:true,get:function(){return wins;},
+      set:function(v){wins=Math.max(0,v|0);localStorage.setItem("ocheckers.wins",String(wins));document.getElementById("wins").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

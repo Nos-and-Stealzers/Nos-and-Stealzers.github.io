@@ -36,12 +36,13 @@
   "use strict";
   var pad=document.getElementById("pad"),big=document.getElementById("big"),sub=document.getElementById("sub");
   var state="idle",t0=0,to=null,times=[];
+  var CH={instant:false};
   var best=+(localStorage.getItem("oreact.best")||0);
   if(best)document.getElementById("best").textContent=best+" ms";
 
   function arm(){
     state="wait";pad.className="pad wait";big.textContent="Wait...";sub.textContent="Green means go";
-    var delay=900+Math.random()*2600;
+    var delay=CH.instant?250:900+Math.random()*2600;
     to=setTimeout(function(){state="go";pad.className="pad go";big.textContent="CLICK!";sub.textContent="";t0=performance.now();},delay);
   }
   function press(){
@@ -49,7 +50,7 @@
     if(state==="wait"){clearTimeout(to);state="early";pad.className="pad early";
       big.textContent="Too early!";sub.textContent="Click to try again";state="done";return;}
     if(state==="go"){
-      var ms=Math.round(performance.now()-t0);
+      var ms=CH.fake?CH.fake:Math.round(performance.now()-t0);
       times.push(ms);state="done";pad.className="pad";
       big.textContent=ms+" ms";
       if(!best||ms<best){best=ms;localStorage.setItem("oreact.best",best);document.getElementById("best").textContent=best+" ms";}
@@ -65,6 +66,12 @@
     times=[];best=0;localStorage.removeItem("oreact.best");
     document.getElementById("best").textContent="—";document.getElementById("avg").textContent="—";
     state="idle";pad.className="pad";big.textContent="Click to start";sub.textContent="Wait for green, then click as fast as you can";});
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Reaction",cheats:[
+    {id:"instant",label:"Short wait",type:"toggle",set:function(on){CH.instant=on;}},
+    {id:"fake",label:"Fake time (ms, 0 = off)",type:"value",noLock:true,get:function(){return CH.fake||0;},set:function(v){CH.fake=Math.max(0,v|0);}},
+    {id:"best",label:"Best (ms)",type:"value",noLock:true,get:function(){return best;},set:function(v){best=Math.max(1,v|0);localStorage.setItem("oreact.best",best);document.getElementById("best").textContent=best+" ms";}}
+  ]};
 })();
 </script>
 </body>

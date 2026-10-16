@@ -61,9 +61,19 @@
     });
   }
   document.getElementById("cookie").addEventListener("click",function(){cookies+=1+cps()*0.02;render();});
-  setInterval(function(){cookies+=cps()/10;cntEl.textContent=fmt(cookies);},100);
+  var CH={mult:1};
+  setInterval(function(){cookies+=cps()*CH.mult/10;cntEl.textContent=fmt(cookies);},100);
   setInterval(function(){render();localStorage.setItem("cookieEmpire",JSON.stringify({cookies:cookies,owned:owned}));},2000);
   render();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function persist(){localStorage.setItem("cookieEmpire",JSON.stringify({cookies:cookies,owned:owned}));}
+  window.ACH_MODS={name:"Cookie Empire",cheats:[
+    {id:"cookies",label:"Cookies",type:"value",get:function(){return Math.floor(cookies);},set:function(v){cookies=Math.max(0,v);render();persist();}},
+    {id:"million",label:"+1,000,000 cookies",type:"button",run:function(){cookies+=1e6;render();persist();}},
+    {id:"x10",label:"10× production",type:"toggle",set:function(on){CH.mult=on?10:1;}},
+    {id:"one",label:"One of every building",type:"button",run:function(){items.forEach(function(it){owned[it.id]=(owned[it.id]||0)+1;});render();persist();}},
+    {id:"rockets",label:"+10 Rocket Co.",type:"button",run:function(){owned.rocket=(owned.rocket||0)+10;render();persist();}}
+  ]};
 })();
 </script>
 </body>

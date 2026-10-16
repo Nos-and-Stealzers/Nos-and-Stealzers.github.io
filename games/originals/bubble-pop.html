@@ -33,6 +33,7 @@
   var best=+(localStorage.getItem("obubble.best")||0);
   document.getElementById("b").textContent=best;
   var bubbles,score,misses,running,timer,tick,spawnRate;
+  var CH={nomiss:false,gold:false};
   var COLORS=["#e5484d","#3fb950","#4f8cff","#b06cff","#4dd9ff"];
 
   function reset(){
@@ -41,7 +42,7 @@
     clearInterval(timer);timer=setInterval(step,1000/60);
   }
   function spawn(){
-    var gold=Math.random()<0.12;
+    var gold=CH.gold||Math.random()<0.12;
     var r=gold?14:18+Math.random()*14;
     bubbles.push({x:r+Math.random()*(W-2*r),y:H+r,r:r,
       vy:-(1.4+Math.random()*1.1+score/900),gold:gold,
@@ -56,7 +57,7 @@
     for(var i=bubbles.length-1;i>=0;i--){var b=bubbles[i];
       if(!b.pop&&b.y+b.r<0){bubbles.splice(i,1);misses++;
         document.getElementById("ms").textContent=misses;
-        if(misses>=5){end();return;}}
+        if(misses>=5&&!CH.nomiss){end();return;}}
       else if(b.pop){b.pop++;if(b.pop>8)bubbles.splice(i,1);}}
     draw();
   }
@@ -91,6 +92,15 @@
     e.preventDefault();},{passive:false});
   document.getElementById("start").addEventListener("click",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Bubble Pop",cheats:[
+    {id:"nomiss",label:"Misses don't count",type:"toggle",set:function(on){CH.nomiss=on;}},
+    {id:"gold",label:"Only gold bubbles",type:"toggle",set:function(on){CH.gold=on;},hint:"Every bubble is worth 3"},
+    {id:"popall",label:"Pop everything",type:"button",run:function(){if(!running)return;
+      bubbles.forEach(function(b){if(!b.pop){b.pop=1;score+=b.gold?3:1;}});document.getElementById("s").textContent=score;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}},
+    {id:"misses",label:"Misses",type:"value",get:function(){return misses;},set:function(v){misses=Math.max(0,Math.min(4,v|0));document.getElementById("ms").textContent=misses;}}
+  ]};
 })();
 </script>
 </body>

@@ -102,6 +102,16 @@
   });
   document.getElementById("new").addEventListener("click",pick);
   pick();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Hangman",cheats:[
+    {id:"reveal",label:"Reveal a letter",type:"button",run:function(){if(over)return;
+      var left=word.split("").filter(function(c){return !guessed[c];});if(left.length)guess(left[(Math.random()*left.length)|0]);}},
+    {id:"solve",label:"Solve it",type:"button",run:function(){if(over)return;word.split("").forEach(function(c){if(!guessed[c])guess(c);});}},
+    {id:"word",label:"Peek at the word",type:"button",run:function(){
+      document.getElementById("msg").style.color="#8a8f99";document.getElementById("msg").textContent="Psst: "+word;}},
+    {id:"lives",label:"Lives",type:"value",get:function(){return lives;},set:function(v){if(over)return;lives=Math.max(1,Math.min(26,v|0));render();}},
+    {id:"wins",label:"Wins",type:"value",noLock:true,get:function(){return wins;},set:function(v){wins=Math.max(0,v|0);localStorage.setItem("ohang.wins",wins);document.getElementById("w").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

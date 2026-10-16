@@ -42,6 +42,7 @@
   var FRUIT=[["\uD83C\uDF4E","#ff5c66"],["\uD83C\uDF4A","#ff8a3d"],["\uD83C\uDF49","#3fb950"],
             ["\uD83C\uDF47","#b06cff"],["\uD83C\uDF4B","#f2b705"],["\uD83C\uDF53","#ff6fae"]];
   var objs,score,lives,over,raf,spawnT,trail,lastX,lastY,slicing;
+  var CH={nobombs:false,auto:false,inf:false};
   function reset(){
     objs=[];score=0;lives=3;over=false;spawnT=0;trail=[];slicing=false;
     scoreEl.textContent=0;livesEl.textContent="\u2665\u2665\u2665";
@@ -49,7 +50,7 @@
     if(raf)cancelAnimationFrame(raf);loop();
   }
   function spawn(){
-    var bomb=Math.random()<0.16;
+    var bomb=!CH.nobombs&&Math.random()<0.16;
     var f=FRUIT[(Math.random()*FRUIT.length)|0];
     objs.push({
       x:40+Math.random()*(W-80),y:H+30,
@@ -66,6 +67,7 @@
     for(var i=objs.length-1;i>=0;i--){
       var o=objs[i];
       o.x+=o.vx;o.y+=o.vy;o.vy+=0.22;o.rot+=o.vr;
+      if(CH.auto&&!o.sliced&&!o.bomb&&o.vy>-2&&o.y<H-20){o.sliced=true;score++;scoreEl.textContent=score;o.vy=-2;o.emoji="\u2728";}
       if(o.y>H+60){
         if(!o.sliced&&!o.bomb){loseLife();}
         objs.splice(i,1);continue;
@@ -90,6 +92,7 @@
     ctx.restore();
   }
   function loseLife(){
+    if(CH.inf)return;
     lives--;livesEl.textContent="\u2665".repeat(Math.max(0,lives))||"\u2014";
     if(lives<=0)gameOver();
   }
@@ -131,6 +134,14 @@
   cv.addEventListener("click",function(){if(over)reset();});
   document.getElementById("new").addEventListener("click",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Fruit Slice",cheats:[
+    {id:"inf",label:"Infinite lives",type:"toggle",set:function(on){CH.inf=on;}},
+    {id:"nobombs",label:"No bombs",type:"toggle",set:function(on){CH.nobombs=on;}},
+    {id:"auto",label:"Auto-slice fruit",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);scoreEl.textContent=score;}},
+    {id:"lives",label:"Lives",type:"value",get:function(){return lives;},set:function(v){lives=Math.max(1,v|0);livesEl.textContent="\u2665".repeat(Math.min(lives,20));}}
+  ]};
 })();
 </script>
 </body>

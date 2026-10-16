@@ -45,6 +45,7 @@
   var best=+(localStorage.getItem("ocolor.best")||0);
   document.getElementById("b").textContent=best;
   var score,answer,timeLeft,limit,timer,playing=false;
+  var CH={slow:false,hint:false};
   var opts=document.getElementById("opts");
 
   function round(){
@@ -60,7 +61,8 @@
       var b=document.createElement("button");b.className="opt";b.textContent=c;
       b.addEventListener("click",function(){guess(c);});opts.appendChild(b);
     });
-    limit=Math.max(700,2100-score*40);timeLeft=limit;
+    limit=CH.slow?600000:Math.max(700,2100-score*40);timeLeft=limit;
+    if(CH.hint)Array.prototype.forEach.call(opts.children,function(b){if(b.textContent===answer)b.style.outline="3px solid #3fb950";});
     clearInterval(timer);var start=Date.now();
     timer=setInterval(function(){
       timeLeft=limit-(Date.now()-start);
@@ -85,6 +87,14 @@
     score=0;playing=true;document.getElementById("s").textContent=0;
     document.getElementById("msg").textContent="";this.textContent="Start";round();
   });
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Color Match",cheats:[
+    {id:"slow",label:"No time limit",type:"toggle",set:function(on){CH.slow=on;}},
+    {id:"hint",label:"Highlight the answer",type:"toggle",set:function(on){CH.hint=on;
+      Array.prototype.forEach.call(opts.children,function(b){b.style.outline=on&&b.textContent===answer?"3px solid #3fb950":"";});}},
+    {id:"answer",label:"Answer for me",type:"button",run:function(){if(playing)guess(answer);}},
+    {id:"score",label:"Score",type:"value",get:function(){return score||0;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

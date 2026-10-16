@@ -60,9 +60,20 @@
     });
   }
   rock.addEventListener("click",function(){gold+=perClick();depth++;render();});
-  setInterval(function(){gold+=perSec()/10;depth+=perSec()>0?1:0;g.textContent=fmt(gold);},100);
+  var CH={mult:1};
+  setInterval(function(){gold+=perSec()*CH.mult/10;depth+=perSec()>0?1:0;g.textContent=fmt(gold);},100);
   setInterval(function(){render();localStorage.setItem("idleMiner",JSON.stringify({gold:gold,depth:depth,pick:pick,drills:drills,layer:layer}));},2000);
   render();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function persist(){localStorage.setItem("idleMiner",JSON.stringify({gold:gold,depth:depth,pick:pick,drills:drills,layer:layer}));}
+  window.ACH_MODS={name:"Idle Miner",cheats:[
+    {id:"gold",label:"Gold",type:"value",get:function(){return Math.floor(gold);},set:function(v){gold=Math.max(0,v);render();persist();}},
+    {id:"million",label:"+1,000,000 gold",type:"button",run:function(){gold+=1e6;render();persist();}},
+    {id:"x10",label:"10× drill output",type:"toggle",set:function(on){CH.mult=on?10:1;}},
+    {id:"pick",label:"Pick level",type:"value",noLock:true,get:function(){return pick;},set:function(v){pick=Math.max(1,v|0);render();persist();}},
+    {id:"drills",label:"Drills",type:"value",noLock:true,get:function(){return drills;},set:function(v){drills=Math.max(0,v|0);render();persist();}},
+    {id:"core",label:"Dig to the core",type:"button",run:function(){layer=9;render();persist();}}
+  ]};
 })();
 </script>
 </body>

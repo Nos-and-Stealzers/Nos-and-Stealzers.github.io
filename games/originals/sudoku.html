@@ -117,6 +117,16 @@
       else if(e.key==="ArrowRight"&&c<8){sel+=1;render();e.preventDefault();}}
   });
   newGame();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Sudoku",cheats:[
+    {id:"hint",label:"Fill the selected cell",type:"button",run:function(){
+      var p=sel>=0&&!given[sel]&&puzzle[sel]!==solution[sel]?sel:-1;
+      if(p<0)for(var i=0;i<81;i++)if(puzzle[i]!==solution[i]){p=i;break;}
+      if(p<0)return;puzzle[p]=solution[p];sel=p;render();checkWin();}},
+    {id:"check",label:"Clear wrong numbers",type:"button",run:function(){for(var i=0;i<81;i++)if(!given[i]&&puzzle[i]&&puzzle[i]!==solution[i])puzzle[i]=0;render();}},
+    {id:"solve",label:"Solve the puzzle",type:"button",run:function(){puzzle=solution.slice();render();checkWin();}},
+    {id:"mist",label:"Mistakes",type:"value",get:function(){return mistakes;},set:function(v){mistakes=Math.max(0,v|0);document.getElementById("mist").textContent=mistakes;}}
+  ]};
 })();
 </script>
 </body>

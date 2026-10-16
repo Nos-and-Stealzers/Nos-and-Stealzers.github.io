@@ -14,6 +14,7 @@
     { href: "categories.html", icon: "◫", label: "Categories", count: function () { return window.Catalog.categories.length; } },
     { href: "library.html", icon: "★", label: "Pinned", count: function () { return window.Store.favorites().length; } },
     { href: "plus.html", icon: "✦", label: "Campus+" },
+    { href: "music.html", icon: "♪", label: "Music", tag: "New" },
     { href: "ai.html", icon: "✧", label: "Campus AI", tag: "Beta" },
     { href: "stats.html", icon: "◔", label: "Activity" }
   ];
@@ -924,6 +925,15 @@
         paintBadges(e.detail);
         announce(e.detail);
       });
+    }
+
+    /* The music player rides along on every page, so a song keeps going
+       (and picks up where it was) as you move around the site. */
+    if (!window.Music && !document.querySelector('script[src$="js/features/music.js"]')) {
+      var ms = document.createElement("script");
+      ms.src = "js/features/music.js";
+      ms.async = true;
+      document.body.appendChild(ms);
     }
 
     if ("serviceWorker" in navigator && window.location.protocol.indexOf("http") === 0) {

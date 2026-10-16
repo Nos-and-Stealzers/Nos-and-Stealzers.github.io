@@ -6,11 +6,32 @@
   var TITLES_KEY = "ach:cp-titles";
   var YT_ORIGINS = ["https://www.youtube-nocookie.com", "https://www.youtube.com"];
 
-  /* Every shape a YouTube link comes in: watch?v=, youtu.be/, embed/,
-     shorts/, live/, music., m., with timestamps or list= riding along. */
+  /* Three sources share one player. A saved item's id says which:
+       "dQw4w9WgXcQ"           YouTube (its fixed 11-character id)
+       "tt:7234567890123456789" TikTok (the numeric video id)
+       "ig:Cx1AbCdEfGh"         Instagram post or reel (its shortcode) */
+  var TT_ORIGINS = ["https://www.tiktok.com"];
+
+  function sourceOf(key) {
+    key = String(key || "");
+    if (key.indexOf("tt:") === 0) return "tiktok";
+    if (key.indexOf("ig:") === 0) return "instagram";
+    return "youtube";
+  }
+  function bareId(key) { return String(key || "").replace(/^(tt|ig):/, ""); }
+  var SOURCE_LABEL = { youtube: "YouTube", tiktok: "TikTok", instagram: "Instagram" };
+
+  /* Every shape a link comes in: YouTube watch?v=, youtu.be/, embed/,
+     shorts/, live/, music., m. (with timestamps or list= riding along);
+     TikTok /@user/video/<id>, /embed/v2/<id>, /player/v1/<id>, m.tiktok.com/v/<id>;
+     Instagram /p/, /reel/, /reels/, /tv/. Returns the item key, or null. */
   function extractVideoId(input) {
     var s = String(input || "").trim();
     if (!s) return null;
+    var tt = s.match(/tiktok\.com\/(?:@[\w.\-]+\/(?:video|photo)\/|embed\/(?:v2\/)?|player\/v1\/|v\/|share\/video\/)(\d{8,25})/);
+    if (tt) return "tt:" + tt[1];
+    var ig = s.match(/instagram\.com\/(?:[\w.\-]+\/)?(?:p|reels?|tv)\/([A-Za-z0-9_-]{5,40})/);
+    if (ig) return "ig:" + ig[1];
     var patterns = [
       /(?:youtube\.com\/watch\?[^#]*\bv=)([A-Za-z0-9_-]{11})/,
       /youtu\.be\/([A-Za-z0-9_-]{11})/,
@@ -24,7 +45,38 @@
       if (m) return m[1];
     }
     if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+    if (/^(tt:\d{8,25}|ig:[A-Za-z0-9_-]{5,40})$/.test(s)) return s;
     return null;
+  }
+
+  /* TikTok's share links (vm.tiktok.com/…, tiktok.com/t/…) hide the id behind
+     a redirect. TikTok's oEmbed (CORS-enabled, no key) follows it for us. */
+  function isTikTokShort(input) {
+    return /(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9]+|tiktok\.com\/t\/[A-Za-z0-9]+/.test(String(input || ""));
+  }
+  function resolveMedia(input) {
+    var key = extractVideoId(input);
+    if (key) return Promise.resolve(key);
+    if (!isTikTokShort(input)) return Promise.resolve(null);
+    var raw = String(input).trim();
+    if (!/^https?:\/\//.test(raw)) raw = "https://" + raw;
+    return fetch("https://www.tiktok.com/oembed?url=" + encodeURIComponent(raw))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        var id = d && (d.embed_product_id || "");
+        if (!/^\d{8,25}$/.test(String(id))) {
+          var m = d && String(d.html || "").match(/data-video-id="(\d{8,25})"/);
+          id = m ? m[1] : "";
+        }
+        if (!id) return null;
+        var key2 = "tt:" + id;
+        cacheInfo(key2, {
+          title: String(d.title || "").slice(0, 200), author: String(d.author_name || "").slice(0, 100),
+          thumb: String(d.thumbnail_url || "")
+        });
+        return key2;
+      })
+      .catch(function () { return null; });
   }
 
   /* ?t=90 / ?t=1m30s / &start=90 — honoured when a timestamped link is pasted. */
@@ -34,26 +86,68 @@
     return (parseInt(m[1] || "0", 10) * 3600) + (parseInt(m[2] || "0", 10) * 60) + parseInt(m[3] || "0", 10);
   }
 
-  function embedUrl(videoId, start) {
-    return "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId) +
+  function embedUrl(key, start) {
+    var src = sourceOf(key), id = encodeURIComponent(bareId(key));
+    if (src === "tiktok") {
+      return "https://www.tiktok.com/player/v1/" + id +
+        "?autoplay=1&loop=0&music_info=1&description=1&rel=0&native_context_menu=1&closed_caption=1";
+    }
+    if (src === "instagram") return "https://www.instagram.com/p/" + id + "/embed/captioned/";
+    return "https://www.youtube-nocookie.com/embed/" + id +
       "?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1" +
       "&origin=" + encodeURIComponent(window.location.origin) +
       (start ? "&start=" + start : "");
   }
-  function thumbUrl(videoId) {
-    return "https://i.ytimg.com/vi/" + encodeURIComponent(videoId) + "/mqdefault.jpg";
+  function linkFor(key) {
+    var src = sourceOf(key), id = bareId(key);
+    if (src === "tiktok") return "https://www.tiktok.com/@/video/" + id;
+    if (src === "instagram") return "https://www.instagram.com/p/" + id + "/";
+    return "https://youtu.be/" + id;
+  }
+  function thumbUrl(key) {
+    if (sourceOf(key) === "youtube") return "https://i.ytimg.com/vi/" + encodeURIComponent(key) + "/mqdefault.jpg";
+    var c = titleCache[key];
+    return (c && c.thumb) || "";
   }
 
-  /* A thumbnail that hides itself if YouTube's image host is blocked, so the
-     placeholder behind it shows instead of a broken-image icon. */
-  function thumb(videoId) {
+  /* A thumbnail that hides itself if the image host is blocked, so the
+     placeholder behind it shows instead of a broken-image icon. TikTok
+     thumbnails come from oEmbed, so they may arrive a moment later.
+     Instagram has no keyless thumbnails: it gets a branded plate. */
+  function thumb(key) {
+    var src = sourceOf(key);
     var img = document.createElement("img");
     img.alt = "";
     img.loading = "lazy";
     img.decoding = "async";
+    img.className = "cp-thumb is-" + src;
     img.addEventListener("error", function () { img.style.visibility = "hidden"; });
-    img.src = thumbUrl(videoId);
+    if (src === "instagram") {
+      img.src = "data:image/svg+xml," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180"><defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0">' +
+        '<stop offset="0" stop-color="#feda75"/><stop offset=".35" stop-color="#fa7e1e"/><stop offset=".6" stop-color="#d62976"/>' +
+        '<stop offset=".8" stop-color="#962fbf"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs>' +
+        '<rect width="320" height="180" fill="url(#g)"/><rect x="132" y="62" width="56" height="56" rx="16" fill="none" stroke="#fff" stroke-width="7"/>' +
+        '<circle cx="160" cy="90" r="13" fill="none" stroke="#fff" stroke-width="7"/><circle cx="176" cy="74" r="4" fill="#fff"/></svg>');
+      return img;
+    }
+    var url = thumbUrl(key);
+    if (url) img.src = url;
+    else {
+      img.style.visibility = "hidden";
+      videoInfo(key).then(function (info) {
+        if (info.thumb) { img.style.visibility = ""; img.src = info.thumb; }
+      });
+    }
     return img;
+  }
+
+  function sourceBadge(key) {
+    var src = sourceOf(key);
+    var b = document.createElement("span");
+    b.className = "cp-src cp-src-" + src;
+    b.textContent = SOURCE_LABEL[src];
+    return b;
   }
 
   function readJSON(key, fallback) {
@@ -63,29 +157,40 @@
     try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
   }
 
-  /* Titles come from YouTube's oEmbed (CORS-enabled, no key). Cached so a
-     playlist doesn't refetch every title on every visit. */
+  /* Titles come from oEmbed (YouTube and TikTok are both CORS-enabled, no
+     key). Cached so a playlist doesn't refetch every title on every visit.
+     Instagram's oEmbed needs an app token, so its posts keep a plain label. */
   var titleCache = readJSON(TITLES_KEY, {});
   var titleWaits = {};
-  function videoInfo(videoId) {
-    if (titleCache[videoId]) return Promise.resolve(titleCache[videoId]);
-    if (titleWaits[videoId]) return titleWaits[videoId];
-    var url = "https://www.youtube.com/oembed?format=json&url=" +
-      encodeURIComponent("https://www.youtube.com/watch?v=" + videoId);
-    titleWaits[videoId] = fetch(url).then(function (r) {
+  function cacheInfo(key, info) {
+    titleCache[key] = info;
+    var keys = Object.keys(titleCache);
+    if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(function (k) { delete titleCache[k]; });
+    writeJSON(TITLES_KEY, titleCache);
+  }
+  function videoInfo(key) {
+    if (titleCache[key]) return Promise.resolve(titleCache[key]);
+    if (titleWaits[key]) return titleWaits[key];
+    var src = sourceOf(key);
+    if (src === "instagram") return Promise.resolve({ title: "Instagram post", author: "" });
+    var url = src === "tiktok"
+      ? "https://www.tiktok.com/oembed?url=" + encodeURIComponent("https://www.tiktok.com/@/video/" + bareId(key))
+      : "https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent("https://www.youtube.com/watch?v=" + key);
+    titleWaits[key] = fetch(url).then(function (r) {
       if (!r.ok) throw new Error("oembed " + r.status);
       return r.json();
     }).then(function (d) {
       var info = { title: String(d.title || "").slice(0, 200), author: String(d.author_name || "").slice(0, 100) };
-      titleCache[videoId] = info;
-      var keys = Object.keys(titleCache);
-      if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(function (k) { delete titleCache[k]; });
-      writeJSON(TITLES_KEY, titleCache);
+      if (src === "tiktok") {
+        info.thumb = String(d.thumbnail_url || "");
+        if (!info.title) info.title = info.author ? "TikTok by @" + info.author : "TikTok video";
+      }
+      cacheInfo(key, info);
       return info;
     }).catch(function () {
       return { title: "", author: "" };
-    }).then(function (info) { delete titleWaits[videoId]; return info; });
-    return titleWaits[videoId];
+    }).then(function (info) { delete titleWaits[key]; return info; });
+    return titleWaits[key];
   }
 
   function shuffled(list) {
@@ -109,6 +214,7 @@
     var urlNote = document.getElementById("cp-url-note");
     var stage = document.getElementById("cp-player-block");
     var player = document.getElementById("cp-player");
+    var frameBox = player.parentNode;
     var nowTitle = document.getElementById("cp-now-title");
     var nowSub = document.getElementById("cp-now-sub");
     var nowActs = document.getElementById("cp-now-acts");
@@ -133,15 +239,19 @@
       if (i < 0 || i >= queue.length) return;
       qIndex = i;
       var item = queue[i];
+      var src = sourceOf(item.videoId);
+      delete player.dataset.ended;
       player.src = embedUrl(item.videoId, start || 0);
+      frameBox.classList.toggle("is-vertical", src !== "youtube");
+      frameBox.dataset.source = src;
       stage.hidden = false;
       nowTitle.textContent = item.title || "Loading title…";
-      nowSub.textContent = "";
+      nowSub.textContent = SOURCE_LABEL[src];
       videoInfo(item.videoId).then(function (info) {
         if (queue[qIndex] !== item) return;
         if (!item.title && info.title) item.title = info.title;
-        nowTitle.textContent = item.title || info.title || "YouTube video";
-        nowSub.textContent = info.author || "";
+        nowTitle.textContent = item.title || info.title || SOURCE_LABEL[src] + " video";
+        nowSub.textContent = SOURCE_LABEL[src] + (info.author ? " · " + info.author : "");
         drawQueue();
       });
       remember(item);
@@ -179,12 +289,18 @@
       } catch (e) { /* cross-origin frame gone */ }
     });
     window.addEventListener("message", function (e) {
-      if (YT_ORIGINS.indexOf(e.origin) === -1 || e.source !== player.contentWindow) return;
+      if (e.source !== player.contentWindow) return;
+      var yt = YT_ORIGINS.indexOf(e.origin) !== -1;
+      var tt = TT_ORIGINS.indexOf(e.origin) !== -1;
+      if (!yt && !tt) return;
       var d;
       try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch (err) { return; }
       if (!d) return;
-      var ended = (d.event === "onStateChange" && d.info === 0) ||
-                  (d.event === "infoDelivery" && d.info && d.info.playerState === 0);
+      /* TikTok's player/v1 posts {type:"onStateChange", value:0} when a video ends. */
+      var ended = yt
+        ? ((d.event === "onStateChange" && d.info === 0) ||
+           (d.event === "infoDelivery" && d.info && d.info.playerState === 0))
+        : (d["x-tiktok-player"] && d.type === "onStateChange" && d.value === 0);
       if (ended && !player.dataset.ended) {
         player.dataset.ended = "1";
         window.setTimeout(function () { delete player.dataset.ended; next(); }, 600);
@@ -206,12 +322,19 @@
       if (!item) return;
       nowActs.appendChild(smallBtn("Save", "plus", function () { saveToPlaylist(item); }, "btn-cta"));
       var share = smallBtn("Copy link", "copy", function () {
-        var link = "https://youtu.be/" + item.videoId;
+        var link = linkFor(item.videoId);
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
           .then(function () { UI.toast("Link copied"); })
           .catch(function () { window.prompt("Copy this link:", link); });
       });
       nowActs.appendChild(share);
+      var open = el("a", "btn btn-sm btn-flat");
+      open.href = linkFor(item.videoId);
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      open.appendChild(UI.icon("popout"));
+      open.appendChild(el("span", null, "Open on " + SOURCE_LABEL[sourceOf(item.videoId)]));
+      nowActs.appendChild(open);
       if (window.ChatCore && Session.user) {
         nowActs.appendChild(smallBtn("Send to a friend", "send", function () { sendToFriend(item); }));
       }
@@ -252,12 +375,15 @@
         b.type = "button";
         if (i === qIndex) b.setAttribute("aria-current", "true");
         var img = thumb(item.videoId);
-        b.appendChild(img);
+        var art = el("span", "cp-qitem-art");
+        art.appendChild(img);
+        art.appendChild(sourceBadge(item.videoId));
+        b.appendChild(art);
         var name = el("span", "cp-qitem-title", item.title || "…");
         if (!item.title) {
           videoInfo(item.videoId).then(function (info) {
             if (info.title) { item.title = info.title; name.textContent = info.title; }
-            else name.textContent = "YouTube video";
+            else name.textContent = SOURCE_LABEL[sourceOf(item.videoId)] + " video";
           });
         }
         b.appendChild(name);
@@ -282,26 +408,47 @@
 
     /* ------------------------------------------------------- paste bar */
 
+    var SUPPORTED_HINT = "Paste a YouTube, TikTok or Instagram link.";
     function checkUrl() {
       var raw = urlInput.value.trim();
       var id = extractVideoId(raw);
-      urlNote.textContent = raw && !id ? "That doesn't look like a YouTube link yet." : "";
-      urlNote.classList.toggle("is-bad", !!(raw && !id));
+      var maybe = !id && isTikTokShort(raw);
+      var bad = !!(raw && !id && !maybe);
+      urlNote.textContent = bad ? "That doesn't look like a YouTube, TikTok or Instagram link yet." :
+        maybe ? "TikTok share link — press Play to open it." : "";
+      urlNote.classList.toggle("is-bad", bad);
       return id;
+    }
+    function playFromInput() {
+      var raw = urlInput.value;
+      if (!raw.trim()) { UI.toast(SUPPORTED_HINT); urlInput.focus(); return; }
+      if (isTikTokShort(raw) && !extractVideoId(raw)) urlNote.textContent = "Opening TikTok link…";
+      resolveMedia(raw).then(function (key) {
+        if (!key) {
+          urlNote.textContent = isTikTokShort(raw)
+            ? "Couldn't open that TikTok share link. Open it, then copy the full link from the address bar."
+            : "That doesn't look like a YouTube, TikTok or Instagram link yet.";
+          urlNote.classList.add("is-bad");
+          return;
+        }
+        urlNote.textContent = "";
+        urlNote.classList.remove("is-bad");
+        playSingle(key, sourceOf(key) === "youtube" ? extractStart(raw) : 0);
+        urlInput.select();
+      });
     }
     urlInput.addEventListener("input", checkUrl);
     /* Pasting a link plays it straight away — the whole point of the page. */
     urlInput.addEventListener("paste", function () {
       window.setTimeout(function () {
-        var id = checkUrl();
-        if (id) { playSingle(id, extractStart(urlInput.value)); urlInput.select(); }
+        var raw = urlInput.value.trim();
+        checkUrl();
+        if (extractVideoId(raw) || isTikTokShort(raw)) playFromInput();
       }, 0);
     });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var id = checkUrl();
-      if (!id) { UI.toast("Paste a YouTube link first"); urlInput.focus(); return; }
-      playSingle(id, extractStart(urlInput.value));
+      playFromInput();
     });
 
     /* ------------------------------------------------------- history */
@@ -328,7 +475,15 @@
           }).then(function () {
             UI.toast("Saved to " + list.title);
             if (tab === "mine") drawLibrary();
-          }).catch(function (err) { UI.toast(err.message || "Couldn't save that"); });
+          }).catch(function (err) {
+            var msg = (err && err.message) || "Couldn't save that";
+            /* A database that predates TikTok/Instagram support still only
+               takes YouTube ids; say what's going on instead of "invalid link". */
+            if (sourceOf(item.videoId) !== "youtube" && /youtube/i.test(msg)) {
+              msg = "Saving " + SOURCE_LABEL[sourceOf(item.videoId)] + " videos needs a quick database update. Ask staff to run supabase/2026-10-16-campus-plus-sources.sql.";
+            }
+            UI.toast(msg, 5000);
+          });
         }
         (lists || []).forEach(function (list) {
           var b = el("button", "cp-save-row");
@@ -363,7 +518,7 @@
         if (!pick) return;
         var name = pick.usernames[0];
         return API.openThread(name).then(function (res) {
-          var text = (item.title ? item.title + " — " : "") + "https://youtu.be/" + item.videoId;
+          var text = (item.title ? item.title + " — " : "") + linkFor(item.videoId);
           return API.send(res.threadId, text, null).then(function () {
             if (window.Realtime && window.Realtime.broadcast) {
               window.Realtime.broadcast("realtime:thread:" + res.threadId, "msg", {});
@@ -420,6 +575,7 @@
         art.appendChild(UI.icon("video"));
       }
       if (opts.badge) art.appendChild(el("span", "cp-card-badge", opts.badge));
+      if (opts.videoId && opts.source) art.appendChild(sourceBadge(opts.videoId));
       c.appendChild(art);
       var t = el("span", "cp-card-title", opts.title || "…");
       c.appendChild(t);
@@ -452,11 +608,11 @@
         }
         hist.forEach(function (h, i) {
           var cd = card({
-            videoId: h.videoId, title: h.title || "…",
+            videoId: h.videoId, title: h.title || "…", source: true,
             sub: UI.formatWhen(h.at),
             onClick: function () { playList(hist, "Recently watched", i); }
           });
-          if (!h.title) videoInfo(h.videoId).then(function (info) { cd.title.textContent = info.title || "YouTube video"; });
+          if (!h.title) videoInfo(h.videoId).then(function (info) { cd.title.textContent = info.title || SOURCE_LABEL[sourceOf(h.videoId)] + " video"; });
           library.appendChild(cd.el);
         });
         var clear = el("button", "btn btn-sm btn-flat cp-clear", "Clear history");
@@ -612,12 +768,15 @@
           var main = el("button", "cp-item-main");
           main.type = "button";
           var th = thumb(item.videoId);
-          main.appendChild(th);
+          var thBox = el("span", "cp-item-art");
+          thBox.appendChild(th);
+          thBox.appendChild(sourceBadge(item.videoId));
+          main.appendChild(thBox);
           var tt = el("span", "cp-item-title", item.title || "…");
           if (!item.title) {
             videoInfo(item.videoId).then(function (vi) {
               item.title = vi.title;
-              tt.textContent = vi.title || "YouTube video";
+              tt.textContent = vi.title || SOURCE_LABEL[sourceOf(item.videoId)] + " video";
             });
           }
           main.appendChild(tt);
@@ -670,8 +829,8 @@
       locked.hidden = member;
       if (!member) {
         lockedMsg.textContent = user
-          ? "Campus+ lets you watch YouTube videos and build playlists right here. It's a members feature — ask a staff member to turn it on for your account."
-          : "Campus+ lets you watch YouTube videos and build playlists right here. Sign in first, then ask a staff member to turn it on for your account.";
+          ? "Campus+ lets you watch YouTube, TikTok and Instagram videos and build playlists right here. It's a members feature — ask a staff member to turn it on for your account."
+          : "Campus+ lets you watch YouTube, TikTok and Instagram videos and build playlists right here. Sign in first, then ask a staff member to turn it on for your account.";
         cta.hidden = !!user;
       }
       return member;
@@ -695,8 +854,10 @@
       booted = true;
       /* ?v=<id> or ?url=<link> deep-links straight into playback. */
       var params = UI.params();
-      var v = extractVideoId(params.get("v") || params.get("url") || "");
-      if (v) playSingle(v, extractStart(params.get("url") || ""));
+      var deep = params.get("v") || params.get("url") || "";
+      if (deep) resolveMedia(deep).then(function (v) {
+        if (v) playSingle(v, sourceOf(v) === "youtube" ? extractStart(params.get("url") || "") : 0);
+      });
       var pl = Number(params.get("playlist"));
       if (pl) openDetail(pl);
     }

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="noir" data-lite="off">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Music — Arcade Campus Hub</title>
+  <meta name="description" content="A built-in music player with thousands of free, public-domain and Creative Commons songs. Stations, search, likes and playlists, and it keeps playing while you browse.">
+  <meta name="theme-color" content="#0c0d10">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/core/access-gate.js"></script>
+  <script src="js/core/theme-boot.js"></script>
+  <script src="js/core/consent-gate.js"></script>
+</head>
+<body data-page="music">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div data-shell="chrome"></div>
+
+  <main class="main mu-main" id="main">
+
+    <section class="mu-now" id="mu-now" aria-label="Now playing">
+      <div class="mu-now-bg" id="mu-now-bg" aria-hidden="true"></div>
+      <div class="mu-now-art"><img id="mu-now-img" alt=""><span class="mu-now-ph" aria-hidden="true"></span></div>
+      <div class="mu-now-body">
+        <span class="label">Campus Music</span>
+        <h1 id="mu-now-title">Pick something to play</h1>
+        <p class="mu-now-sub" id="mu-now-sub">Thousands of free songs: public domain and Creative Commons, from the Internet Archive. It keeps playing while you browse the arcade.</p>
+        <div class="mu-transport" id="mu-transport">
+          <button type="button" class="mu-tbtn" id="mu-shuffle" aria-label="Shuffle" title="Shuffle" aria-pressed="false"></button>
+          <button type="button" class="mu-tbtn" id="mu-prev" aria-label="Previous" title="Previous"></button>
+          <button type="button" class="mu-tbtn mu-tplay" id="mu-play" aria-label="Play" title="Play"></button>
+          <button type="button" class="mu-tbtn" id="mu-next" aria-label="Next" title="Next"></button>
+          <button type="button" class="mu-tbtn" id="mu-repeat" aria-label="Repeat: off" title="Repeat: off" aria-pressed="false"></button>
+          <span class="fill"></span>
+          <button type="button" class="mu-tbtn" id="mu-like" aria-label="Like" title="Like" aria-pressed="false"></button>
+          <div class="mu-vol"><button type="button" class="mu-tbtn" id="mu-mute" aria-label="Mute" title="Mute"></button><input type="range" id="mu-volume" min="0" max="1" step="0.02" aria-label="Volume"></div>
+        </div>
+        <div class="mu-seek">
+          <span id="mu-t-now">0:00</span>
+          <input type="range" id="mu-seek" min="0" max="1000" step="1" value="0" aria-label="Seek">
+          <span id="mu-t-len">0:00</span>
+        </div>
+        <p class="mu-license" id="mu-license"></p>
+      </div>
+    </section>
+
+    <form class="mu-search" id="mu-search" role="search" autocomplete="off">
+      <span class="mu-search-ico" aria-hidden="true"></span>
+      <label class="sr-only" for="mu-q">Search music</label>
+      <input type="search" id="mu-q" placeholder="Search songs, artists, genres…" spellcheck="false">
+      <button class="btn btn-cta" type="submit">Search</button>
+    </form>
+
+    <nav class="mu-tabs" aria-label="Music library">
+      <div class="mu-tablist" role="tablist">
+        <button type="button" class="mu-tab" role="tab" data-tab="discover" aria-selected="true">Discover</button>
+        <button type="button" class="mu-tab" role="tab" data-tab="liked" aria-selected="false">Liked songs</button>
+        <button type="button" class="mu-tab" role="tab" data-tab="playlists" aria-selected="false">Playlists</button>
+        <button type="button" class="mu-tab" role="tab" data-tab="recent" aria-selected="false">Recent</button>
+        <button type="button" class="mu-tab" role="tab" data-tab="queue" aria-selected="false">Queue</button>
+      </div>
+    </nav>
+
+    <section id="mu-view" class="mu-view" aria-live="polite"></section>
+
+    <div data-shell="foot"></div>
+  </main>
+
+  <script src="js/core/config.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/features/catalog-overlay.js"></script>
+  <script src="js/features/catalog.js"></script>
+  <script src="js/features/art.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/api-supabase.js"></script>
+  <script src="js/core/session.js"></script>
+  <script src="js/core/realtime.js"></script>
+  <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
+  <script src="js/features/chat-core.js"></script>
+  <script src="js/features/chat-dock.js"></script>
+  <script src="js/features/call.js"></script>
+  <script src="js/features/game-saves.js"></script>
+  <script src="js/features/music.js"></script>
+  <script src="js/features/shell.js"></script>
+  <script src="js/features/motion-fx.js"></script>
+  <script src="js/features/context-menu.js"></script>
+  <script src="js/pages/page-music.js"></script>
+</body>
+</html>

@@ -64,7 +64,7 @@
       seeking = false;
     });
 
-    var lastTrack = null, lastPlayIcon = "", lastMute = "";
+    var lastTrack = null, lastPlayIcon = "", lastMute = "", lastQueueKey = "";
     function drawNow() {
       var s = M.state();
       var t = s.track;
@@ -97,8 +97,14 @@
           $("mu-license").textContent = "";
           document.title = "Music — Arcade Campus Hub";
         }
-        if (tab === "queue") drawView();
         markPlaying();
+      }
+      /* The queue view's rows carry positions; redraw it whenever the queue
+         itself changes (Play next / Add to queue from a row menu, another tab). */
+      var qk = s.queue.length + ":" + s.index + ":" + s.queue.map(function (q) { return q.id; }).join("|");
+      if (qk !== lastQueueKey) {
+        lastQueueKey = qk;
+        if (tab === "queue" && !openAlbum && !openList) drawView();
       }
       var pi = s.playing ? "pause" : "play";
       if (pi !== lastPlayIcon) {
@@ -135,7 +141,7 @@
       var t = M.current();
       var s = M.state();
       Array.prototype.forEach.call(view.querySelectorAll(".mu-row"), function (r) {
-        var on = !!t && r.dataset.id === t.id;
+        var on = r.dataset.qi != null ? +r.dataset.qi === s.index : !!t && r.dataset.id === t.id;
         r.classList.toggle("is-now", on);
         r.classList.toggle("is-playing", on && s.playing);
       });
@@ -197,6 +203,8 @@
       tracks.forEach(function (t, i) {
         var li = el("li", "mu-row");
         li.dataset.id = t.id;
+        /* In the queue a song can appear twice; rows there match by position. */
+        if (opts.onPlay) li.dataset.qi = String(i);
         var main = el("button", "mu-row-main");
         main.type = "button";
         main.setAttribute("aria-label", "Play " + t.title);
@@ -215,7 +223,8 @@
         main.appendChild(el("span", "mu-row-len", t.length ? M.format(t.length) : ""));
         main.addEventListener("click", function () {
           var cur = M.current();
-          if (cur && cur.id === t.id) { M.toggle(); return; }
+          var isCur = opts.onPlay ? M.state().index === i : !!(cur && cur.id === t.id);
+          if (isCur) { M.toggle(); return; }
           if (opts.onPlay) opts.onPlay(i); else M.playTracks(tracks, i);
         });
         li.appendChild(main);

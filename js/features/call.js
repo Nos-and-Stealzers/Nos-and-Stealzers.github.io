@@ -622,7 +622,10 @@
     video.playsInline = true;
     video.setAttribute("playsinline", "");        // iOS Safari needs the attribute
     video.setAttribute("autoplay", "");
-    video.muted = userId === state.self;    // never hear yourself
+    /* Video is always muted: remote sound goes through the dedicated <audio>
+       sink below (so volume and speaker choice apply), and you never hear yourself. */
+    video.muted = true;
+    video.setAttribute("muted", "");
     tile.appendChild(video);
 
     /* Dedicated audio sink for REMOTE peers. */

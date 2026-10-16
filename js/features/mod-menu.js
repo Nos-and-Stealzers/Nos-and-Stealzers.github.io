@@ -274,7 +274,7 @@
       o._cross.className = "mod-cross is-" + X.style;
       o._cross.style.setProperty("--mc", X.color);
       o._cross.style.setProperty("--ms", X.size + "px");
-      o._timer.hidden = !timer.shown;
+      o._timer.hidden = !(timer.shown && member());
     }
 
     function timerNow() { return timer.acc + (timer.running ? performance.now() - timer.start : 0); }
@@ -284,6 +284,7 @@
       return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec + "." + (cs < 10 ? "0" : "") + cs;
     }
     function tickTimer() {
+      if (timer.raf) { window.cancelAnimationFrame(timer.raf); timer.raf = 0; }
       var o = ensureOverlay();
       var html = fmtTime(timerNow());
       if (timer.laps.length) html += "\n" + timer.laps.slice(-3).map(function (l, i, arr) {
@@ -963,6 +964,12 @@
     function onSession() {
       paintLock();
       if (member()) applyAll();
+      else {
+        /* Members-only tools come off the game the moment membership does. */
+        timer.shown = false;
+        if (!panel.hidden) toggle(false);
+        drawOverlay();
+      }
     }
     document.addEventListener("session:change", onSession);
     if (window.Session && window.Session.ready) window.Session.ready.then(onSession);

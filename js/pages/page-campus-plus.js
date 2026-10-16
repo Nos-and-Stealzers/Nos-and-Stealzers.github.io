@@ -72,7 +72,7 @@
         var key2 = "tt:" + id;
         cacheInfo(key2, {
           title: String(d.title || "").slice(0, 200), author: String(d.author_name || "").slice(0, 100),
-          thumb: String(d.thumbnail_url || "")
+          thumb: String(d.thumbnail_url || ""), authorUrl: String(d.author_url || ""), at: Date.now()
         });
         return key2;
       })
@@ -100,7 +100,13 @@
   }
   function linkFor(key) {
     var src = sourceOf(key), id = bareId(key);
-    if (src === "tiktok") return "https://www.tiktok.com/@/video/" + id;
+    if (src === "tiktok") {
+      /* oEmbed tells us the creator's handle; use it so the link is the
+         canonical one, falling back to TikTok's handle-less form. */
+      var c = titleCache[key];
+      var handle = c && /^https:\/\/www\.tiktok\.com\/@[\w.\-]+$/.test(c.authorUrl || "") ? c.authorUrl : "https://www.tiktok.com/@";
+      return handle + "/video/" + id;
+    }
     if (src === "instagram") return "https://www.instagram.com/p/" + id + "/";
     return "https://youtu.be/" + id;
   }
@@ -131,9 +137,16 @@
         '<circle cx="160" cy="90" r="13" fill="none" stroke="#fff" stroke-width="7"/><circle cx="176" cy="74" r="4" fill="#fff"/></svg>');
       return img;
     }
-    var url = thumbUrl(key);
-    if (url) img.src = url;
-    else {
+    var url = stale(key) ? "" : thumbUrl(key);
+    if (url) {
+      img.src = url;
+      /* An expired TikTok link: drop the cached copy and fetch a fresh one, once. */
+      if (src === "tiktok") img.addEventListener("error", function retry() {
+        img.removeEventListener("error", retry);
+        if (titleCache[key]) titleCache[key].at = 0;
+        videoInfo(key).then(function (info) { if (info.thumb && info.thumb !== url) { img.style.visibility = ""; img.src = info.thumb; } });
+      });
+    } else {
       img.style.visibility = "hidden";
       videoInfo(key).then(function (info) {
         if (info.thumb) { img.style.visibility = ""; img.src = info.thumb; }
@@ -168,8 +181,15 @@
     if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(function (k) { delete titleCache[k]; });
     writeJSON(TITLES_KEY, titleCache);
   }
+  /* TikTok thumbnails are signed links that expire within a day or so;
+     a cached entry older than that is refetched for a fresh one. */
+  var TT_FRESH = 6 * 3600 * 1000;
+  function stale(key) {
+    var c = titleCache[key];
+    return !!c && sourceOf(key) === "tiktok" && !(c.at && Date.now() - c.at < TT_FRESH);
+  }
   function videoInfo(key) {
-    if (titleCache[key]) return Promise.resolve(titleCache[key]);
+    if (titleCache[key] && !stale(key)) return Promise.resolve(titleCache[key]);
     if (titleWaits[key]) return titleWaits[key];
     var src = sourceOf(key);
     if (src === "instagram") return Promise.resolve({ title: "Instagram post", author: "" });
@@ -183,12 +203,15 @@
       var info = { title: String(d.title || "").slice(0, 200), author: String(d.author_name || "").slice(0, 100) };
       if (src === "tiktok") {
         info.thumb = String(d.thumbnail_url || "");
+        info.authorUrl = String(d.author_url || "");
+        info.at = Date.now();
         if (!info.title) info.title = info.author ? "TikTok by @" + info.author : "TikTok video";
       }
       cacheInfo(key, info);
       return info;
     }).catch(function () {
-      return { title: "", author: "" };
+      /* Offline or refused: an old cached title still beats nothing. */
+      return titleCache[key] || { title: "", author: "" };
     }).then(function (info) { delete titleWaits[key]; return info; });
     return titleWaits[key];
   }

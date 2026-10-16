@@ -216,7 +216,73 @@
   audio.volume = state.volume;
   audio.muted = state.muted;
 
+  /* ------------------------------------------------------------ tabs
+     Every tab of the site runs this player, but only one should make sound
+     and write the shared state: the "owner", whichever tab last played or
+     was acted on. Others go quiet, follow along through storage events, and
+     take over the moment you press something in them. */
+  var TAB = Math.random().toString(36).slice(2);
+  var channel = null;
+  try { channel = new window.BroadcastChannel("ach-music"); } catch (e) { channel = null; }
+  var owner = !channel;          // without the channel, every tab acts alone as before
+
+  function announce(type) { if (channel) { try { channel.postMessage({ t: type, from: TAB }); } catch (e) {} } }
+
+  /* Pick up the latest shared state written by another tab. */
+  function adopt() {
+    var latest = lget(STATE_KEY, {});
+    var before = current();
+    state.queue = Array.isArray(latest.queue) ? latest.queue.slice(0, MAX_QUEUE) : [];
+    state.index = typeof latest.index === "number" && latest.index < state.queue.length ? latest.index : (state.queue.length ? 0 : -1);
+    state.time = latest.time || 0;
+    state.shuffle = !!latest.shuffle;
+    state.repeat = latest.repeat === "all" || latest.repeat === "one" ? latest.repeat : "off";
+    state.order = Array.isArray(latest.order) ? latest.order : [];
+    if (typeof latest.volume === "number") { state.volume = latest.volume; audio.volume = state.volume; }
+    state.muted = !!latest.muted; audio.muted = state.muted;
+    var now = current();
+    if (!now || !before || now.url !== before.url) {
+      audio.pause();
+      audio.removeAttribute("src");
+      try { audio.load(); } catch (e) {}
+      if (now) mediaSession(now);
+    }
+  }
+
+  /* This tab is taking over: catch up first so nothing newer is overwritten. */
+  function claim() {
+    if (owner) return;
+    adopt();
+    owner = true;
+    announce("claim");
+  }
+
+  function yieldTo() {
+    if (!owner && audio.paused) return;
+    owner = false;
+    if (!audio.paused) audio.pause();
+    state.playing = false;
+    state.blocked = false;
+    changed();
+  }
+
+  if (channel) {
+    channel.onmessage = function (e) {
+      var m = e.data || {};
+      if (m.from === TAB) return;
+      if (m.t === "claim" || m.t === "playing") yieldTo();
+      else if (m.t === "who" && owner && !audio.paused) announce("me");
+      else if (m.t === "me" && waitingWho) { waitingWho(true); }
+    };
+  }
+  var waitingWho = null;
+  window.addEventListener("storage", function (e) {
+    if (e.key === LIKES_KEY) { likeCache = null; changed(); }
+    if (e.key === STATE_KEY && !owner) { adopt(); state.playing = false; changed(); }
+  });
+
   function persist() {
+    if (!owner) return;
     lset(STATE_KEY, {
       queue: state.queue, index: state.index, time: audio.currentTime || state.time || 0,
       playing: state.playing, volume: state.volume, muted: state.muted,
@@ -284,6 +350,7 @@
   }
 
   function play() {
+    claim();
     if (!current()) return Promise.resolve();
     if (!audio.src) { load(state.index, true, state.time); return Promise.resolve(); }
     state.playing = true;
@@ -305,6 +372,7 @@
   }
 
   function pause() {
+    claim();
     state.playing = false;
     audio.pause();
     persist();
@@ -312,6 +380,7 @@
   }
 
   function toggle() {
+    claim();
     if (!current()) return;
     if (audio.paused) play(); else pause();
   }
@@ -334,6 +403,7 @@
   }
 
   function next(auto) {
+    if (!auto) claim();
     if (auto && state.repeat === "one") { audio.currentTime = 0; play(); return; }
     var ni = stepIndex(1);
     if (ni === -1) {
@@ -346,6 +416,7 @@
   }
 
   function prev() {
+    claim();
     /* Like every music app: a few seconds in, "previous" restarts the track. */
     if (audio.currentTime > 4) { audio.currentTime = 0; return; }
     var ni = stepIndex(-1);
@@ -354,6 +425,7 @@
   }
 
   function seek(sec) {
+    claim();
     if (!current()) return;
     if (!audio.src) { load(state.index, false, sec); return; }
     try { audio.currentTime = Math.max(0, sec); } catch (e) {}
@@ -362,6 +434,7 @@
   }
 
   function setVolume(v) {
+    claim();
     state.volume = Math.max(0, Math.min(1, v));
     audio.volume = state.volume;
     if (state.volume > 0 && state.muted) { state.muted = false; audio.muted = false; }
@@ -369,18 +442,21 @@
     changed();
   }
   function toggleMute() {
+    claim();
     state.muted = !state.muted;
     audio.muted = state.muted;
     persist();
     changed();
   }
   function toggleShuffle() {
+    claim();
     state.shuffle = !state.shuffle;
     if (state.shuffle) rebuildOrder();
     persist();
     changed();
   }
   function cycleRepeat() {
+    claim();
     state.repeat = state.repeat === "off" ? "all" : state.repeat === "all" ? "one" : "off";
     persist();
     changed();
@@ -395,6 +471,7 @@
   }
 
   function playTracks(tracks, i) {
+    claim();
     tracks = (tracks || []).filter(function (t) { return t && t.url; }).slice(0, MAX_QUEUE).map(sanitize);
     if (!tracks.length) return;
     state.queue = tracks;
@@ -406,6 +483,7 @@
   }
 
   function enqueue(tracks) {
+    claim();
     tracks = (tracks || []).filter(function (t) { return t && t.url; }).map(sanitize);
     if (!tracks.length) return;
     var wasEmpty = !state.queue.length;
@@ -416,6 +494,7 @@
   }
 
   function playNext(track) {
+    claim();
     if (!track || !track.url) return;
     if (!state.queue.length) { playTracks([track], 0); return; }
     state.queue.splice(state.index + 1, 0, sanitize(track));
@@ -426,6 +505,7 @@
   }
 
   function removeAt(i) {
+    claim();
     if (i < 0 || i >= state.queue.length) return;
     var playingIt = i === state.index;
     state.queue.splice(i, 1);
@@ -440,9 +520,10 @@
     changed();
   }
 
-  function jump(i) { if (state.queue[i]) load(i, true); }
+  function jump(i) { claim(); if (state.queue[i]) load(i, true); }
 
   function stop() {
+    claim();
     audio.pause();
     audio.removeAttribute("src");
     try { audio.load(); } catch (e) {}
@@ -464,7 +545,7 @@
     if (now - lastSave > 2000) { lastSave = now; persist(); }
     changed();
   });
-  audio.addEventListener("playing", function () { state.loading = false; state.errors = 0; state.retried = null; changed(); });
+  audio.addEventListener("playing", function () { announce("playing"); state.loading = false; state.errors = 0; state.retried = null; changed(); });
   audio.addEventListener("waiting", function () { state.loading = true; changed(); });
   audio.addEventListener("canplay", function () { state.loading = false; changed(); });
   audio.addEventListener("pause", changed);
@@ -521,14 +602,26 @@
 
   /* ------------------------------------------------- likes, recents, lists */
 
-  function likes() { return lget(LIKES_KEY, []); }
-  function isLiked(id) { return likes().some(function (t) { return t.id === id; }); }
+  /* Parsed once and kept in memory: isLiked runs on every redraw while
+     music plays, and the list can hold a thousand songs. */
+  var likeCache = null, likeIds = null;
+  function likeList() {
+    if (!likeCache) {
+      likeCache = lget(LIKES_KEY, []);
+      likeIds = {};
+      likeCache.forEach(function (t) { likeIds[t.id] = true; });
+    }
+    return likeCache;
+  }
+  function likes() { return likeList().slice(); }
+  function isLiked(id) { likeList(); return !!likeIds[id]; }
   function toggleLike(track) {
     if (!track) return false;
-    var list = likes();
+    var list = likeList().slice();
     var had = list.some(function (t) { return t.id === track.id; });
     list = had ? list.filter(function (t) { return t.id !== track.id; }) : [sanitize(track)].concat(list);
     lset(LIKES_KEY, list.slice(0, 1000));
+    likeCache = null;
     changed();
     return !had;
   }
@@ -751,13 +844,25 @@
   function boot() {
     buildMini();
     if (current() && state.playing) {
-      load(state.index, true, state.time);
+      /* Another tab may be playing right now; ask before making a second copy. */
+      var resume = function () { owner = true; announce("claim"); load(state.index, true, state.time); };
+      if (!channel) resume();
+      else {
+        var answered = false;
+        waitingWho = function () { answered = true; };
+        announce("who");
+        window.setTimeout(function () {
+          waitingWho = null;
+          if (answered) { state.playing = false; changed(); }   // keep quiet; tap play to take over
+          else resume();
+        }, 250);
+      }
     } else if (current()) {
       changed();
     }
     /* Any first interaction on the page counts as permission to resume. */
     var unblock = function () {
-      if (state.blocked && state.playing) play();
+      if (owner && state.blocked && state.playing) play();
       document.removeEventListener("pointerdown", unblock, true);
       document.removeEventListener("keydown", unblock, true);
     };
@@ -801,6 +906,7 @@
     addToPlaylist: addToPlaylist,
     removeFromPlaylist: removeFromPlaylist,
     clearQueue: function () {
+      claim();
       var t = current();
       if (!t) return;
       state.queue = [t];

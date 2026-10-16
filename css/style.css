@@ -3906,7 +3906,7 @@ html.has-mplayer .main { padding-bottom: 5.5rem; }
 @media (max-width: 900px) {
   body:has(.callbar:not([hidden]):not(.is-moved)) .mplayer { bottom: calc(12rem + env(safe-area-inset-bottom)); }
 }
-.stage.is-fullscreen ~ .mplayer, body:has(.stage:fullscreen) .mplayer { display: none; }
+body:has(.stage.is-fullscreen) .mplayer, body:has(.stage.is-pseudo-fullscreen) .mplayer, body:has(.stage:fullscreen) .mplayer { display: none; }
 @media (prefers-reduced-motion: reduce) { .mplayer, .mp-eq::after { animation: none; } }
 
 /* ---- full player page ---- */

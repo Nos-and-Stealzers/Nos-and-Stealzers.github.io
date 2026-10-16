@@ -264,6 +264,9 @@
       item("Add to playlist…", "list", function () { pickPlaylist([t]); });
       if (t.album && !opts.inAlbum) item("Go to release", "music", function () { showAlbum(t.album); });
       if (opts.removeLabel) item(opts.removeLabel, "trash", function () { opts.onRemove(t, i); });
+      if (window.ChatCore && window.ChatCore.pickFriends && window.Session && window.Session.user) {
+        item("Send to a friend", "send", function () { sendToFriend(t); });
+      }
       item("Copy link", "link", function () {
         var link = "https://archive.org/details/" + encodeURIComponent(t.album);
         (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
@@ -280,6 +283,23 @@
       menu.style.top = y + "px";
       var firstItem = menu.querySelector("button");
       if (firstItem) firstItem.focus();
+    }
+
+    /* Shares a song in a direct message, with a link that opens its release here. */
+    function sendToFriend(t) {
+      var API = window.API;
+      window.ChatCore.pickFriends({ title: "Send to a friend", single: true }).then(function (pick) {
+        if (!pick) return;
+        var name = pick.usernames[0];
+        return API.openThread(name).then(function (res) {
+          var link = location.origin + location.pathname + "?album=" + encodeURIComponent(t.album);
+          var text = "\u266A " + t.title + " \u2014 " + t.artist + " " + link;
+          return API.send(res.threadId, text, null).then(function () {
+            if (window.Realtime && window.Realtime.broadcast) window.Realtime.broadcast("realtime:thread:" + res.threadId, "msg", {});
+            UI.toast("Sent to @" + name);
+          });
+        });
+      }).catch(function (err) { UI.toast((err && err.message) || "Couldn't send that"); });
     }
 
     function pickPlaylist(tracks) {

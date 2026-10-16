@@ -1291,6 +1291,8 @@
 
     stopRinging();
     state.ringing = null;
+    /* Music from the built-in player would talk over the call. */
+    if (window.Music && window.Music.state().playing) window.Music.pause();
     root.hidden = false;
     bar.hidden = false;
     ringEl.hidden = true;

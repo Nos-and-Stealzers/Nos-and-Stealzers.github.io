@@ -49,7 +49,21 @@
 
       /* ------------------------------------------------------ list */
 
+      /* Many things ask for a fresh list at once (new message, badges, the
+         poll, opening a thread). Run one request at a time and fold extra asks
+         into a single follow-up, so a slow old response can't overwrite a newer
+         one and one event doesn't cost three fetches. */
+      var listInFlight = null, listAgain = false;
       function loadList() {
+        if (listInFlight) { listAgain = true; return listInFlight; }
+        listInFlight = fetchList().then(function (res) {
+          listInFlight = null;
+          if (listAgain) { listAgain = false; return loadList(); }
+          return res;
+        });
+        return listInFlight;
+      }
+      function fetchList() {
         return API.threads().then(function (res) {
           threads = res.threads || [];
           loaded = true;

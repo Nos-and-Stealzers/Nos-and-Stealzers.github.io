@@ -94,6 +94,14 @@
     N=N===4?3:N===3?5:4;this.textContent="Size: "+N+"×"+N;showBest();shuffle();
   });
   showBest();shuffle();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Sliding Puzzle",cheats:[
+    {id:"solve",label:"Solve it",type:"button",run:function(){if(solved)return;board=[];
+      for(var i=1;i<N*N;i++)board.push(i);board.push(0);blank=N*N-1;solved=true;win();render();}},
+    {id:"almost",label:"Leave one move",type:"button",run:function(){if(solved)return;board=[];
+      for(var i=1;i<N*N;i++)board.push(i);board.push(0);board[N*N-1]=N*N-1;board[N*N-2]=0;blank=N*N-2;render();}},
+    {id:"moves",label:"Moves",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);document.getElementById("m").textContent=moves;}}
+  ]};
 })();
 </script>
 </body>

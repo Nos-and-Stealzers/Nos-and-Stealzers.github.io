@@ -40,6 +40,7 @@
 (function(){
   "use strict";
   var R=6,C=7,grid,turn,lock,over,w1=0,w2=0;
+  var CH={twice:false,hist:[]};
   var depths=[["Easy",1],["Normal",3],["Hard",5]],di=1;
   var bEl=document.getElementById("b");
   document.getElementById("diff").textContent="Difficulty: "+depths[di][0];
@@ -60,21 +61,23 @@
     }
     if(winCells)winCells.forEach(function(p){cellEl(p[0],p[1]).classList.add("win");});
   }
-  function newGame(){build();turn=1;lock=false;over=false;render();document.getElementById("over").textContent="Your move — drop a blue disc";}
+  function newGame(){CH.hist=[];build();turn=1;lock=false;over=false;render();document.getElementById("over").textContent="Your move — drop a blue disc";}
   function drop(g,c,player){for(var r=R-1;r>=0;r--)if(!g[r][c]){g[r][c]=player;return r;}return -1;}
 
   function play(c){
     if(lock||over||grid[0][c])return;
-    drop(grid,c,1);render();
+    CH.hist.push([drop(grid,c,1),c]);render();
     var res=check(grid);
     if(res){finish(res);return;}
     if(full(grid)){draw();return;}
+    if(CH.twice&&!CH.extra){CH.extra=true;document.getElementById("over").textContent="Bonus move — drop again";return;}
+    CH.extra=false;
     lock=true;document.getElementById("over").textContent="CPU thinking…";
     setTimeout(cpu,220);
   }
   function cpu(){
     var c=best(grid,depths[di][1]);
-    drop(grid,c,2);render();
+    CH.hist.push([drop(grid,c,2),c]);render();
     var res=check(grid);
     lock=false;
     if(res){finish(res);return;}
@@ -144,6 +147,18 @@
     di=(di+1)%depths.length;this.textContent="Difficulty: "+depths[di][0];newGame();
   });
   newGame();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Connect Four",cheats:[
+    {id:"twice",label:"Two moves per turn",type:"toggle",set:function(on){CH.twice=on;CH.extra=false;}},
+    {id:"hint",label:"Show the best move",type:"button",run:function(){if(over||lock)return;
+      var g=clone(grid).map(function(r){return r.map(function(v){return v===1?2:v===2?1:0;});});
+      var c=best(g,5);for(var r=R-1;r>=0;r--)if(!grid[r][c]){var el=cellEl(r,c);el.style.outline="3px solid #3fb950";
+        setTimeout(function(){el.style.outline="";},1600);break;}}},
+    {id:"undo",label:"Take back my last move",type:"button",run:function(){if(lock||!CH.hist.length)return;
+      while(CH.hist.length){var m=CH.hist.pop(),who=grid[m[0]][m[1]];grid[m[0]][m[1]]=0;if(who===1)break;}
+      over=false;CH.extra=false;render();document.getElementById("over").textContent="Your move";}},
+    {id:"wins",label:"Your wins",type:"value",noLock:true,get:function(){return w1;},set:function(v){w1=Math.max(0,v|0);document.getElementById("w1").textContent=w1;}}
+  ]};
 })();
 </script>
 </body>

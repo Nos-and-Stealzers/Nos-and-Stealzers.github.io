@@ -51,6 +51,7 @@
   "use strict";
   var board=document.getElementById("board"),over=document.getElementById("over");
   var N,MINES,grid,revealed,started,dead,won,timer,secs,flags,flagMode=false;
+  var CH={safe:false,xray:false};
   function idx(x,y){return y*N+x;}
   function reset(){
     var parts=document.getElementById("diff").value.split(",");
@@ -82,6 +83,7 @@
         if(grid[idx(nx,ny)].mine)c++;}
       grid[idx(xx,yy)].n=c;
     }
+    if(CH.xray)xray(true);
     started=true;timer=setInterval(function(){secs++;document.getElementById("t").textContent=secs;},1000);
   }
   function onFlag(x,y){
@@ -95,6 +97,7 @@
     if(flagMode){onFlag(x,y);return;}
     if(!started)place(x,y);
     var c=grid[idx(x,y)];if(c.open||c.flag)return;
+    if(c.mine&&CH.safe){onFlag(x,y);return;}
     if(c.mine){boom();return;}
     flood(x,y);checkWin();
   }
@@ -129,6 +132,17 @@
     this.style.color=flagMode?"var(--acc)":"";
   });
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function xray(on){if(!grid)return;grid.forEach(function(c){if(c.mine&&!c.open)c.el.style.boxShadow=on?"inset 0 0 0 2px #e5484d":"";});}
+  window.ACH_MODS={name:"Minesweeper",cheats:[
+    {id:"xray",label:"X-ray (outline mines)",type:"toggle",set:function(on){CH.xray=on;xray(on);}},
+    {id:"safe",label:"Mines can't hurt you",type:"toggle",set:function(on){CH.safe=on;},hint:"Clicking a mine flags it instead"},
+    {id:"flagall",label:"Flag every mine",type:"button",run:function(){if(!started||dead||won)return;
+      grid.forEach(function(c,i){if(c.mine&&!c.flag)onFlag(i%N,(i/N)|0);});}},
+    {id:"solve",label:"Clear the board",type:"button",run:function(){if(dead||won)return;if(!started)place(0,0);
+      grid.forEach(function(c,i){if(!c.mine&&!c.open)flood(i%N,(i/N)|0);});checkWin();}},
+    {id:"time",label:"Timer",type:"value",get:function(){return secs;},set:function(v){secs=Math.max(0,v|0);document.getElementById("t").textContent=secs;}}
+  ]};
 })();
 </script>
 </body>

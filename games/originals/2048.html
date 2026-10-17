@@ -177,6 +177,22 @@
   document.getElementById("new").addEventListener("click",reset);
   window.addEventListener("resize",function(){Object.keys(tiles).forEach(function(k){place(tiles[k]);});});
   render();reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function paintTile(t){t.el.textContent=t.v;t.el.style.background=COLORS[t.v]||"#cbb002";
+    t.el.style.color=t.v<=4?"#e8eaed":"#101216";t.el.style.fontSize="";place(t);}
+  window.ACH_MODS={name:"2048",cheats:[
+    {id:"score",label:"Score",type:"value",get:function(){return score;},
+      set:function(v){score=Math.max(0,v|0);if(score>best){best=score;localStorage.setItem("o2048.best",best);}render();}},
+    {id:"t2048",label:"Drop a 2048 tile",type:"button",run:function(){var e=empties();if(!e.length)return;
+      var p=e[(Math.random()*e.length)|0];board[p[0]][p[1]]=make(p[0],p[1],2048);}},
+    {id:"double",label:"Double every tile",type:"button",run:function(){
+      Object.keys(tiles).forEach(function(k){tiles[k].v*=2;paintTile(tiles[k]);});}},
+    {id:"clean",label:"Clear the 2s and 4s",type:"button",run:function(){
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++){var t=board[r][c];
+        if(t&&t.v<=4){t.el.remove();delete tiles[t.id];board[r][c]=0;}}
+      msg.classList.remove("on");}},
+    {id:"new",label:"New game",type:"button",run:reset}
+  ]};
 })();
 </script>
 </body>

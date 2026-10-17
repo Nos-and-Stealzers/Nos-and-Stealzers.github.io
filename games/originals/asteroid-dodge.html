@@ -37,6 +37,7 @@
   var ship,rocks,gems,score,best=+(localStorage.getItem("ododge.best")||0);
   var running=false,dead=false,raf=null,tSpawn=0,gSpawn=0,speed,frames;
   var keys={};
+  var CH={god:false,calm:false};
   document.getElementById("b").textContent=best;
 
   function reset(){
@@ -58,6 +59,7 @@
   function loop(){
     frames++;
     // difficulty ramp
+    if(CH.calm)frames=Math.min(frames,1);
     speed=2.4+frames/900;
     if(keys.left)ship.vx-=0.8;if(keys.right)ship.vx+=0.8;
     ship.vx*=0.86;ship.x+=ship.vx;
@@ -73,7 +75,7 @@
 
     // collisions
     for(var i=0;i<rocks.length;i++){var o=rocks[i];
-      if(hit(ship,o)){die();return;}}
+      if(hit(ship,o)&&!CH.god){die();return;}}
     for(var j=gems.length-1;j>=0;j--){if(hit(ship,gems[j])){gems.splice(j,1);score+=15;}}
 
     score++;
@@ -119,6 +121,15 @@
   document.getElementById("start").addEventListener("click",reset);
   document.getElementById("pause").addEventListener("click",function(){if(!dead)running?stop():run();});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Asteroid Dodge",cheats:[
+    {id:"god",label:"Invincible",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"calm",label:"No speed-up",type:"toggle",set:function(on){CH.calm=on;},hint:"Rocks stay at the starting pace"},
+    {id:"clear",label:"Clear the rocks",type:"button",run:function(){rocks=[];}},
+    {id:"gems",label:"Rain gems",type:"button",run:function(){for(var i=0;i<12;i++)gems.push({x:14+Math.random()*(W-28),y:-8-i*30,r:7,vy:speed*0.9});}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},
+      set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

@@ -37,6 +37,7 @@
   var W=cv.width,H=cv.height,PW=10,PH=64,BS=9;
   var py,ey,pv,ball,ps,es,running=false,over=false,timer=null;
   var diffs=[["Easy",4.2,0.06],["Normal",5.4,0.10],["Hard",7.0,0.16]],di=1;
+  var CH={wall:false,auto:false,frozen:false};
   document.getElementById("diff").textContent="Difficulty: "+diffs[di][0];
 
   function reset(serveToPlayer){
@@ -49,9 +50,11 @@
   function upd(){document.getElementById("p").textContent=ps;document.getElementById("e").textContent=es;}
 
   function tick(){
+    if(CH.auto)py=ball.y-PH/2;
     py+=pv;py=Math.max(0,Math.min(H-PH,py));
     // ai tracks ball with capped speed
     var target=ball.y-PH/2, aispeed=diffs[di][1]*0.9;
+    if(CH.frozen)aispeed=0;
     if(ey+PH/2<ball.y-8)ey+=aispeed; else if(ey+PH/2>ball.y+8)ey-=aispeed;
     ey=Math.max(0,Math.min(H-PH,ey));
 
@@ -66,6 +69,7 @@
     if(ball.x+BS/2>W-PW-6 && ball.vx>0 && ball.y>ey && ball.y<ey+PH){
       ball.x=W-PW-6-BS/2;bounce(ey);
     }
+    if(ball.x<0&&CH.wall){ball.x=0;ball.vx=Math.abs(ball.vx);}
     if(ball.x<0){es++;score(true);}
     else if(ball.x>W){ps++;score(false);}
     draw();
@@ -119,6 +123,15 @@
   function kick(){if(!kicked&&!over){kicked=true;run();}}
   cv.addEventListener("mousemove",kick);cv.addEventListener("touchstart",kick);
   document.addEventListener("keydown",kick);
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Pong",cheats:[
+    {id:"wall",label:"Unbeatable wall",type:"toggle",set:function(on){CH.wall=on;},hint:"Your goal bounces everything back"},
+    {id:"auto",label:"Autopilot paddle",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"frozen",label:"Freeze the CPU",type:"toggle",set:function(on){CH.frozen=on;}},
+    {id:"big",label:"Giant paddles",type:"toggle",set:function(on){PH=on?140:64;}},
+    {id:"you",label:"Your points",type:"value",get:function(){return ps;},set:function(v){ps=Math.max(0,Math.min(6,v|0));upd();}},
+    {id:"cpu",label:"CPU points",type:"value",get:function(){return es;},set:function(v){es=Math.max(0,Math.min(6,v|0));upd();}}
+  ]};
 })();
 </script>
 </body>

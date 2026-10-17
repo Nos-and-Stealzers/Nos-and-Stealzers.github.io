@@ -35,13 +35,14 @@
   "use strict";
   var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
   var N=5,grid,moves,solved;
+  var CH={single:false};
   var best=JSON.parse(localStorage.getItem("olights.best")||"{}");
 
   function idx(r,c){return r*N+c;}
   function toggle(r,c){if(r<0||c<0||r>=N||c>=N)return;grid[idx(r,c)]=!grid[idx(r,c)];}
   function press(r,c){
     if(solved)return;
-    toggle(r,c);toggle(r-1,c);toggle(r+1,c);toggle(r,c-1);toggle(r,c+1);
+    toggle(r,c);if(!CH.single){toggle(r-1,c);toggle(r+1,c);toggle(r,c-1);toggle(r,c+1);}
     moves++;document.getElementById("moves").textContent=moves;render();check();
   }
   function scramble(){
@@ -75,6 +76,12 @@
   document.getElementById("size").addEventListener("click",function(){
     N=N===5?4:N===4?6:5;this.textContent="Size: "+N+"×"+N;scramble();});
   scramble();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Lights Out",cheats:[
+    {id:"solve",label:"Turn every light off",type:"button",run:function(){if(solved)return;grid.fill(false);render();check();}},
+    {id:"single",label:"Taps flip one light only",type:"toggle",set:function(on){CH.single=on;}},
+    {id:"moves",label:"Moves",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);document.getElementById("moves").textContent=moves;}}
+  ]};
 })();
 </script>
 </body>

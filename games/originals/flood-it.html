@@ -102,6 +102,19 @@
   document.getElementById("size").addEventListener("click",function(){
     N=N===14?10:N===10?18:14;this.textContent="Size: "+N;fresh();});
   fresh();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Flood It",cheats:[
+    {id:"solve",label:"Fill the board",type:"button",run:function(){if(over)return;var t=grid[0];
+      for(var i=0;i<grid.length;i++)grid[i]=t;render();check();}},
+    {id:"moves",label:"Moves used",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);document.getElementById("moves").textContent=moves;}},
+    {id:"limit",label:"Move limit",type:"value",noLock:true,get:function(){return limit;},set:function(v){limit=Math.max(1,v|0);document.getElementById("limit").textContent=limit;if(over&&moves<limit){over=false;msg.textContent="";msg.className="msg";}}},
+    {id:"hint",label:"Best colour now",type:"button",run:function(){if(over)return;var start=grid[0],gain=[0,0,0,0,0,0];
+      var seen={0:1},st=[0],edge={};while(st.length){var p=st.pop(),r=(p/N)|0,c=p%N;
+        [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(function(n){if(n[0]<0||n[1]<0||n[0]>=N||n[1]>=N)return;var q=idx(n[0],n[1]);
+          if(seen[q])return;if(grid[q]===start){seen[q]=1;st.push(q);}else if(!edge[q]){edge[q]=1;gain[grid[q]]++;}});}
+      var b=0;for(var k=1;k<6;k++)if(gain[k]>gain[b])b=k;var el=pickerEl.children[b];el.style.outline="3px solid #fff";
+      setTimeout(function(){el.style.outline="";},1500);}}
+  ]};
 })();
 </script>
 </body>

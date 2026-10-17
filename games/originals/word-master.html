@@ -76,6 +76,15 @@
     if(e.key==="Enter")key("ENT");else if(e.key==="Backspace")key("DEL");
     else if(/^[a-zA-Z]$/.test(e.key))key(e.key.toLowerCase());
   });
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Word Master",cheats:[
+    {id:"letter",label:"Reveal a letter",type:"button",run:function(){if(done)return;var i=(Math.random()*5)|0;say("Letter "+(i+1)+" is "+answer[i].toUpperCase());}},
+    {id:"peek",label:"Show the word",type:"button",run:function(){say("Psst: "+answer.toUpperCase());}},
+    {id:"solve",label:"Type the answer",type:"button",run:function(){if(done)return;guess=answer;col=5;paint();}},
+    {id:"new",label:"New word",type:"button",run:function(){answer=WORDS[Math.floor(Math.random()*WORDS.length)];row=0;col=0;done=false;guess="";kbState={};
+      for(var r=0;r<6;r++)for(var c=0;c<5;c++){var t=document.getElementById("t"+r+"_"+c);t.textContent="";t.className="t";}
+      Array.prototype.forEach.call(document.querySelectorAll(".k"),function(b){b.classList.remove("hit","near","miss");});msg.textContent="";}}
+  ]};
 })();
 </script>
 </body>

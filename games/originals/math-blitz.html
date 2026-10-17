@@ -45,6 +45,7 @@
   document.getElementById("b").textContent=best;
   var score,streak,answer,playing=false,tEnd,tick;
   var opts=document.getElementById("opts");
+  var CH={hint:false};
 
   function make(){
     var lvl=Math.min(4,1+((score/60)|0));
@@ -62,7 +63,7 @@
     for(var k=set.length-1;k>0;k--){var r=rnd(k+1);var t=set[k];set[k]=set[r];set[r]=t;}
     opts.innerHTML="";
     set.forEach(function(v){var btn=document.createElement("button");btn.className="opt";
-      btn.textContent=v;btn.addEventListener("click",function(){guess(v,btn);});opts.appendChild(btn);});
+      btn.textContent=v;if(CH.hint&&v===answer)btn.style.outline="3px solid #3fb950";btn.addEventListener("click",function(){guess(v,btn);});opts.appendChild(btn);});
   }
   function rnd(n){return (Math.random()*n)|0;}
   function guess(v,btn){
@@ -97,6 +98,15 @@
     var i=["1","2","3","4"].indexOf(e.key);
     if(i>=0&&opts.children[i])opts.children[i].click();
   });
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Math Blitz",cheats:[
+    {id:"hint",label:"Highlight the answer",type:"toggle",set:function(on){CH.hint=on;
+      Array.prototype.forEach.call(opts.children,function(b){b.style.outline=on&&+b.textContent===answer?"3px solid #3fb950":"";});}},
+    {id:"answer",label:"Answer for me",type:"button",run:function(){if(!playing)return;
+      Array.prototype.forEach.call(opts.children,function(b){if(+b.textContent===answer)b.click();});}},
+    {id:"time",label:"+30 seconds",type:"button",run:function(){if(playing)tEnd+=30000;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score||0;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

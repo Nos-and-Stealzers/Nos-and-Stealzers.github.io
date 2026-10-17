@@ -39,6 +39,7 @@
 (function(){
   "use strict";
   var g,turn,over,w1=0,w2=0,wd=0,hard=true;
+  var CH={sleepy:false};
   var bEl=document.getElementById("b");
   var WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
   document.getElementById("diff").textContent="Difficulty: Hard";
@@ -61,6 +62,7 @@
     if(full(g)){finish(0);return;}
     document.getElementById("over").textContent="CPU…";
     setTimeout(function(){
+      if(CH.sleepy){document.getElementById("over").textContent="CPU skipped its turn — your move";return;}
       var m=hard?bestMove():randMove();
       g[m]=2;var r2=winner(g);render(r2&&r2.line);
       if(r2){finish(2,r2.line);return;}
@@ -89,6 +91,15 @@
   document.getElementById("diff").addEventListener("click",function(){
     hard=!hard;this.textContent="Difficulty: "+(hard?"Hard":"Easy");newGame();});
   newGame();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Tic-Tac-Toe",cheats:[
+    {id:"sleepy",label:"CPU skips its turns",type:"toggle",set:function(on){CH.sleepy=on;}},
+    {id:"hint",label:"Show my best move",type:"button",run:function(){if(over)return;var b=g.map(function(v){return v===1?2:v===2?1:0;});
+      var m=minimax(b,2);if(m&&m.i!=null){var el=bEl.children[m.i];el.style.outline="3px solid #3fb950";setTimeout(function(){el.style.outline="";},1400);}}},
+    {id:"steal",label:"Turn an O into an X",type:"button",run:function(){if(over)return;var i=g.indexOf(2);if(i<0)return;g[i]=1;
+      var r=winner(g);render(r&&r.line);if(r)finish(1,r.line);}},
+    {id:"wins",label:"Your wins",type:"value",noLock:true,get:function(){return w1;},set:function(v){w1=Math.max(0,v|0);document.getElementById("w1").textContent=w1;}}
+  ]};
 })();
 </script>
 </body>

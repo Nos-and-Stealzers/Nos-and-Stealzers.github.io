@@ -85,6 +85,19 @@
   document.getElementById("start").addEventListener("click",reset);
   document.getElementById("size").addEventListener("change",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Memory",cheats:[
+    {id:"peek",label:"Peek at every card",type:"button",run:function(){if(busy)return;busy=true;
+      cards.forEach(function(c){if(!c.classList.contains("done"))c.classList.add("up","peek");});
+      setTimeout(function(){cards.forEach(function(c){if(c.classList.contains("peek")&&c!==first)c.classList.remove("up");c.classList.remove("peek");});busy=false;},1500);}},
+    {id:"pair",label:"Match a pair for me",type:"button",run:function(){if(busy)return;
+      var left=cards.filter(function(c){return !c.classList.contains("done")&&!c.classList.contains("up");});if(!left.length)return;
+      var a=first||left[0],b=cards.filter(function(c){return c!==a&&c.dataset.sym===a.dataset.sym;})[0];
+      if(a!==first)flip(a);flip(b);}},
+    {id:"solve",label:"Solve the board",type:"button",run:function(){if(busy)return;first=null;
+      cards.forEach(function(c){c.classList.remove("up");c.classList.add("done");});pairs=total;document.getElementById("p").textContent=pairs;win();}},
+    {id:"moves",label:"Moves",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);document.getElementById("m").textContent=moves;}}
+  ]};
 })();
 </script>
 </body>

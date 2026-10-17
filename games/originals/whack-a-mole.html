@@ -41,6 +41,7 @@
   "use strict";
   var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
   var holes=[],score=0,time=30,running=false,spawnT=null,tickT=null;
+  var CH={nobomb:false,auto:false,freeze:false};
   var best=+(localStorage.getItem("owhack.best")||0);
   document.getElementById("b").textContent=best;
 
@@ -69,7 +70,8 @@
     var free=holes.filter(function(o){return !o.active;});
     if(free.length){
       var o=free[(Math.random()*free.length)|0];
-      o.active=true;o.bomb=Math.random()<0.22;
+      o.active=true;o.bomb=!CH.nobomb&&Math.random()<0.22;
+      if(CH.auto&&!o.bomb){(function(oo){setTimeout(function(){if(oo.active)hit(oo.hole,oo.mole);},180);})(o);}
       o.mole.className="mole up"+(o.bomb?" bomb":"");
       var life=Math.max(550,1100-(30-time)*22);
       (function(oo){setTimeout(function(){if(oo.active){oo.active=false;oo.mole.className="mole";}},life);})(o);
@@ -84,7 +86,7 @@
     msg.textContent="Go!";holes.forEach(function(o){o.active=false;o.mole.className="mole";});
     spawn();
     tickT=setInterval(function(){
-      time--;document.getElementById("time").textContent=time;
+      if(!CH.freeze)time--;document.getElementById("time").textContent=time;
       if(time<=0)end();
     },1000);
   }
@@ -96,6 +98,14 @@
     else msg.textContent="Time! You scored "+score+".";
   }
   document.getElementById("start").addEventListener("click",start);
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Whack-a-Mole",cheats:[
+    {id:"auto",label:"Auto-whack",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"nobomb",label:"No bombs",type:"toggle",set:function(on){CH.nobomb=on;}},
+    {id:"freeze",label:"Freeze the clock",type:"toggle",set:function(on){CH.freeze=on;}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);document.getElementById("s").textContent=score;}},
+    {id:"time",label:"Time left",type:"value",get:function(){return time;},set:function(v){time=Math.max(1,v|0);document.getElementById("time").textContent=time;}}
+  ]};
 })();
 </script>
 </body>

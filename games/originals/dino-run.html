@@ -33,6 +33,7 @@
   var best=+(localStorage.getItem("odino.best")||0);
   document.getElementById("b").textContent=best;
   var dino,obs,score,speed,running,dead,timer,tick,holding;
+  var CH={god:false,auto:false,moon:false};
 
   function reset(){
     dino={x:56,y:ground,vy:0,onGround:true,h:38};
@@ -51,7 +52,8 @@
   function step(){
     tick++;
     // physics
-    dino.vy+= holding&&dino.vy<0 ? 0.42 : 0.62;
+    if(CH.auto&&dino.onGround&&obs.some(function(o){return !o.bird&&o.x>dino.x&&o.x-dino.x<70+speed*6;}))jump();
+    dino.vy+= (holding&&dino.vy<0 ? 0.42 : 0.62)*(CH.moon?0.45:1);
     dino.y+=dino.vy;
     if(dino.y>=ground){dino.y=ground;dino.vy=0;dino.onGround=true;}
     // difficulty ramps with distance
@@ -62,7 +64,7 @@
     // collisions
     var dx=dino.x,dw=24,dtop=dino.y-dino.h;
     for(var i=0;i<obs.length;i++){var o=obs[i],oy=o.bird?o.y:o.y-o.h;
-      if(dx< o.x+o.w && dx+dw> o.x && dtop< oy+o.h && dino.y> oy){ end();return; }}
+      if(!CH.god&&dx< o.x+o.w && dx+dw> o.x && dtop< oy+o.h && dino.y> oy){ end();return; }}
     score++;document.getElementById("s").textContent=(score/6|0);
     draw();
   }
@@ -104,6 +106,14 @@
   cv.addEventListener("mouseup",function(){holding=false;});
   document.getElementById("start").addEventListener("click",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Dino Run",cheats:[
+    {id:"god",label:"Invincible",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"auto",label:"Auto-jump cactuses",type:"toggle",set:function(on){CH.auto=on;}},
+    {id:"moon",label:"Moon gravity",type:"toggle",set:function(on){CH.moon=on;}},
+    {id:"clear",label:"Clear obstacles",type:"button",run:function(){obs=[];}},
+    {id:"score",label:"Score",type:"value",get:function(){return (score/6)|0;},set:function(v){score=Math.max(0,v|0)*6;document.getElementById("s").textContent=(score/6|0);}}
+  ]};
 })();
 </script>
 </body>

@@ -76,8 +76,10 @@
   function emojiOnly(body) {
     if (!body || body.length > 16) return false;
     try {
-      return /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|‍|️|\s)+$/u.test(body) &&
-             !/^[\d#*\s]+$/.test(body);
+      /* Keycaps (1️⃣ #️⃣) count as emoji; any other digit, # or * means it's text. */
+      var rest = body.replace(/[0-9#*]\uFE0F?\u20E3/g, "\u2B50");
+      return /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|‍|️|\s)+$/u.test(rest) &&
+             !/[0-9#*]/.test(rest) && /\p{Extended_Pictographic}/u.test(rest);
     } catch (e) { return false; }
   }
 
@@ -629,6 +631,10 @@
             window.API.deleteMessage(row._id).then(function () {
               fillBubble(bubble, { deleted: true, at: m.at });
               acts.remove();
+              /* Others only fetch newer messages, so tell open views directly. */
+              if (state && window.Realtime && window.Realtime.broadcast) {
+                window.Realtime.broadcast("realtime:thread:" + state.id, "del", { id: row._id });
+              }
             }).catch(function (err) { UI().toast(err.message || "Couldn't delete that"); });
           });
         }));
@@ -761,7 +767,15 @@
         if (m.mine) {
           for (var i = 0; i < optimistic.length; i++) {
             var o = optimistic[i];
-            if (o.id == null && !o.failed && o.body === (m.body || "") && o.hasImage === !!m.image) {
+            if (o.id == null && o.body === (m.body || "") && o.hasImage === !!m.image) {
+              /* Includes a send that looked failed (timeout) but was stored:
+                 the server copy wins and the "Not sent" note goes away. */
+              if (o.failed) {
+                o.failed = false;
+                o.row.classList.remove("is-failed");
+                var note = o.row.querySelector(".chat-fail");
+                if (note) note.remove();
+              }
               adopt(o, m.id);
               return;
             }
@@ -888,15 +902,21 @@
 
     function socketUp() { return !!(window.Realtime && window.Realtime.connected); }
 
+    var timerSocket = null;
     function retime() {
       window.clearInterval(timer);
       if (!state) return;
-      timer = window.setInterval(tick, socketUp() ? POLL_SOCKET : POLL_LIVE);
+      timerSocket = socketUp();
+      timer = window.setInterval(tick, timerSocket ? POLL_SOCKET : POLL_LIVE);
     }
 
-    var tickCount = 0;
+    var tickCount = 0, tickAgain = false;
     function tick() {
-      if (!state || !state.id || ticking || document.hidden) return;
+      if (!state || !state.id || document.hidden) return;
+      /* A realtime nudge during a fetch must not be lost: run once more after. */
+      if (ticking) { tickAgain = true; return; }
+      /* Follow the socket: fast polling only while realtime is down. */
+      if (timerSocket !== socketUp()) retime();
       if (++tickCount % 4 === 0) refreshCalls();
       var my = seq;
       ticking = true;
@@ -909,7 +929,10 @@
         }
       }).catch(function (err) {
         if (my === seq && err && err.status === 404 && opts.onGone) opts.onGone(err);
-      }).then(function () { ticking = false; });
+      }).then(function () {
+        ticking = false;
+        if (tickAgain) { tickAgain = false; tick(); }
+      });
     }
 
     document.addEventListener("visibilitychange", function () {
@@ -922,6 +945,14 @@
       if (!window.Realtime || !window.Realtime.subscribe) return;
       unsub = window.Realtime.subscribe("realtime:thread:" + id, {
         msg: function () { tick(); },
+        del: function (p) {
+          var row = p && rendered[p.id];
+          if (!row) return;
+          var bubble = row.querySelector(".chat-bubble");
+          if (bubble) fillBubble(bubble, { deleted: true });
+          var acts = row.querySelector(".chat-msg-acts");
+          if (acts) acts.remove();
+        },
         typing: function (p) {
           if (!p || !p.u || p.u === me().username) return;
           if (p.stop) { delete typers[p.u]; renderTyping(); return; }
@@ -967,11 +998,11 @@
       });
     }
 
-    function pokeOthers(id) {
+    function pokeOthers(id, members) {
       if (!window.Realtime) return;
       if (window.Realtime.broadcast) window.Realtime.broadcast("realtime:thread:" + id, "msg", {});
       var mine = me().id;
-      ((state && state.members) || []).forEach(function (m) {
+      (members || (state && state.members) || []).forEach(function (m) {
         if (m && m.id && m.id !== mine && window.Realtime.pokeUser) window.Realtime.pokeUser(m.id, "notify");
       });
     }
@@ -1093,7 +1124,9 @@
     }
 
     function deliver(o, threadId) {
+      if (o.id != null) return;           // already matched to the server copy
       var my = seq;
+      var members = (state && state.members) || [];
       o.failed = false;
       o.row.classList.remove("is-failed");
       o.row.classList.add("is-sending");
@@ -1101,6 +1134,9 @@
       if (old) old.remove();
 
       window.API.send(threadId, o.body, o.image).then(function (res) {
+        /* Delivered: nudge the others even if we've moved to another thread. */
+        pokeOthers(threadId, members);
+        if (opts.onActivity) opts.onActivity();
         if (my !== seq) return;
         var id = res && res.message && res.message.id;
         if (id != null && rendered[id] && rendered[id] !== o.row) {
@@ -1108,11 +1144,10 @@
           o.row.remove();
           optimistic = optimistic.filter(function (x) { return x !== o; });
         } else if (id != null && o.id == null) {
+          /* lastId isn't moved here: others' messages with smaller ids may not
+             have been polled yet. The poll skips this one as already drawn. */
           adopt(o, id);
-          if (id > lastId) lastId = id;
         }
-        pokeOthers(threadId);
-        if (opts.onActivity) opts.onActivity();
       }).catch(function (err) {
         if (my !== seq) return;
         o.failed = true;

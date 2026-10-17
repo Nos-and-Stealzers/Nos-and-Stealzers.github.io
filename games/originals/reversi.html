@@ -39,6 +39,7 @@
   "use strict";
   var boardEl=document.getElementById("board"),msg=document.getElementById("msg");
   var B=1,W=2,board,turn,over,hard=false;
+  var CH={hint:false};
   var DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
   var WEIGHT=[
     120,-20,20,5,5,20,-20,120, -20,-40,-5,-5,-5,-5,-40,-20,
@@ -77,6 +78,7 @@
     for(var i=0;i<64;i++){
       var d=document.createElement("div");d.className="cell";
       if(legalNow.indexOf(i)!==-1)d.className+=" legal";
+      if(CH.hint&&legalNow.length&&i===bestFor(legalNow))d.style.boxShadow="inset 0 0 0 3px #3fb950";
       if(board[i]){var disc=document.createElement("div");disc.className="disc "+(board[i]===B?"b":"w");d.appendChild(disc);}
       (function(pos){d.addEventListener("click",function(){human(pos);});})(i);
       boardEl.appendChild(d);
@@ -133,6 +135,15 @@
   document.getElementById("diff").addEventListener("click",function(){
     hard=!hard;this.textContent="CPU: "+(hard?"Hard":"Normal");reset();});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function bestFor(moves){var b=moves[0],bv=-1e9;moves.forEach(function(m){var v=flips(board,m,B).length+WEIGHT[m]*0.6;if(v>bv){bv=v;b=m;}});return b;}
+  window.ACH_MODS={name:"Reversi",cheats:[
+    {id:"hint",label:"Show the best move",type:"toggle",set:function(on){CH.hint=on;draw();}},
+    {id:"flip",label:"Flip 5 CPU discs",type:"button",run:function(){if(over)return;var n=0;
+      for(var i=0;i<64&&n<5;i++)if(board[i]===W){board[i]=B;n++;}draw();}},
+    {id:"pass",label:"Skip the CPU's turn",type:"button",run:function(){if(over)return;turn=B;msg.textContent="Your move.";draw();}},
+    {id:"win",label:"Win now",type:"button",run:function(){if(over)return;for(var i=0;i<64;i++)if(board[i]===W)board[i]=B;finish();}}
+  ]};
 })();
 </script>
 </body>

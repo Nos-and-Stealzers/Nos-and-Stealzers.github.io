@@ -49,7 +49,9 @@ const SPECIAL = {
   "huge-particle-clicker": "particle",
   "huge-particleclicker": "particle",
   "ext-quickclick": "quickclick",
-  "ext2-devlife": "devlife"
+  "ext2-devlife": "devlife",
+  /* Hooked in its own repo: publishes window.ACH_MODS. */
+  "waterboy-firegirl": "original"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 
@@ -130,6 +132,10 @@ async function main() {
     if (SPECIAL[g.id]) { out[g.id] = SPECIAL[g.id]; return; }
     if (SPECIAL_HOST[g.host]) { out[g.id] = SPECIAL_HOST[g.host]; return; }
     if (/(^|\/)games\/flash\.html\?/.test(String(g.source || ""))) { out[g.id] = "flash"; return; }
+    /* The arcade's own games (originals, websie) publish exact cheats on window.ACH_MODS. */
+    const local = String(g.source || g.direct || "").match(/^games\/(originals|websie)\/[\w-]+\.html$/);
+    if (local && fs.existsSync(path.join(ROOT, local[0])) &&
+        fs.readFileSync(path.join(ROOT, local[0]), "utf8").indexOf("ACH_MODS") !== -1) { out[g.id] = "original"; return; }
     if (EXCLUDE.has(g.id)) return;
     if (RETAG[g.id]) { out[g.id] = RETAG[g.id]; return; }
     const src = String(g.source || g.direct || "");

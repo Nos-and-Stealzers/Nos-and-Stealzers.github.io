@@ -126,6 +126,18 @@
   }
   document.getElementById("new").addEventListener("click",fresh);
   fresh();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Gem Match",cheats:[
+    {id:"moves",label:"Moves left",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);update();
+      if(moves>0){msg.textContent="Swap adjacent gems to line up 3 or more.";msg.className="msg";}}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);update();}},
+    {id:"bomb",label:"Clear one colour",type:"button",run:function(){if(busy)return;var t=g[(Math.random()*g.length)|0];
+      var hit=[];for(var i=0;i<g.length;i++)if(g[i]===t)hit.push(i);score+=hit.length*10;update();
+      hit.forEach(function(i){g[i]=-1;});busy=true;setTimeout(function(){for(var c=0;c<N;c++){var col=[];
+        for(var r=N-1;r>=0;r--)if(g[idx(r,c)]>=0)col.push(g[idx(r,c)]);
+        for(var r2=N-1,k=0;r2>=0;r2--)g[idx(r2,c)]=k<col.length?col[k++]:ri();}render();setTimeout(resolve,180);},150);}},
+    {id:"shuffle",label:"Shuffle the board",type:"button",run:function(){if(busy)return;sel=null;noMatchFill();render();}}
+  ]};
 })();
 </script>
 </body>

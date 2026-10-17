@@ -45,8 +45,10 @@
   var movesEl=document.getElementById("moves"),bestEl=document.getElementById("best");
   var disksBtn=document.getElementById("disks");
   var N=4,pegs,moves,sel,over;
+  var CH={free:false};
   var best=JSON.parse(localStorage.getItem("ohanoi.best")||"{}");
   function fresh(){
+    if(CH.timer){clearInterval(CH.timer);CH.timer=0;CH.solving=false;}
     pegs=[[],[],[]];
     for(var i=N;i>=1;i--)pegs[0].push(i);
     moves=0;sel=null;over=false;
@@ -70,13 +72,13 @@
     }
   }
   function onPeg(){
-    if(over)return;
+    if(over||(CH.solving&&!CH.auto))return;
     var p=+this.dataset.p;
     if(sel===null){if(!pegs[p].length)return;sel=p;render();return;}
     if(sel===p){sel=null;render();return;}
     var from=pegs[sel],to=pegs[p];
     var disk=from[from.length-1];
-    if(to.length&&to[to.length-1]<disk){
+    if(!CH.free&&to.length&&to[to.length-1]<disk){
       msg.textContent="Can't place a larger disk on a smaller one.";
       sel=null;render();
       setTimeout(function(){if(!over){msg.textContent="Move the whole stack to the right peg.";}},900);
@@ -95,6 +97,16 @@
   disksBtn.addEventListener("click",function(){
     N=N>=6?3:N+1;this.textContent="Disks: "+N;fresh();});
   fresh();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Tower of Hanoi",cheats:[
+    {id:"solve",label:"Solve it (animated)",type:"button",run:function(){if(over||CH.solving)return;CH.solving=true;
+      var steps=[];(function h(n,a,b,c){if(!n)return;h(n-1,a,c,b);steps.push([a,c]);h(n-1,b,a,c);})(N,0,1,2);
+      pegs=[[],[],[]];for(var i=N;i>=1;i--)pegs[0].push(i);moves=0;sel=null;render();
+      var k=0,t=CH.timer=setInterval(function(){if(k>=steps.length||over){clearInterval(t);CH.solving=false;return;}
+        CH.auto=true;sel=steps[k][0];onPeg.call({dataset:{p:steps[k][1]}});CH.auto=false;k++;},Math.max(80,1600/steps.length));}},
+    {id:"lift",label:"Ignore size rules",type:"toggle",set:function(on){CH.free=on;}},
+    {id:"moves",label:"Moves",type:"value",get:function(){return moves;},set:function(v){moves=Math.max(0,v|0);movesEl.textContent=moves;}}
+  ]};
 })();
 </script>
 </body>

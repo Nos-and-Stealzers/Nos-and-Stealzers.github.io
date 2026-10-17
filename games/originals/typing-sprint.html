@@ -104,6 +104,15 @@
   }
   document.getElementById("start").addEventListener("click",begin);
   document.getElementById("next").addEventListener("click",function(){totalKeys=0;errKeys=0;lastLen=0;begin();});
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Typing Sprint",cheats:[
+    {id:"word",label:"Type the next word",type:"button",run:function(){if(inp.disabled)return;
+      var v=inp.value,ok=0;while(ok<v.length&&v[ok]===text[ok])ok++;var end=text.indexOf(" ",ok+1);if(end<0)end=text.length;else end++;
+      inp.value=text.slice(0,end);inp.dispatchEvent(new Event("input"));inp.focus();}},
+    {id:"finish",label:"Finish the text",type:"button",run:function(){if(inp.disabled)return;if(!started){started=true;t0=performance.now()-15000;}
+      inp.value=text;inp.dispatchEvent(new Event("input"));}},
+    {id:"best",label:"Best (wpm)",type:"value",noLock:true,get:function(){return best;},set:function(v){best=Math.max(0,v|0);localStorage.setItem("otype.best",best);document.getElementById("best").textContent=best;}}
+  ]};
 })();
 </script>
 </body>

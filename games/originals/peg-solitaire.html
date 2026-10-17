@@ -126,6 +126,16 @@
   });
   document.getElementById("new").addEventListener("click",reset);
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Peg Solitaire",cheats:[
+    {id:"remove",label:"Remove a peg",type:"button",run:function(){history.push(clone(g));
+      var pegs=[];for(var r=0;r<7;r++)for(var c=0;c<7;c++)if(g[r][c]===1&&!(r===3&&c===3))pegs.push([r,c]);
+      if(pegs.length>1){var p=pegs[(Math.random()*pegs.length)|0];g[p[0]][p[1]]=0;}sel=null;render();checkEnd();}},
+    {id:"win",label:"Leave one peg",type:"button",run:function(){history.push(clone(g));
+      for(var r=0;r<7;r++)for(var c=0;c<7;c++)if(g[r][c]===1)g[r][c]=0;g[3][3]=1;sel=null;render();checkEnd();}},
+    {id:"hint",label:"Show a legal jump",type:"button",run:function(){for(var r=0;r<7;r++)for(var c=0;c<7;c++)
+      if(g[r][c]===1&&targets(r,c).length){sel=[r,c];render();return;}}}
+  ]};
 })();
 </script>
 </body>

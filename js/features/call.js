@@ -18,7 +18,9 @@
     timer: null,
     ringTimer: null,
     ringing: null,       // an incoming call awaiting an answer
-    startedAt: 0
+    startedAt: 0,
+    volume: 1,           // remote audio volume, 0..1
+    sink: ""             // chosen speaker (setSinkId), when supported
   };
 
   var root, bar, tiles, statusEl, timerEl, ringEl;
@@ -45,15 +47,21 @@
     ringEl.setAttribute("aria-label", "Incoming call");
     root.appendChild(ringEl);
 
-    /* --- the live call panel ---
-       Collapsed it's a slim card (who, status, mute, end). Expanded it adds the
-       video tiles and every control; "big" fills the screen. */
+    /* --- the live call window ---
+       A floating window: drag it by its header, resize it from any edge or
+       corner. Collapsed it's a slim card (who, status, mute, end). Expanded
+       it adds the video tiles and every control; "big" fills the screen.
+       Where you leave it and how big you made it is remembered. */
     bar = el("div", "callbar");
     bar.hidden = true;
     bar.setAttribute("role", "region");
     bar.setAttribute("aria-label", "Call");
 
     var head = el("div", "callbar-head");
+    head.title = "Drag to move · double-click to show or hide video";
+    var grip = el("span", "callbar-grip");
+    grip.appendChild(window.UI.icon("grip"));
+    head.appendChild(grip);
     var who = el("div", "callbar-who");
     who.setAttribute("aria-hidden", "true");
     head.appendChild(who);
@@ -64,6 +72,9 @@
     bar._title = title;
     textWrap.appendChild(title);
     var line = el("span", "callbar-line");
+    var dot = el("span", "callbar-dot");
+    dot.setAttribute("aria-hidden", "true");
+    line.appendChild(dot);
     statusEl = el("span", "callbar-status", "Connecting…");
     statusEl.setAttribute("aria-live", "polite");
     line.appendChild(statusEl);
@@ -78,32 +89,25 @@
       b.title = label;
       b.setAttribute("aria-label", label);
       b.appendChild(window.UI.icon(iconName));
-      b.addEventListener("click", onClick);
+      b.addEventListener("click", function (e) { e.stopPropagation(); onClick(b); });
       head.appendChild(b);
       return b;
     }
-    var toggle = headBtn("expand", "Show video", "callbar-toggle", function () {
-      var open = bar.classList.toggle("is-expanded");
-      toggle.title = open ? "Hide video" : "Show video";
-      toggle.setAttribute("aria-label", toggle.title);
-      if (!open) root.classList.remove("is-big");
-    });
-    headBtn("popout", "Full screen", "callbar-big", function () {
-      var big = root.classList.toggle("is-big");
-      if (big) bar.classList.add("is-expanded");
-    });
+    headBtn("expand", "Show video", "callbar-toggle", function () { setExpanded(!bar.classList.contains("is-expanded")); });
+    headBtn("popout", "Full screen", "callbar-big", function () { setBig(!bar.classList.contains("is-big")); });
     bar.appendChild(head);
 
     tiles = el("div", "calltiles");
     bar.appendChild(tiles);
 
-    /* Mute and End always show; camera and screen share join them once the
-       panel is expanded (a plain voice call stays tiny). */
+    /* Mute and End always show; camera, screen share and settings join them
+       once the panel is expanded (a plain voice call stays tiny). */
     var deck = el("div", "callbar-deck");
     [
-      ["mute",   "mic",    "Mute",         toggleMute,   "primary"],
-      ["cam",    "video",  "Camera",       toggleCam,    "secondary"],
-      ["screen", "screen", "Share screen", toggleScreen, "secondary"]
+      ["mute",     "mic",    "Mute",         toggleMute,   "primary"],
+      ["cam",      "video",  "Camera",       toggleCam,    "secondary"],
+      ["screen",   "screen", "Share screen", toggleScreen, "secondary"],
+      ["settings", "gear",   "Call settings", function (b) { toggleSettings(b); }, "secondary"]
     ].forEach(function (spec) {
       var b = el("button", "callbtn callbtn-" + spec[4]);
       b.type = "button";
@@ -111,10 +115,11 @@
       b.dataset.icon = spec[1];
       b.title = spec[2];
       b.setAttribute("aria-label", spec[2]);
-      b.setAttribute("aria-pressed", "false");
+      if (spec[0] !== "settings") b.setAttribute("aria-pressed", "false");
+      else b.setAttribute("aria-haspopup", "true");
       b.appendChild(window.UI.icon(spec[1], "callbtn-ico"));
       b.appendChild(el("span", "callbtn-lbl", spec[2]));
-      b.addEventListener("click", function () { spec[3](); });
+      b.addEventListener("click", function () { spec[3](b); });
       deck.appendChild(b);
     });
 
@@ -128,8 +133,450 @@
     deck.appendChild(end);
 
     bar.appendChild(deck);
+
+    /* Eight resize handles: four edges, four corners. */
+    ["n", "s", "e", "w", "ne", "nw", "se", "sw"].forEach(function (dir) {
+      var h = el("span", "callbar-rz callbar-rz-" + dir);
+      h.dataset.dir = dir;
+      h.setAttribute("aria-hidden", "true");
+      bar.appendChild(h);
+    });
+
     root.appendChild(bar);
     document.body.appendChild(root);
+
+    installWindowing(head);
+  }
+
+  /* ---------------------------------------------------- window geometry */
+
+  var GEO_KEY = "ach:callbox";
+  var MIN_W = 300, MIN_H = 240, EDGE = 8;
+  var geo = readGeo();
+
+  function readGeo() {
+    try {
+      var g = JSON.parse(window.localStorage.getItem(GEO_KEY) || "null");
+      if (g && isFinite(g.x) && isFinite(g.y)) return g;
+    } catch (e) {}
+    return null;
+  }
+  function writeGeo() {
+    try {
+      if (geo) window.localStorage.setItem(GEO_KEY, JSON.stringify(geo));
+      else window.localStorage.removeItem(GEO_KEY);
+    } catch (e) {}
+  }
+
+  function viewport() {
+    return { w: document.documentElement.clientWidth || window.innerWidth, h: window.innerHeight };
+  }
+
+  /* Put the window where geo says, kept fully on screen. With no geo it sits
+     in its default corner (CSS). Big mode ignores all of this. */
+  function applyGeo() {
+    if (!bar) return;
+    var s = bar.style;
+    if (!geo || bar.classList.contains("is-big")) {
+      s.left = s.top = s.width = s.height = "";
+      s.right = s.bottom = "";
+      bar.classList.remove("is-moved", "is-sized");
+      return;
+    }
+    var vp = viewport();
+    var expanded = bar.classList.contains("is-expanded");
+    bar.classList.add("is-moved");
+    s.right = "auto";
+    s.bottom = "auto";
+    if (expanded && geo.w) {
+      s.width = Math.min(Math.max(geo.w, MIN_W), vp.w - EDGE * 2) + "px";
+      bar.classList.toggle("is-sized", !!geo.h);
+      s.height = geo.h ? Math.min(Math.max(geo.h, MIN_H), vp.h - EDGE * 2) + "px" : "";
+    } else {
+      s.width = "";
+      s.height = "";
+      bar.classList.remove("is-sized");
+    }
+    var r = bar.getBoundingClientRect();
+    var x = Math.min(Math.max(geo.x, EDGE), Math.max(EDGE, vp.w - r.width - EDGE));
+    var y = Math.min(Math.max(geo.y, EDGE), Math.max(EDGE, vp.h - r.height - EDGE));
+    s.left = x + "px";
+    s.top = y + "px";
+  }
+
+  /* The show/hide-video button always says what it will do next. */
+  function syncToggle(open) {
+    var toggle = bar.querySelector(".callbar-toggle");
+    if (!toggle) return;
+    toggle.title = open ? "Hide video" : "Show video";
+    toggle.setAttribute("aria-label", toggle.title);
+    toggle.replaceChild(window.UI.icon(open ? "shrink" : "expand"), toggle.firstChild);
+  }
+
+  function setExpanded(open) {
+    if (!bar) return;
+    bar.classList.toggle("is-expanded", !!open);
+    syncToggle(!!open);
+    if (!open && bar.classList.contains("is-big")) setBig(false);
+    applyGeo();
+    closeSettings();
+  }
+
+  function setBig(big) {
+    if (!bar) return;
+    if (big) bar.classList.add("is-expanded");
+    bar.classList.toggle("is-big", !!big);
+    root.classList.toggle("is-big", !!big);
+    var b = bar.querySelector(".callbar-big");
+    if (b) {
+      b.title = big ? "Exit full screen" : "Full screen";
+      b.setAttribute("aria-label", b.title);
+    }
+    if (big) syncToggle(true);
+    applyGeo();
+  }
+
+  function installWindowing(head) {
+    /* ---- drag by the header ---- */
+    var drag = null;
+    head.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0 || bar.classList.contains("is-big")) return;
+      if (e.target.closest("button")) return;
+      var r = bar.getBoundingClientRect();
+      drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, x: r.left, y: r.top, moved: false };
+      try { head.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    head.addEventListener("pointermove", function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+      if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+      if (!drag.moved) {
+        drag.moved = true;
+        bar.classList.add("is-dragging");
+        var r0 = bar.getBoundingClientRect();
+        geo = geo || {};
+        if (bar.classList.contains("is-expanded") && !geo.w) geo.w = r0.width;
+      }
+      var vp = viewport();
+      var r = bar.getBoundingClientRect();
+      var x = drag.x + dx, y = drag.y + dy;
+      /* Snap to the screen edges when close. */
+      if (x < EDGE + 14) x = EDGE;
+      if (y < EDGE + 14) y = EDGE;
+      if (vp.w - (x + r.width) < EDGE + 14) x = vp.w - r.width - EDGE;
+      if (vp.h - (y + r.height) < EDGE + 14) y = vp.h - r.height - EDGE;
+      geo.x = x;
+      geo.y = y;
+      applyGeo();
+    });
+    function endDrag(e) {
+      if (!drag || (e && e.pointerId !== drag.id)) return;
+      var moved = drag.moved;
+      drag = null;
+      bar.classList.remove("is-dragging");
+      if (moved) writeGeo();
+    }
+    head.addEventListener("pointerup", endDrag);
+    head.addEventListener("pointercancel", endDrag);
+    head.addEventListener("dblclick", function (e) {
+      if (e.target.closest("button")) return;
+      setExpanded(!bar.classList.contains("is-expanded"));
+    });
+
+    /* ---- resize from edges and corners ---- */
+    var rz = null;
+    bar.addEventListener("pointerdown", function (e) {
+      var h = e.target.closest && e.target.closest(".callbar-rz");
+      if (!h || e.button !== 0 || bar.classList.contains("is-big")) return;
+      e.preventDefault();
+      if (!bar.classList.contains("is-expanded")) setExpanded(true);
+      var r = bar.getBoundingClientRect();
+      rz = { id: e.pointerId, dir: h.dataset.dir, sx: e.clientX, sy: e.clientY,
+             x: r.left, y: r.top, w: r.width, h: r.height, handle: h };
+      try { h.setPointerCapture(e.pointerId); } catch (err) {}
+      bar.classList.add("is-resizing");
+    });
+    bar.addEventListener("pointermove", function (e) {
+      if (!rz || e.pointerId !== rz.id) return;
+      var vp = viewport();
+      var dx = e.clientX - rz.sx, dy = e.clientY - rz.sy;
+      var x = rz.x, y = rz.y, w = rz.w, h = rz.h;
+      if (rz.dir.indexOf("e") !== -1) w = rz.w + dx;
+      if (rz.dir.indexOf("s") !== -1) h = rz.h + dy;
+      if (rz.dir.indexOf("w") !== -1) { w = rz.w - dx; x = rz.x + dx; }
+      if (rz.dir.indexOf("n") !== -1) { h = rz.h - dy; y = rz.y + dy; }
+      var maxW = vp.w - EDGE * 2, maxH = vp.h - EDGE * 2;
+      if (w < MIN_W) { if (rz.dir.indexOf("w") !== -1) x -= MIN_W - w; w = MIN_W; }
+      if (h < MIN_H) { if (rz.dir.indexOf("n") !== -1) y -= MIN_H - h; h = MIN_H; }
+      w = Math.min(w, maxW);
+      h = Math.min(h, maxH);
+      geo = { x: x, y: y, w: w, h: h };
+      applyGeo();
+    });
+    function endResize(e) {
+      if (!rz || (e && e.pointerId !== rz.id)) return;
+      rz = null;
+      bar.classList.remove("is-resizing");
+      writeGeo();
+    }
+    bar.addEventListener("pointerup", endResize);
+    bar.addEventListener("pointercancel", endResize);
+
+    /* Keep it on screen when the window changes size. */
+    window.addEventListener("resize", function () { if (bar && !bar.hidden) applyGeo(); });
+
+    /* Esc leaves big mode. */
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape" || !bar || bar.hidden || e.defaultPrevented) return;
+      /* Leave Escape to whatever has focus outside the call (chat, dialogs),
+         unless the call has the screen to itself. */
+      var inCall = bar.contains(document.activeElement);
+      if (!inCall && !bar.classList.contains("is-big")) return;
+      if (!inCall && document.querySelector(".sheet:not([hidden]), dialog[open], .cdock.is-open")) return;
+      if (settingsEl && !settingsEl.hidden) { closeSettings(); return; }
+      if (bar.classList.contains("is-big")) setBig(false);
+    });
+  }
+
+  function resetWindow() {
+    geo = null;
+    writeGeo();
+    applyGeo();
+    window.UI.toast("Call window moved back to the corner");
+  }
+
+  /* ----------------------------------------------------- settings popover */
+
+  var settingsEl = null;
+
+  function closeSettings() {
+    if (settingsEl) settingsEl.hidden = true;
+    var b = bar && bar.querySelector('[data-act="settings"]');
+    if (b) b.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleSettings(btn) {
+    if (settingsEl && !settingsEl.hidden) { closeSettings(); return; }
+    if (!settingsEl) {
+      settingsEl = el("div", "callset");
+      settingsEl.setAttribute("role", "dialog");
+      settingsEl.setAttribute("aria-label", "Call settings");
+      bar.appendChild(settingsEl);
+      document.addEventListener("pointerdown", function (e) {
+        if (!settingsEl || settingsEl.hidden) return;
+        if (settingsEl.contains(e.target) || (e.target.closest && e.target.closest('[data-act="settings"]'))) return;
+        closeSettings();
+      }, true);
+    }
+    settingsEl.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    drawSettings();
+  }
+
+  var settingsGen = 0;
+  function drawSettings() {
+    var box = settingsEl;
+    var gen = ++settingsGen;
+    box.innerHTML = "";
+    var headRow = el("div", "callset-head");
+    headRow.appendChild(el("strong", null, "Call settings"));
+    var x = el("button", "callbar-btn");
+    x.type = "button";
+    x.setAttribute("aria-label", "Close");
+    x.appendChild(window.UI.icon("close"));
+    x.addEventListener("click", closeSettings);
+    headRow.appendChild(x);
+    box.appendChild(headRow);
+
+    var md = navigator.mediaDevices;
+    var list = md && md.enumerateDevices ? md.enumerateDevices() : Promise.resolve([]);
+    list.then(function (devices) {
+      if (gen !== settingsGen || box.hidden) return;   // reopened or closed meanwhile
+      function picker(label, kind, current, onPick) {
+        var opts = devices.filter(function (d) { return d.kind === kind; });
+        var row = el("label", "callset-row");
+        row.appendChild(el("span", null, label));
+        var sel = document.createElement("select");
+        if (!opts.length) {
+          var o0 = document.createElement("option");
+          o0.textContent = "None found";
+          sel.appendChild(o0);
+          sel.disabled = true;
+        }
+        opts.forEach(function (d, i) {
+          var o = document.createElement("option");
+          o.value = d.deviceId;
+          o.textContent = d.label || (label + " " + (i + 1));
+          if (d.deviceId === current) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.addEventListener("change", function () { onPick(sel.value); });
+        row.appendChild(sel);
+        box.appendChild(row);
+      }
+      var mic = state.local && state.local.getAudioTracks()[0];
+      var cam = state.local && state.local.getVideoTracks()[0];
+      picker("Microphone", "audioinput", mic && mic.getSettings ? mic.getSettings().deviceId : "", function (id) { switchDevice("audio", id); });
+      picker("Camera", "videoinput", cam && cam.getSettings ? cam.getSettings().deviceId : "", function (id) { switchDevice("video", id); });
+      function eachRemoteAudio(fn) {
+        Object.keys(state.peers).forEach(function (k) {
+          var a = state.peers[k].el && state.peers[k].el._audio;
+          if (a) fn(a);
+        });
+      }
+      var probe = document.createElement("audio");
+      if (typeof probe.setSinkId === "function") {
+        picker("Speaker", "audiooutput", state.sink || "default", function (id) {
+          state.sink = id;
+          eachRemoteAudio(function (a) { if (a.setSinkId) a.setSinkId(id).catch(function () {}); });
+        });
+      }
+
+      var vol = el("label", "callset-row");
+      vol.appendChild(el("span", null, "Call volume"));
+      var range = document.createElement("input");
+      range.type = "range";
+      range.min = "0"; range.max = "1"; range.step = "0.05";
+      range.value = String(state.volume);
+      range.addEventListener("input", function () {
+        state.volume = Number(range.value);
+        eachRemoteAudio(function (a) { a.volume = state.volume; });
+      });
+      vol.appendChild(range);
+      box.appendChild(vol);
+
+      var acts = el("div", "callset-acts");
+      var reset = el("button", "btn btn-sm btn-flat", "Reset window position");
+      reset.type = "button";
+      reset.addEventListener("click", function () { resetWindow(); closeSettings(); });
+      acts.appendChild(reset);
+      box.appendChild(acts);
+    });
+  }
+
+  /* Swap the microphone or camera mid-call without renegotiating. */
+  function switchDevice(kind, deviceId) {
+    if (!state.local || !navigator.mediaDevices) return;
+    /* Picking a camera while it's off only remembers the choice; it's used
+       the next time the camera goes on, rather than switching it on now. */
+    if (kind === "video" && (state.camOff || !state.local.getVideoTracks().length)) {
+      state.camDevice = deviceId;
+      window.UI.toast("Camera chosen. It's used when you turn your camera on.");
+      return;
+    }
+    var callAtStart = state.call;
+    var c = kind === "audio"
+      ? { audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } }
+      : { video: { deviceId: { exact: deviceId }, width: { ideal: 640 }, height: { ideal: 360 } } };
+    navigator.mediaDevices.getUserMedia(c).then(function (s) {
+      var track = kind === "audio" ? s.getAudioTracks()[0] : s.getVideoTracks()[0];
+      /* The call may have ended (or another begun) while the device opened. */
+      if (!track || !state.local || state.call !== callAtStart) {
+        s.getTracks().forEach(function (t) { t.stop(); });
+        return;
+      }
+      if (kind === "video") state.camDevice = deviceId;
+      var old = kind === "audio" ? state.local.getAudioTracks() : state.local.getVideoTracks();
+      old.forEach(function (t) { state.local.removeTrack(t); t.stop(); });
+      state.local.addTrack(track);
+      if (kind === "audio") {
+        track.enabled = !state.muted;
+        Object.keys(state.peers).forEach(function (id) {
+          var pc = state.peers[id].pc;
+          if (!pc) return;
+          pc.getSenders().forEach(function (snd) {
+            if (snd.track && snd.track.kind === "audio") snd.replaceTrack(track);
+          });
+        });
+        watchSpeaking(state.self, state.local);
+      } else {
+        if (!state.screen) publishVideo(track);
+        var tile = tileFor(state.self, "You");
+        if (!state.screen) {
+          tile._video.srcObject = state.local;
+          playMedia(tile._video);
+          refreshTile(tile, state.local);
+        }
+      }
+      window.UI.toast(kind === "audio" ? "Microphone switched" : "Camera switched");
+    }).catch(function () {
+      window.UI.toast("Couldn't switch to that device.");
+    });
+  }
+
+  /* ------------------------------------------------- speaking indicators */
+
+  /* A soft ring around whoever is talking, from the audio level of each
+     stream. One AudioContext, one timer, for every participant. */
+  var speak = { ctx: null, meters: {}, timer: null };
+
+  function watchSpeaking(userId, stream) {
+    var key = String(userId);
+    unwatchSpeaking(key);
+    if (!stream || !stream.getAudioTracks().length) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!speak.ctx) speak.ctx = new Ctx();
+      if (speak.ctx.state === "suspended") speak.ctx.resume().catch(function () {});
+      var src = speak.ctx.createMediaStreamSource(new window.MediaStream(stream.getAudioTracks()));
+      var an = speak.ctx.createAnalyser();
+      an.fftSize = 512;
+      src.connect(an);
+      speak.meters[key] = { src: src, an: an, buf: new Uint8Array(an.fftSize), level: 0 };
+    } catch (e) { return; }
+    if (!speak.timer) speak.timer = window.setInterval(meterTick, 150);
+  }
+
+  function unwatchSpeaking(key) {
+    var m = speak.meters[key];
+    if (!m) return;
+    try { m.src.disconnect(); } catch (e) {}
+    delete speak.meters[key];
+  }
+
+  function meterTick() {
+    if (speak.ctx && speak.ctx.state === "suspended") speak.ctx.resume().catch(function () {});
+    var any = false;
+    Object.keys(speak.meters).forEach(function (key) {
+      any = true;
+      var m = speak.meters[key];
+      m.an.getByteTimeDomainData(m.buf);
+      var sum = 0;
+      for (var i = 0; i < m.buf.length; i++) { var v = (m.buf[i] - 128) / 128; sum += v * v; }
+      var rms = Math.sqrt(sum / m.buf.length);
+      m.level = m.level * 0.6 + rms * 0.4;
+      var talking = m.level > 0.025 && !(key === String(state.self) && state.muted);
+      var tile = tiles && tiles.querySelector('[data-peer="' + key + '"]');
+      if (tile) tile.classList.toggle("is-speaking", talking);
+    });
+    if (!any) { window.clearInterval(speak.timer); speak.timer = null; }
+  }
+
+  function stopSpeaking() {
+    Object.keys(speak.meters).forEach(unwatchSpeaking);
+    window.clearInterval(speak.timer);
+    speak.timer = null;
+    /* Free the audio device between calls; a new call makes a fresh one. */
+    if (speak.ctx) { try { speak.ctx.close(); } catch (e) {} speak.ctx = null; }
+  }
+
+  /* ------------------------------------------------------------ spotlight */
+
+  /* Click a tile to make it the big one; click it again to go back to the
+     grid. Double-click a tile with video to watch it full screen. */
+  function spotlight(tile) {
+    var on = !tile.classList.contains("is-spot");
+    Array.prototype.forEach.call(tiles.children, function (t) { t.classList.remove("is-spot"); });
+    tile.classList.toggle("is-spot", on);
+    tiles.classList.toggle("has-spot", on);
+  }
+
+  function layoutTiles() {
+    if (!tiles) return;
+    var n = tiles.children.length;
+    tiles.dataset.count = String(Math.min(n, 9));
+    if (!tiles.querySelector(".is-spot")) tiles.classList.remove("has-spot");
   }
 
   /* Header: who you're talking to, as faces and a name line. */
@@ -159,9 +606,7 @@
   function autoExpandForVideo() {
     if (!bar || bar._autoExpanded) return;
     bar._autoExpanded = true;
-    bar.classList.add("is-expanded");
-    var toggle = bar.querySelector(".callbar-toggle");
-    if (toggle) { toggle.title = "Collapse"; toggle.setAttribute("aria-label", "Collapse"); }
+    if (!bar.classList.contains("is-expanded")) setExpanded(true);
   }
 
   function status(text) {
@@ -195,7 +640,10 @@
     video.playsInline = true;
     video.setAttribute("playsinline", "");        // iOS Safari needs the attribute
     video.setAttribute("autoplay", "");
-    video.muted = userId === state.self;    // never hear yourself
+    /* Video is always muted: remote sound goes through the dedicated <audio>
+       sink below (so volume and speaker choice apply), and you never hear yourself. */
+    video.muted = true;
+    video.setAttribute("muted", "");
     tile.appendChild(video);
 
     /* Dedicated audio sink for REMOTE peers. */
@@ -203,6 +651,8 @@
       var audio = document.createElement("audio");
       audio.autoplay = true;
       audio.setAttribute("autoplay", "");
+      audio.volume = state.volume;
+      if (state.sink && audio.setSinkId) audio.setSinkId(state.sink).catch(function () {});
       tile.appendChild(audio);
       tile._audio = audio;
     }
@@ -214,8 +664,29 @@
     var name = el("span", "calltile-name", label || "…");
     tile.appendChild(name);
 
+    if (userId === state.self) {
+      var mic = el("span", "calltile-muted");
+      mic.appendChild(window.UI.icon("micOff"));
+      mic.title = "You're muted";
+      tile.appendChild(mic);
+      tile.classList.add("is-self");
+    }
+
+    tile.title = "Click to spotlight · double-click for full screen";
+    tile.addEventListener("click", function () { spotlight(tile); });
+    tile.addEventListener("dblclick", function () {
+      if (!tile.classList.contains("has-video")) return;
+      var fs = tile.requestFullscreen || tile.webkitRequestFullscreen;
+      if (document.fullscreenElement === tile && document.exitFullscreen) document.exitFullscreen();
+      else if (fs) { try { var r = fs.call(tile); if (r && r.catch) r.catch(function () {}); } catch (e) {} }
+    });
+
     tile._video = video;
-    tiles.appendChild(tile);
+    /* You always sit last, so other people lead the grid. */
+    var selfTile = tiles.querySelector(".calltile.is-self");
+    if (selfTile && userId !== state.self) tiles.insertBefore(tile, selfTile);
+    else tiles.appendChild(tile);
+    layoutTiles();
     return tile;
   }
 
@@ -368,6 +839,7 @@
     }).then(function (stream) {
       state.local = stream;
       state.camOff = !wantVideo;
+      watchSpeaking(state.self, stream);
       var tile = tileFor(state.self, "You");
       tile._video.srcObject = stream;
       playMedia(tile._video);
@@ -387,7 +859,11 @@
     state.muted = !state.muted;
     state.local.getAudioTracks().forEach(function (t) { t.enabled = !state.muted; });
     mark("mute", state.muted);
-    status(state.muted ? "Muted" : "In a call");
+    if (tiles) {
+      var me = tiles.querySelector(".calltile.is-self");
+      if (me) me.classList.toggle("is-muted", state.muted);
+    }
+    if (state.startedAt) status(state.muted ? "Muted" : "In a call");
   }
 
   function toggleCam() {
@@ -403,7 +879,9 @@
     }
 
     /* Started audio-only: acquire a camera now and push it to every peer. */
-    navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 360 } } })
+    var camWant = { width: { ideal: 640 }, height: { ideal: 360 } };
+    if (state.camDevice) camWant.deviceId = { ideal: state.camDevice };
+    navigator.mediaDevices.getUserMedia({ video: camWant })
       .then(function (cam) {
         var track = cam.getVideoTracks()[0];
         state.local.addTrack(track);
@@ -585,6 +1063,7 @@
         playMedia(entry.el._audio);
       }
       refreshTile(entry.el, stream);
+      if (e.track && e.track.kind === "audio") watchSpeaking(userId, stream);
       /* Tracks can go live after the tile is drawn. */
       stream.addEventListener("addtrack", function () {
         playMedia(entry.el._video);
@@ -600,8 +1079,9 @@
         entry.restarted = false;   // a later drop gets its own restart attempt
         if (!state.startedAt) {
           state.startedAt = Date.now();
-          status("In a call");
+          status(state.muted ? "Muted" : "In a call");
         }
+        if (bar) bar.classList.add("is-connected");
       }
       if (pc.connectionState === "failed") {
         /* A direct P2P path often fails on strict NATs / school-firewall networks even though the TURN relay (see… */
@@ -736,7 +1216,9 @@
     if (!entry) return;
     if (entry.pc) entry.pc.close();
     if (entry.el) entry.el.remove();
+    unwatchSpeaking(String(userId));
     delete state.peers[userId];
+    layoutTiles();
 
     /* keepAlive: a "bye" that might be a rejoin (peer navigated). Don't run the
        "everyone left" hangup — pump() re-offers if the peer is still in the
@@ -832,9 +1314,14 @@
 
     stopRinging();
     state.ringing = null;
+    /* Music from the built-in player would talk over the call. */
+    if (window.Music && window.Music.hush) window.Music.hush();
     root.hidden = false;
     bar.hidden = false;
     ringEl.hidden = true;
+    bar.dataset.kind = call && call.kind === "video" ? "video" : "audio";
+    if (call && call.kind === "video") { setExpanded(true); bar._autoExpanded = true; }
+    applyGeo();
     status(call && call.state === "ringing" ? "Ringing…" : "Connecting…");
     if (timerEl) timerEl.textContent = "";
     drawWho();
@@ -930,7 +1417,9 @@
       if (state.peers[k].pc) state.peers[k].pc.close();
     });
     state.peers = {};
-    if (tiles) tiles.innerHTML = "";
+    stopSpeaking();
+    if (tiles) { tiles.innerHTML = ""; tiles.classList.remove("has-spot"); }
+    closeSettings();
 
     [state.local, state.screen].forEach(function (s) {
       if (s) s.getTracks().forEach(function (t) { t.stop(); });
@@ -944,7 +1433,9 @@
 
     if (bar) {
       bar.hidden = true;
-      bar.classList.remove("is-min", "is-expanded");
+      setBig(false);
+      setExpanded(false);
+      bar.classList.remove("is-min", "is-connected");
       bar._autoExpanded = false;
       bar._whoKey = null;
       ["mute", "cam", "screen"].forEach(function (a) { mark(a, false); });

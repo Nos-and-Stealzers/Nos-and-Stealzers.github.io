@@ -33,6 +33,7 @@
   var best=+(localStorage.getItem("odoodle.best")||0);
   document.getElementById("b").textContent=best;
   var px,py,vx,vy,plats,score,running,dead,timer,camY,keys={};
+  var CH={net:false,spring:false};
 
   function make(){
     plats=[];
@@ -50,7 +51,7 @@
     plats.forEach(function(p){if(p.moving){p.x+=p.d*1.4;if(p.x<0||p.x>W-p.w)p.d*=-1;}});
     // land on platform while falling
     if(vy>0){plats.forEach(function(p){
-      if(px+14>p.x&&px-14<p.x+p.w&&py+18>p.y&&py+18<p.y+14){vy=-11.5;}
+      if(px+14>p.x&&px-14<p.x+p.w&&py+18>p.y&&py+18<p.y+14){vy=CH.spring?-17:-11.5;}
     });}
     // scroll when high
     if(py<H*0.42){var dy=H*0.42-py;py=H*0.42;camY+=dy;score=Math.max(score,(camY/10)|0);
@@ -60,7 +61,7 @@
       while(plats.length<9){var top=Math.min.apply(null,plats.map(function(p){return p.y;}));
         plats.push({x:Math.random()*(W-60),y:top-Math.random()*40-42,w:60,moving:score>200&&Math.random()<0.35,d:1});}
     }
-    if(py>H+20){end();return;}
+    if(py>H+20){if(CH.net){py=H-30;vy=-14;}else{end();return;}}
     draw();
   }
   function end(){dead=true;running=false;clearInterval(timer);
@@ -102,6 +103,14 @@
     if(e.gamma==null)return;keys.left=e.gamma<-4;keys.right=e.gamma>4;});}
   document.getElementById("start").addEventListener("click",make);
   make();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Doodle Jump",cheats:[
+    {id:"net",label:"Safety net",type:"toggle",set:function(on){CH.net=on;},hint:"Bounce back up instead of falling out"},
+    {id:"spring",label:"Super springs",type:"toggle",set:function(on){CH.spring=on;}},
+    {id:"rocket",label:"Rocket boost",type:"button",run:function(){if(running)vy=-30;}},
+    {id:"wide",label:"Wide platforms",type:"button",run:function(){plats.forEach(function(p){p.w=110;p.x=Math.min(p.x,W-110);});}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);camY=score*10;document.getElementById("s").textContent=score;}}
+  ]};
 })();
 </script>
 </body>

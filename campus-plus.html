@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Campus+ — Arcade Campus Hub</title>
-  <meta name="description" content="Paste a YouTube link, it plays right here. Build playlists, share them, or keep them to yourself.">
+  <meta name="description" content="Paste a YouTube, TikTok or Instagram link, it plays right here. Build playlists, share them, or keep them to yourself.">
   <meta name="theme-color" content="#0c0d10">
   <meta name="robots" content="noindex,follow">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
@@ -25,7 +25,8 @@
       <div class="cp-hero-text">
         <span class="label">Campus<span class="plus-mark">+</span></span>
         <h1>Watch together, keep what you find</h1>
-        <p>Paste a YouTube link to play it right here. Save videos into playlists, queue them up, and share the good ones.</p>
+        <p>Paste a YouTube, TikTok or Instagram link to play it right here. Save videos into playlists, queue them up, and share the good ones.</p>
+        <div class="cp-sources" aria-label="Supported sites"><span class="cp-src cp-src-youtube">YouTube</span><span class="cp-src cp-src-tiktok">TikTok</span><span class="cp-src cp-src-instagram">Instagram</span></div>
         <p class="cp-member" id="cp-membership" hidden></p>
       </div>
     </header>
@@ -34,15 +35,15 @@
     <section class="cp-locked" id="cp-locked" hidden aria-labelledby="locked-h">
       <span class="cp-locked-ico" aria-hidden="true">+</span>
       <h2 id="locked-h">Campus+ is for members</h2>
-      <p id="cp-locked-msg">Campus+ lets you watch YouTube videos and build playlists right here. Ask a staff member to turn it on for your account.</p>
+      <p id="cp-locked-msg">Campus+ lets you watch YouTube, TikTok and Instagram videos and build playlists right here. Ask a staff member to turn it on for your account.</p>
       <a class="btn btn-cta" id="cp-locked-cta" href="login.html?next=campus-plus.html" hidden>Sign in</a>
     </section>
 
     <div id="cp-tools" hidden>
 
       <form class="cp-paste" id="cp-form" autocomplete="off">
-        <label class="sr-only" for="cp-url">YouTube link</label>
-        <input type="text" id="cp-url" placeholder="Paste a YouTube link — youtube.com/watch?v=… or youtu.be/…" inputmode="url" spellcheck="false">
+        <label class="sr-only" for="cp-url">Video link</label>
+        <input type="text" id="cp-url" placeholder="Paste a YouTube, TikTok or Instagram link" inputmode="url" spellcheck="false">
         <button class="btn btn-cta" type="submit" id="cp-play">Play</button>
       </form>
       <p class="cp-note" id="cp-url-note" role="status"></p>

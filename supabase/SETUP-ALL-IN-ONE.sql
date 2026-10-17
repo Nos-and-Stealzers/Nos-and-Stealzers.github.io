@@ -4352,7 +4352,7 @@ create index if not exists playlists_public_idx on public.playlists(is_public, u
 create table if not exists public.playlist_items (
   id          bigint generated always as identity primary key,
   playlist_id bigint not null references public.playlists(id) on delete cascade,
-  video_id    text not null check (video_id ~ '^[A-Za-z0-9_-]{11}$'),  -- YouTube's fixed-length id
+  video_id    text not null check (video_id ~ '^([A-Za-z0-9_-]{11}|tt:[0-9]{8,25}|ig:[A-Za-z0-9_-]{5,40})$'),  -- YouTube id, tt:<TikTok id> or ig:<Instagram shortcode>
   title       text not null default '' check (char_length(title) <= 200),
   added_by    uuid references public.profiles(id) on delete set null,
   position    integer not null default 0,
@@ -4481,8 +4481,8 @@ begin
   if owner is null then raise exception 'No such playlist.'; end if;
   if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
 
-  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
-    raise exception 'That does not look like a valid YouTube link.';
+  if p_video_id !~ '^([A-Za-z0-9_-]{11}|tt:[0-9]{8,25}|ig:[A-Za-z0-9_-]{5,40})$' then
+    raise exception 'That does not look like a valid YouTube, TikTok or Instagram link.';
   end if;
 
   select coalesce(max(position), -1) + 1 into next_pos
@@ -4764,8 +4764,8 @@ begin
   if owner is null then raise exception 'No such playlist.'; end if;
   if owner <> auth.uid() then raise exception 'Not your playlist.'; end if;
 
-  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
-    raise exception 'That does not look like a valid YouTube link.';
+  if p_video_id !~ '^([A-Za-z0-9_-]{11}|tt:[0-9]{8,25}|ig:[A-Za-z0-9_-]{5,40})$' then
+    raise exception 'That does not look like a valid YouTube, TikTok or Instagram link.';
   end if;
 
   select count(*) into cur_items from public.playlist_items where playlist_id = p_playlist_id;
@@ -4919,8 +4919,8 @@ begin
     raise exception 'Campus+ is a members-only feature. Ask staff to enable it for your account.';
   end if;
 
-  if p_video_id !~ '^[A-Za-z0-9_-]{11}$' then
-    raise exception 'That does not look like a valid YouTube link.';
+  if p_video_id !~ '^([A-Za-z0-9_-]{11}|tt:[0-9]{8,25}|ig:[A-Za-z0-9_-]{5,40})$' then
+    raise exception 'That does not look like a valid YouTube, TikTok or Instagram link.';
   end if;
 
   select count(*) into cur_items from public.playlist_items where playlist_id = p_playlist_id;
@@ -6080,3 +6080,11 @@ $$;
 
 revoke all on function public.admin_replace_email_account(text, boolean) from public, anon;
 grant execute on function public.admin_replace_email_account(text, boolean) to authenticated;
+
+-- #####################################################################
+-- ## 2026-10-16-campus-plus-sources.sql - TikTok + Instagram playlist ids
+-- #####################################################################
+
+alter table public.playlist_items drop constraint if exists playlist_items_video_id_check;
+alter table public.playlist_items add constraint playlist_items_video_id_check
+  check (video_id ~ '^([A-Za-z0-9_-]{11}|tt:[0-9]{8,25}|ig:[A-Za-z0-9_-]{5,40})$');

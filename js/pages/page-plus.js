@@ -139,6 +139,7 @@
       ["quickclick", "QuickClick", "Set your clicks or add a billion, and raise the mouse rating."],
       ["devlife", "devLife", "Set your money or add a million, and end the month early."],
       ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets super speed, super jump, every character unlocked and task skipping."],
+      ["original", "Arcade originals & built-in cheats", "Games made for (or wired into) this arcade, so every cheat is exact: invincibility, autopilots, instant solves, level skips, extra lives and moves, and any score you like."],
       ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
     ];
     function drawModList() {

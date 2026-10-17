@@ -53,9 +53,10 @@
   };
   var KEYS=Object.keys(SHAPES);
   var grid,cur,nextP,pos,score,lines,level,dropMs,acc,last,running,dead,raf;
+  var CH={slow:false,onlyI:false,ghost:false};
 
   function empty(){var g=[];for(var y=0;y<ROWS;y++){g.push(new Array(COLS).fill(0));}return g;}
-  function rand(){return SHAPES[KEYS[(Math.random()*KEYS.length)|0]].map(function(r){return r.slice();});}
+  function rand(){if(CH.onlyI)return SHAPES.I.map(function(r){return r.slice();});return SHAPES[KEYS[(Math.random()*KEYS.length)|0]].map(function(r){return r.slice();});}
   function reset(){
     grid=empty();score=0;lines=0;level=1;dropMs=800;acc=0;dead=false;
     cur=rand();nextP=rand();pos={x:3,y:0};
@@ -126,7 +127,7 @@
     raf=requestAnimationFrame(loop);
     if(!running||dead)return;
     var now=performance.now();acc+=now-last;last=now;
-    if(acc>=dropMs){acc=0;step();sync();}
+    if(acc>=(CH.slow?Math.max(dropMs,1600):dropMs)){acc=0;step();sync();}
     draw();
   }
   document.addEventListener("keydown",function(e){
@@ -156,6 +157,18 @@
     document.getElementById("pause").textContent=running?"Pause":"Resume";
   });
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Tetris",cheats:[
+    {id:"onlyI",label:"Only long bars",type:"toggle",set:function(on){CH.onlyI=on;if(on){nextP=rand();drawNext();}}},
+    {id:"slow",label:"Slow drop",type:"toggle",set:function(on){CH.slow=on;}},
+    {id:"clear",label:"Clear the bottom 4 rows",type:"button",run:function(){if(dead)return;
+      for(var k=0;k<4;k++){grid.pop();grid.unshift(new Array(COLS).fill(0));}draw();}},
+    {id:"wipe",label:"Clear the board",type:"button",run:function(){if(dead)return;grid=empty();draw();}},
+    {id:"swap",label:"Swap current piece",type:"button",run:function(){if(dead)return;var t=cur;cur=nextP;nextP=t;
+      if(collide(cur,pos.x,pos.y)){var t2=cur;cur=nextP;nextP=t2;}drawNext();draw();}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);sync();}},
+    {id:"level",label:"Level",type:"value",noLock:true,get:function(){return level;},set:function(v){level=Math.max(1,Math.min(20,v|0));lines=(level-1)*10;dropMs=Math.max(90,800-(level-1)*70);sync();}}
+  ]};
 })();
 </script>
 </body>

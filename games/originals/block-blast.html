@@ -37,6 +37,7 @@
     [[0,0],[1,0],[1,1],[1,2]],[[0,1],[1,0],[1,1],[1,2]],[[0,0],[0,1],[0,2],[0,3]]
   ];
   var S=document.getElementById("score");
+  var CH={nolose:false};
   for(var i=0;i<N*N;i++){var d=document.createElement("div");d.className="c";d.dataset.i=i;
     d.addEventListener("click",function(){place(+this.dataset.i);});grid.appendChild(d);cells.push(d);}
   function paint(){for(var i=0;i<N*N;i++)cells[i].style.background=board[i]||"#1d2027";}
@@ -73,7 +74,7 @@
     sel.node.classList.add("used");sel.node.style.outline="";sel=null;
     clearLines();paint();S.textContent=score;
     if(pieces.every(function(p){return p.classList.contains("used");}))newPieces();
-    if(noMoves())setTimeout(function(){alert("No moves left! Score "+score);},80);
+    if(!CH.nolose&&noMoves())setTimeout(function(){alert("No moves left! Score "+score);},80);
   }
   function clearLines(){
     var rowsFull=[],colsFull=[],r,c,i;
@@ -93,6 +94,21 @@
     return true;
   }
   newPieces();paint();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Block Blast",cheats:[
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);S.textContent=score;}},
+    {id:"pieces",label:"New pieces",type:"button",run:function(){sel=null;newPieces();}},
+    {id:"singles",label:"Give me three 1×1 blocks",type:"button",run:function(){
+      sel=null;newPieces();pieces.forEach(function(el){el.remove();});pieces=[];tray.innerHTML="";
+      for(var p=0;p<3;p++){var el=document.createElement("div");el.className="piece";el.style.gridTemplateColumns="repeat(1,16px)";
+        var b=document.createElement("div");b.className="pc";b.style.background=COLORS[p];el.appendChild(b);
+        (function(node,color){node.addEventListener("click",function(){if(node.classList.contains("used"))return;
+          document.querySelectorAll(".piece").forEach(function(n){n.style.outline="";});
+          node.style.outline="2px solid #f2b705";sel={shape:[[0,0]],color:color,node:node};});})(el,COLORS[p]);
+        tray.appendChild(el);pieces.push(el);}}},
+    {id:"clear",label:"Clear the board",type:"button",run:function(){board.fill(0);paint();}},
+    {id:"nolose",label:"Never run out of moves",type:"toggle",set:function(on){CH.nolose=on;}}
+  ]};
 })();
 </script>
 </body>

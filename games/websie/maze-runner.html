@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maze Runner</title>
+<style>
+  :root{--bg:#0f172a;--panel:#111827;--ink:#e5e7eb;--muted:#94a3b8;--accent:#22c55e;--accent2:#38bdf8;--danger:#fb7185}
+  *{box-sizing:border-box}html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(circle at top,#1e293b,#0f172a 55%,#020617);color:var(--ink)}
+  body{display:grid;place-items:center;padding:16px} .wrap{width:min(980px,100%);display:grid;gap:12px}
+  .hud,.menu,.footer{background:rgba(15,23,42,.72);backdrop-filter:blur(12px);border:1px solid rgba(148,163,184,.2);border-radius:18px;box-shadow:0 20px 60px rgba(2,6,23,.45)}
+  .hud{padding:12px 16px;display:flex;justify-content:space-between;gap:12px;align-items:center}.title{font-weight:800;letter-spacing:.08em;text-transform:uppercase}.small{color:var(--muted);font-size:14px}
+  .stage{position:relative;aspect-ratio:16/9;min-height:520px}.menu,.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:24px}.card{width:min(560px,100%);padding:28px;border-radius:24px;background:rgba(2,6,23,.72);border:1px solid rgba(148,163,184,.18)}
+  h1,h2,p{margin:0 0 12px} h1{font-size:clamp(34px,6vw,58px)} h2{font-size:24px} p{color:var(--muted);line-height:1.5}
+  .row{display:flex;flex-wrap:wrap;gap:10px}.btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;font-weight:700;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#03111d;cursor:pointer}.btn.secondary{background:#1f2937;color:var(--ink);border:1px solid rgba(148,163,184,.2)}.btn:active{transform:translateY(1px)}
+  canvas{width:100%;height:100%;display:block;background:#08111f;border-radius:24px;border:1px solid rgba(148,163,184,.16)}
+  .hidden{display:none}.footer{padding:10px 16px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud"><div><div class="title">Maze Runner</div><div class="small" id="hudText">Find 3 keys, reach the exit, avoid the guards.</div></div><div class="small" id="saveText"></div></div>
+  <div class="stage">
+    <canvas id="game" width="1280" height="720"></canvas>
+    <div class="menu" id="menu">
+      <div class="card">
+        <h1>Maze Runner</h1>
+        <p>Slip through the maze, collect three keys, then reach the green exit. Guards patrol predictable routes so the game stays fair, but each room still asks you to plan your path.</p>
+        <div class="row" style="margin-bottom:14px"><button class="btn" id="playBtn">Play</button><button class="btn secondary" id="continueBtn">Continue</button><button class="btn secondary" id="resetBtn">Reset Save</button></div>
+        <p class="small">Controls: WASD or arrow keys to move. Save data keeps your best time and unlocked stage.</p>
+      </div>
+    </div>
+    <div class="overlay hidden" id="overlay">
+      <div class="card"><h2 id="overlayTitle">Level Complete</h2><p id="overlayBody"></p><div class="row"><button class="btn" id="nextBtn">Next Run</button><button class="btn secondary" id="menuBtn">Main Menu</button></div></div>
+    </div>
+  </div>
+  <div class="footer">Browser save uses localStorage. Refresh-safe and file-friendly.</div>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const menu = document.getElementById('menu');
+  const overlay = document.getElementById('overlay');
+  const saveText = document.getElementById('saveText');
+  const hudText = document.getElementById('hudText');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayBody = document.getElementById('overlayBody');
+  const saveKey = 'maze-runner-save-v1';
+  const walls = [
+    [0,0,1280,24],[0,696,1280,24],[0,0,24,720],[1256,0,24,720],[120,96,24,480],[120,96,280,24],[200,172,24,420],[320,220,24,400],[420,96,24,300],[420,372,320,24],[520,172,24,300],[620,96,24,180],[720,220,24,300],[820,96,24,300],[920,220,24,400],[1020,96,24,280],[1020,452,160,24],[1120,220,24,280],[220,560,320,24],[520,500,180,24],[760,560,220,24],[280,320,120,24],[1040,620,120,24]
+  ];
+  const keys = [[150,620,false],[880,150,false],[1080,560,false]];
+  const CH = {god:false, ghost:false};
+  let save = loadSave();
+  let state = 'menu';
+  let level = save.level || 1;
+  let best = save.best || null;
+  let t = 0;
+  let msgTimer = 0;
+  const player = {x:56,y:56,w:20,h:20,speed:220,vx:0,vy:0,keys:0,spawn:{x:56,y:56}};
+  const exit = {x:1180,y:640,w:48,h:48};
+  const guards = [
+    {x:190,y:240,r:18,path:[[190,240],[470,240],[470,520],[190,520]],speed:120,seg:0,dir:1},
+    {x:760,y:140,r:18,path:[[760,140],[1060,140],[1060,380],[760,380]],speed:130,seg:0,dir:1},
+    {x:360,y:620,r:18,path:[[360,620],[360,340],[620,340],[620,620]],speed:110,seg:0,dir:1}
+  ];
+  const pressed = new Set();
+  addEventListener('keydown', e => { pressed.add(e.key.toLowerCase()); if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+  addEventListener('keyup', e => pressed.delete(e.key.toLowerCase()));
+  document.getElementById('playBtn').onclick = () => startRun(true);
+  document.getElementById('continueBtn').onclick = () => startRun(false);
+  document.getElementById('resetBtn').onclick = () => { localStorage.removeItem(saveKey); save = loadSave(); updateSaveText(); };
+  document.getElementById('menuBtn').onclick = showMenu;
+  document.getElementById('nextBtn').onclick = () => { level = Math.min(3, level + 1); persist(); startRun(true); };
+  function loadSave(){ try { return JSON.parse(localStorage.getItem(saveKey) || '{}'); } catch { return {}; } }
+  function persist(extra={}){ save = {...save, level, best, ...extra}; localStorage.setItem(saveKey, JSON.stringify(save)); updateSaveText(); }
+  function updateSaveText(){ saveText.textContent = `Stage ${level} | Best ${best ?? '—'}`; }
+  function resetRun(){ player.x = player.spawn.x; player.y = player.spawn.y; player.keys = 0; keys.forEach(k => k[2] = false); guards.forEach(g => { g.seg = 0; g.dir = 1; g.x = g.path[0][0]; g.y = g.path[0][1]; }); t = 0; msgTimer = 0; }
+  function startRun(fromMenu){ resetRun(); state = 'play'; menu.classList.add('hidden'); overlay.classList.add('hidden'); if(fromMenu) hudText.textContent = 'Collect all three keys and reach the exit.'; }
+  function showMenu(){ state = 'menu'; menu.classList.remove('hidden'); overlay.classList.add('hidden'); updateSaveText(); }
+  function rects(a,b){ return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+  function circleRect(cx,cy,r,rect){ const x = Math.max(rect.x, Math.min(cx, rect.x + rect.w)); const y = Math.max(rect.y, Math.min(cy, rect.y + rect.h)); const dx = cx - x, dy = cy - y; return dx*dx + dy*dy < r*r; }
+  function moveActor(actor, dt, dx, dy){ const stepX = dx * actor.speed * dt; const stepY = dy * actor.speed * dt; if(stepX){ actor.x += stepX; for(const w of walls){ const r = {x:w[0],y:w[1],w:w[2],h:w[3]}; if(rects(actor,r)){ actor.x += stepX > 0 ? -(actor.x + actor.w - r.x) : (r.x + r.w - actor.x); } } } if(stepY){ actor.y += stepY; for(const w of walls){ const r = {x:w[0],y:w[1],w:w[2],h:w[3]}; if(rects(actor,r)){ actor.y += stepY > 0 ? -(actor.y + actor.h - r.y) : (r.y + r.h - actor.y); } } } actor.x = Math.max(24, Math.min(canvas.width - actor.w - 24, actor.x)); actor.y = Math.max(24, Math.min(canvas.height - actor.h - 24, actor.y)); }
+  function update(dt){ t += dt; const horiz = (pressed.has('d') || pressed.has('arrowright') ? 1 : 0) - (pressed.has('a') || pressed.has('arrowleft') ? 1 : 0); const vert = (pressed.has('s') || pressed.has('arrowdown') ? 1 : 0) - (pressed.has('w') || pressed.has('arrowup') ? 1 : 0); const len = Math.hypot(horiz, vert) || 1; if(CH.ghost){ player.x = Math.max(24, Math.min(canvas.width - player.w - 24, player.x + horiz/len*player.speed*dt)); player.y = Math.max(24, Math.min(canvas.height - player.h - 24, player.y + vert/len*player.speed*dt)); } else moveActor(player, dt, horiz/len, vert/len); for(const k of keys){ if(!k[2] && circleRect(k[0],k[1],12,player)){ k[2] = true; player.keys++; persist(); msgTimer = 1.8; } } for(const g of guards){ const next = g.path[(g.seg + g.dir + g.path.length) % g.path.length]; const dx = next[0] - g.x, dy = next[1] - g.y, dist = Math.hypot(dx, dy); if(dist < 2){ g.seg = (g.seg + g.dir + g.path.length) % g.path.length; } else { g.x += (dx / dist) * g.speed * dt; g.y += (dy / dist) * g.speed * dt; } if(!CH.god && circleRect(g.x,g.y,g.r,player)){ fail(); return; } } if(player.keys === keys.length && rects(player, exit)){ win(); return; } if(msgTimer > 0) msgTimer -= dt; }
+  function win(){ const time = Math.max(1, Math.round(t)); best = best == null ? time : Math.min(best, time); level = Math.min(3, level + 1); persist(); overlayTitle.textContent = level >= 3 ? 'Maze Cleared' : 'Level Complete'; overlayBody.textContent = `Time: ${Math.round(t)}s. Best: ${best}s. Your save is updated.`; overlay.classList.remove('hidden'); state = 'win'; }
+  function fail(){ overlayTitle.textContent = 'Caught'; overlayBody.textContent = 'A guard reached you. The run was not saved, but your best time stays intact.'; overlay.classList.remove('hidden'); state = 'dead'; }
+  function draw(){ ctx.clearRect(0,0,canvas.width,canvas.height); const grd = ctx.createLinearGradient(0,0,canvas.width,canvas.height); grd.addColorStop(0,'#0b1220'); grd.addColorStop(1,'#0e1f35'); ctx.fillStyle = grd; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle = 'rgba(34,197,94,.15)'; for(let i=0;i<40;i++){ ctx.beginPath(); ctx.arc((i*157)%canvas.width,(i*91+30)%canvas.height,2,0,Math.PI*2); ctx.fill(); }
+    ctx.fillStyle = '#1f2937'; walls.forEach(w => ctx.fillRect(w[0],w[1],w[2],w[3])); ctx.strokeStyle = 'rgba(148,163,184,.18)'; ctx.lineWidth = 2; ctx.strokeRect(exit.x,exit.y,exit.w,exit.h); ctx.fillStyle = '#22c55e'; ctx.fillRect(exit.x+8,exit.y+8,exit.w-16,exit.h-16);
+    keys.forEach((k,i) => { if(k[2]) return; ctx.fillStyle = ['#f59e0b','#f472b6','#38bdf8'][i]; ctx.beginPath(); ctx.arc(k[0],k[1],10,0,Math.PI*2); ctx.fill(); }); guards.forEach(g => { ctx.fillStyle = '#fb7185'; ctx.beginPath(); ctx.arc(g.x,g.y,g.r,0,Math.PI*2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(g.x-6,g.y-4,3,0,Math.PI*2); ctx.arc(g.x+6,g.y-4,3,0,Math.PI*2); ctx.fill(); }); ctx.fillStyle = '#e2e8f0'; ctx.fillRect(player.x,player.y,player.w,player.h); ctx.fillStyle = '#22d3ee'; ctx.fillRect(player.x+4,player.y+4,player.w-8,player.h-8); ctx.fillStyle = 'rgba(15,23,42,.8)'; ctx.fillRect(36,36,250,82); ctx.fillStyle = '#e5e7eb'; ctx.font = '20px system-ui'; ctx.fillText(`Keys: ${player.keys}/${keys.length}`, 54, 68); ctx.fillText(`Time: ${Math.floor(t)}s`, 54, 96); if(msgTimer > 0){ ctx.fillStyle = 'rgba(2,6,23,.75)'; ctx.fillRect(canvas.width/2-120, 24, 240, 40); ctx.fillStyle = '#fff'; ctx.fillText('Keys collected. Find the exit.', canvas.width/2-98, 51); } }
+  let last = performance.now(); function frame(now){ const dt = Math.min(.033, (now - last) / 1000); last = now; if(state === 'play') update(dt); draw(); requestAnimationFrame(frame); }
+  updateSaveText(); requestAnimationFrame(frame); showMenu();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Maze Runner",cheats:[
+    {id:"god",label:"Guards can't catch you",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"ghost",label:"Walk through walls",type:"toggle",set:function(on){CH.ghost=on;}},
+    {id:"keys",label:"Grab all three keys",type:"button",run:function(){keys.forEach(function(k){k[2]=true;});player.keys=keys.length;persist();msgTimer=1.8;}},
+    {id:"exit",label:"Warp to the exit",type:"button",run:function(){if(state!=="play")return;player.x=exit.x-player.w-4;player.y=exit.y+10;}},
+    {id:"speed",label:"Move speed",type:"value",noLock:true,get:function(){return player.speed;},set:function(v){player.speed=Math.max(60,Math.min(900,v));}},
+    {id:"level",label:"Stage",type:"value",noLock:true,get:function(){return level;},set:function(v){level=Math.max(1,Math.min(3,v|0));persist();}}
+  ]};
+})();
+</script>
+</body>
+</html>

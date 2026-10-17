@@ -145,6 +145,14 @@
     else if(e.key>="1"&&e.key<="6"){placePeg(+e.key-1);}
   });
   newGame();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Mastermind",cheats:[
+    {id:"peek",label:"Show the code",type:"button",run:function(){var m=document.getElementById("msg");m.className="msg";
+      m.innerHTML="";secret.forEach(function(v){var s=document.createElement("span");s.style.cssText="display:inline-block;width:14px;height:14px;border-radius:50%;margin:0 2px;background:"+COLORS[v];m.appendChild(s);});}},
+    {id:"fill",label:"Enter the code",type:"button",run:function(){if(done)return;current=secret.slice();render();}},
+    {id:"rows",label:"Extra tries",type:"button",run:function(){ROWS+=5;if(done&&guesses.length&&guesses[guesses.length-1].fb.black!==SLOTS){done=false;document.getElementById("msg").textContent="";document.getElementById("msg").className="msg";}render();}},
+    {id:"wins",label:"Wins",type:"value",noLock:true,get:function(){return wins;},set:function(v){wins=Math.max(0,v|0);localStorage.setItem("omm.wins",wins);document.getElementById("wn").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

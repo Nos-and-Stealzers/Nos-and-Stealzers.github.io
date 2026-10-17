@@ -35,6 +35,7 @@
   var level=1,best=+(localStorage.getItem("omaze.best")||1);
   document.getElementById("b").textContent=best;
   var N,cell,grid,px,py,solved;
+  var CH={walls:false};
 
   // recursive-backtracker maze; each cell stores wall bits N,E,S,W
   function gen(){
@@ -58,7 +59,8 @@
   function move(dx,dy){
     if(solved)return;
     var c=grid[py*N+px];
-    if(dx===1&&!c.e)px++;else if(dx===-1&&!c.w)px--;
+    if(CH.walls){px=Math.max(0,Math.min(N-1,px+dx));py=Math.max(0,Math.min(N-1,py+dy));}
+    else if(dx===1&&!c.e)px++;else if(dx===-1&&!c.w)px--;
     else if(dy===1&&!c.s)py++;else if(dy===-1&&!c.n)py--;
     draw();
     if(px===N-1&&py===N-1){solved=true;
@@ -99,6 +101,17 @@
   },{passive:true});
   document.getElementById("new").addEventListener("click",function(){gen();});
   gen();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function solvePath(){var prev={},q=[0],seen={0:1};while(q.length){var i=q.shift();if(i===N*N-1)break;var c=grid[i];
+    [[!c.n,i-N],[!c.e,i+1],[!c.s,i+N],[!c.w,i-1]].forEach(function(o){if(o[0]&&!seen[o[1]]){seen[o[1]]=1;prev[o[1]]=i;q.push(o[1]);}});}
+    var path=[],k=N*N-1;while(k!==undefined&&k!==0){path.push(k);k=prev[k];}return path;}
+  window.ACH_MODS={name:"Maze",cheats:[
+    {id:"walls",label:"Walk through walls",type:"toggle",set:function(on){CH.walls=on;}},
+    {id:"path",label:"Show the way out",type:"button",run:function(){ctx.fillStyle="rgba(63,185,80,.45)";
+      solvePath().forEach(function(i){ctx.fillRect((i%N)*cell+cell*0.3,((i/N)|0)*cell+cell*0.3,cell*0.4,cell*0.4);});}},
+    {id:"exit",label:"Jump to the exit",type:"button",run:function(){if(solved)return;px=N-2;py=N-1;CH.walls=true;move(1,0);CH.walls=false;}},
+    {id:"level",label:"Level",type:"value",noLock:true,get:function(){return level;},set:function(v){level=Math.max(1,v|0);gen();}}
+  ]};
 })();
 </script>
 </body>

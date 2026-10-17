@@ -103,6 +103,8 @@
     settings.looks = settings.looks || {};
     settings.zoom = settings.zoom || 1;
     settings.speed = settings.speed || 1;
+    settings.picture = settings.picture || { b: 1, c: 1, s: 1, h: 0 };
+    settings.crosshair = settings.crosshair || { style: "off", color: "#39ff88", size: 22 };
 
     var btn = el("button", "btn mod-btn");
     btn.type = "button";
@@ -129,7 +131,13 @@
       if (L.neon) filters.push("saturate(2.4) contrast(1.25) brightness(1.08)");
       if (L.mono) filters.push("grayscale(1) contrast(1.1)");
       if (L.night) filters.push("brightness(0.6) contrast(1.1)");
+      var P = settings.picture;
+      if (P.b !== 1) filters.push("brightness(" + P.b + ")");
+      if (P.c !== 1) filters.push("contrast(" + P.c + ")");
+      if (P.s !== 1) filters.push("saturate(" + P.s + ")");
+      if (P.h) filters.push("hue-rotate(" + P.h + "deg)");
       f.style.filter = filters.join(" ");
+      drawOverlay();
       var t = [];
       if (settings.zoom !== 1) t.push("scale(" + settings.zoom + ")");
       if (L.mirror) t.push("scaleX(-1)");
@@ -233,8 +241,93 @@
     function applyAll() { applyLooks(); applySpeed(); }
 
     function persist() {
-      if (cfg.remember) save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed });
+      if (cfg.remember) {
+        save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed,
+               picture: settings.picture, crosshair: settings.crosshair });
+      }
     }
+
+    /* ---- overlay tools: drawn over the game from outside, so they work on
+       every game, wherever it's served from ---- */
+    var overlay = null;
+    var timer = { running: false, start: 0, acc: 0, laps: [], raf: 0, shown: false };
+    var wake = { lock: null, want: false };
+
+    function ensureOverlay() {
+      if (overlay && overlay.isConnected) return overlay;
+      overlay = el("div", "mod-overlay");
+      overlay.setAttribute("aria-hidden", "true");
+      overlay._cross = el("div", "mod-cross");
+      overlay.appendChild(overlay._cross);
+      overlay._timer = el("div", "mod-timer");
+      overlay._timer.hidden = true;
+      overlay.appendChild(overlay._timer);
+      stage.appendChild(overlay);
+      return overlay;
+    }
+
+    function drawOverlay() {
+      var o = ensureOverlay();
+      var X = settings.crosshair;
+      var on = member() && X.style !== "off";
+      o._cross.hidden = !on;
+      o._cross.className = "mod-cross is-" + X.style;
+      o._cross.style.setProperty("--mc", X.color);
+      o._cross.style.setProperty("--ms", X.size + "px");
+      o._timer.hidden = !(timer.shown && member());
+    }
+
+    function timerNow() { return timer.acc + (timer.running ? performance.now() - timer.start : 0); }
+    function fmtTime(ms) {
+      var t = Math.max(0, ms);
+      var m = Math.floor(t / 60000), sec = Math.floor(t / 1000) % 60, cs = Math.floor(t / 10) % 100;
+      return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec + "." + (cs < 10 ? "0" : "") + cs;
+    }
+    function tickTimer() {
+      if (timer.raf) { window.cancelAnimationFrame(timer.raf); timer.raf = 0; }
+      var o = ensureOverlay();
+      var html = fmtTime(timerNow());
+      if (timer.laps.length) html += "\n" + timer.laps.slice(-3).map(function (l, i, arr) {
+        return "Lap " + (timer.laps.length - arr.length + i + 1) + "  " + fmtTime(l);
+      }).join("\n");
+      o._timer.textContent = html;
+      var live = document.getElementById("mod-timer-live");
+      if (live) live.textContent = fmtTime(timerNow());
+      timer.raf = timer.running ? window.requestAnimationFrame(tickTimer) : 0;
+    }
+    function timerToggle() {
+      if (timer.running) { timer.acc = timerNow(); timer.running = false; }
+      else { timer.start = performance.now(); timer.running = true; timer.shown = true; }
+      drawOverlay();
+      tickTimer();
+    }
+    function timerReset() {
+      timer.running = false; timer.acc = 0; timer.laps = [];
+      drawOverlay();
+      tickTimer();
+    }
+    function timerLap() {
+      if (!timer.running) return;
+      timer.laps.push(timerNow());
+      tickTimer();
+    }
+
+    function setWake(on) {
+      wake.want = on;
+      if (!on) {
+        if (wake.lock) { wake.lock.release().catch(function () {}); wake.lock = null; }
+        return Promise.resolve(false);
+      }
+      if (!navigator.wakeLock) return Promise.resolve(false);
+      return navigator.wakeLock.request("screen").then(function (l) {
+        wake.lock = l;
+        l.addEventListener("release", function () { wake.lock = null; });
+        return true;
+      }).catch(function () { return false; });
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden && wake.want && !wake.lock) setWake(true);
+    });
 
     var tab = "looks";
 
@@ -261,7 +354,7 @@
 
       var tabs = el("div", "mod-tabs");
       tabs.setAttribute("role", "tablist");
-      [["looks", "Looks"], ["cheats", "Cheats"], ["game", "Game"]].forEach(function (t) {
+      [["looks", "Looks"], ["tools", "Tools"], ["cheats", "Cheats"], ["game", "Game"]].forEach(function (t) {
         var b = el("button", "mod-tab", t[1]);
         b.type = "button";
         b.setAttribute("role", "tab");
@@ -274,6 +367,7 @@
       var body = el("div", "mod-body");
       panel.appendChild(body);
       if (tab === "looks") drawLooks(body);
+      else if (tab === "tools") drawTools(body);
       else if (tab === "cheats") drawCheats(body);
       else drawGame(body);
     }
@@ -352,6 +446,110 @@
       var custom = el("a", "mod-link", "Customize the menu");
       custom.href = "plus.html#mods";
       body.appendChild(custom);
+    }
+
+    function drawTools(body) {
+      /* Picture */
+      body.appendChild(el("span", "mod-label", "Picture · every game"));
+      var P = settings.picture;
+      [["b", "Brightness", 0.3, 2, 0.05, function (v) { return Math.round(v * 100) + "%"; }],
+       ["c", "Contrast", 0.3, 2, 0.05, function (v) { return Math.round(v * 100) + "%"; }],
+       ["s", "Saturation", 0, 3, 0.05, function (v) { return Math.round(v * 100) + "%"; }],
+       ["h", "Hue", -180, 180, 5, function (v) { return v + "°"; }]].forEach(function (spec) {
+        body.appendChild(slider(spec[1], spec[2], spec[3], spec[4], P[spec[0]], function (v) {
+          P[spec[0]] = v;
+          applyLooks();
+          persist();
+        }, spec[5]));
+      });
+      var resetP = el("button", "btn btn-sm btn-flat", "Reset picture");
+      resetP.type = "button";
+      resetP.addEventListener("click", function () {
+        settings.picture = { b: 1, c: 1, s: 1, h: 0 };
+        applyLooks();
+        persist();
+        draw();
+      });
+      var pf = el("div", "mod-foot");
+      pf.appendChild(resetP);
+      body.appendChild(pf);
+
+      /* Crosshair */
+      body.appendChild(el("span", "mod-label", "Crosshair"));
+      var X = settings.crosshair;
+      var cg = el("div", "mod-chips");
+      [["off", "Off"], ["dot", "Dot"], ["cross", "Cross"], ["gap", "Gap cross"], ["circle", "Circle"]].forEach(function (c) {
+        var b = el("button", "mod-chip", c[1]);
+        b.type = "button";
+        b.setAttribute("aria-pressed", X.style === c[0] ? "true" : "false");
+        b.addEventListener("click", function () {
+          X.style = c[0];
+          drawOverlay();
+          persist();
+          draw();
+        });
+        cg.appendChild(b);
+      });
+      body.appendChild(cg);
+      if (X.style !== "off") {
+        var colors = el("div", "mod-swatches");
+        ["#39ff88", "#ffffff", "#ff3b5c", "#ffd23f", "#33d6ff", "#c86bff"].forEach(function (c) {
+          var b = el("button", "mod-swatch");
+          b.type = "button";
+          b.style.background = c;
+          b.setAttribute("aria-label", "Crosshair colour " + c);
+          b.setAttribute("aria-pressed", X.color === c ? "true" : "false");
+          b.addEventListener("click", function () { X.color = c; drawOverlay(); persist(); draw(); });
+          colors.appendChild(b);
+        });
+        body.appendChild(colors);
+        body.appendChild(slider("Size", 8, 64, 2, X.size, function (v) { X.size = v; drawOverlay(); persist(); },
+          function (v) { return v + "px"; }));
+      }
+
+      /* Timer */
+      body.appendChild(el("span", "mod-label", "Speedrun timer"));
+      var live = el("div", "mod-timer-live", fmtTime(timerNow()));
+      live.id = "mod-timer-live";
+      body.appendChild(live);
+      var tf = el("div", "mod-foot");
+      var go = el("button", "btn btn-sm" + (timer.running ? "" : " btn-cta"), timer.running ? "Pause" : (timer.acc ? "Resume" : "Start"));
+      go.type = "button";
+      go.addEventListener("click", function () { timerToggle(); draw(); });
+      tf.appendChild(go);
+      var lap = el("button", "btn btn-sm", "Lap");
+      lap.type = "button";
+      lap.disabled = !timer.running;
+      lap.addEventListener("click", timerLap);
+      tf.appendChild(lap);
+      var rs = el("button", "btn btn-sm btn-flat", "Reset");
+      rs.type = "button";
+      rs.addEventListener("click", function () { timerReset(); draw(); });
+      tf.appendChild(rs);
+      body.appendChild(tf);
+      var show = el("button", "mod-chip", timer.shown ? "Shown on the game" : "Show on the game");
+      show.type = "button";
+      show.setAttribute("aria-pressed", timer.shown ? "true" : "false");
+      show.addEventListener("click", function () { timer.shown = !timer.shown; drawOverlay(); tickTimer(); draw(); });
+      body.appendChild(show);
+
+      /* Screen */
+      body.appendChild(el("span", "mod-label", "Screen"));
+      var sc = el("div", "mod-chips");
+      var awake = el("button", "mod-chip", "Keep screen awake");
+      awake.type = "button";
+      awake.setAttribute("aria-pressed", wake.want ? "true" : "false");
+      awake.disabled = !navigator.wakeLock;
+      if (!navigator.wakeLock) awake.title = "This browser can't keep the screen awake";
+      awake.addEventListener("click", function () {
+        setWake(!wake.want).then(function (ok) {
+          if (wake.want && !ok) { wake.want = false; window.UI.toast("The browser said no to keeping the screen on."); }
+          draw();
+        });
+      });
+      sc.appendChild(awake);
+      body.appendChild(sc);
+      body.appendChild(el("p", "mod-note mod-fine", "Tools sit on top of the game, so they work on every title — even ones served from another site."));
     }
 
     function drawGame(body) {
@@ -766,6 +964,12 @@
     function onSession() {
       paintLock();
       if (member()) applyAll();
+      else {
+        /* Members-only tools come off the game the moment membership does. */
+        timer.shown = false;
+        if (!panel.hidden) toggle(false);
+        drawOverlay();
+      }
     }
     document.addEventListener("session:change", onSession);
     if (window.Session && window.Session.ready) window.Session.ready.then(onSession);

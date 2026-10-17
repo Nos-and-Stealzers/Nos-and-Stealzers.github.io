@@ -42,6 +42,7 @@
   var COLS=11,ROWS=11,cell=440/COLS;
   var best=parseInt(localStorage.getItem("oroad.best")||"0",10);bestEl.textContent=best;
   var px,py,score,lanes,over,raf,speed;
+  var CH={god:false,freeze:false};
   var CARCOL=["#ff5c66","#f2b705","#4dd9ff","#b06cff","#ff8a3d"];
   function reset(){
     px=(COLS/2)|0;py=ROWS-1;score=0;over=false;speed=1;
@@ -67,7 +68,7 @@
     // advance cars
     lanes.forEach(function(l){
       for(var i=0;i<l.cars.length;i++){
-        l.cars[i]+=l.dir*l.speed*speed*0.04;
+        if(!CH.freeze)l.cars[i]+=l.dir*l.speed*speed*0.04;
         if(l.cars[i]>COLS+1)l.cars[i]=-1;
         if(l.cars[i]<-1)l.cars[i]=COLS+1;
       }
@@ -76,7 +77,7 @@
     lanes.forEach(function(l){
       if(l.row!==py)return;
       l.cars.forEach(function(cx){
-        if(px+0.5>cx&&px+0.5<cx+l.w)die();
+        if(!CH.god&&px+0.5>cx&&px+0.5<cx+l.w)die();
       });
     });
     draw();
@@ -130,6 +131,13 @@
   });
   cv.addEventListener("click",function(){if(over)reset();});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Road Crosser",cheats:[
+    {id:"god",label:"Cars can't hit you",type:"toggle",set:function(on){CH.god=on;}},
+    {id:"freeze",label:"Freeze traffic",type:"toggle",set:function(on){CH.freeze=on;}},
+    {id:"cross",label:"Cross instantly",type:"button",run:function(){if(over)return;py=1;move(0,-1);}},
+    {id:"score",label:"Score",type:"value",get:function(){return score;},set:function(v){score=Math.max(0,v|0);scoreEl.textContent=score;}}
+  ]};
 })();
 </script>
 </body>

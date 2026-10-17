@@ -229,6 +229,22 @@
   document.getElementById("diff").onchange=init;
   window.addEventListener("resize",function(){layout();draw();});
   init();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Dots and Boxes",cheats:[
+    {id:"hint",label:"Show a safe move",type:"button",run:function(){if(gameOver||turn!==1)return;
+      var a=availableEdges(),best=a.filter(function(e){return boxesGainedIfPlayed(e[0],e[1],e[2])>0;})[0]||
+        a.filter(function(e){return !createsThreeSided(e[0],e[1],e[2]);})[0]||a[0];if(!best)return;
+      var p=dotXY(best[1],best[2]),q=best[0]==="h"?dotXY(best[1],best[2]+1):dotXY(best[1]+1,best[2]);
+      ctx.strokeStyle="#3fb950";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
+      setTimeout(draw,1500);}},
+    {id:"take",label:"Claim a free box",type:"button",run:function(){if(gameOver||turn!==1)return;
+      for(var r=0;r<N;r++)for(var c=0;c<N;c++)if(!owner[r][c]){
+        hEdges[r][c]=hEdges[r+1][c]=vEdges[r][c]=vEdges[r][c+1]=true;owner[r][c]=1;scoreYou++;
+        for(var rr=0;rr<N;rr++)for(var cc=0;cc<N;cc++)if(!owner[rr][cc]&&edgesFilledFor(rr,cc)===4)owner[rr][cc]=1,scoreYou++;
+        updateScore();draw();endCheck();return;}}},
+    {id:"you",label:"Your boxes",type:"value",noLock:true,get:function(){return scoreYou;},set:function(v){scoreYou=Math.max(0,v|0);updateScore();}},
+    {id:"cpu",label:"CPU boxes",type:"value",noLock:true,get:function(){return scoreCpu;},set:function(v){scoreCpu=Math.max(0,v|0);updateScore();}}
+  ]};
 })();
 </script>
 </body>

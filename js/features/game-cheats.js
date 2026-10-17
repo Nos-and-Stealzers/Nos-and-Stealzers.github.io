@@ -2864,8 +2864,70 @@
 
   /* ------------------------------------------------------------- public */
 
+  /* ------------------------------------------- the arcade's own originals */
+
+  /* Games in games/originals publish their cheats on window.ACH_MODS:
+       { name, note?, cheats: [ cheat, ... ] }   where a cheat is one of
+       { id, label, type: "value",  get(), set(v), group?, hint?, noLock? }
+       { id, label, type: "toggle", set(on), hold?, group?, hint? }   hold: re-applied every frame while on
+       { id, label, type: "button", run(), group?, hint? }
+       { id, label, type: "text",   run(text), placeholder? }
+     Their state lives in closures, so this is the only way in — and since
+     the games are ours, every cheat is exact rather than guessed. */
+  function origCheat(win, id) {
+    var list = (win.ACH_MODS && win.ACH_MODS.cheats) || [];
+    for (var i = 0; i < list.length; i++) if ("o:" + list[i].id === id) return list[i];
+    return null;
+  }
+  var original = {
+    name: "Built-in cheats",
+    detect: function (win) { return !!(win.ACH_MODS && Array.isArray(win.ACH_MODS.cheats)); },
+    items: function (win, s) {
+      var M = win.ACH_MODS;
+      return {
+        note: M.note || ((M.name ? M.name + " was made for this arcade, so its" : "This game's") + " cheats are exact and apply instantly."),
+        items: M.cheats.map(function (c) {
+          var it = { id: "o:" + c.id, label: c.label, type: c.type, hint: c.hint,
+            group: c.group || (c.type === "value" ? "Values" : "Cheats") };
+          if (c.type === "value") {
+            var v = Number(safe(function () { return c.get(); }, 0));
+            it.value = isFinite(v) ? Math.round(v * 100) / 100 : 0;
+            it.locked = s.locks["o:" + c.id] !== undefined;
+            it.noLock = !!c.noLock;
+          }
+          if (c.type === "text") it.placeholder = c.placeholder || "";
+          return it;
+        })
+      };
+    },
+    action: function (win, s, id, arg) {
+      var c = origCheat(win, id);
+      if (!c) return;
+      if (c.type === "toggle") { safe(function () { c.set(!!s.on[id]); }); return; }
+      if (c.type === "button") { safe(function () { c.run(); }); return; }
+      if (c.type === "text") { safe(function () { c.run(String((arg && arg.value) || "")); }); return; }
+      if (arg && arg.unlock) { delete s.locks[id]; return; }
+      var v = Number(arg && arg.value);
+      if (!isFinite(v)) return;
+      safe(function () { c.set(v); });
+      if (arg && arg.lock) s.locks[id] = v;
+    },
+    tick: function (win, s) {
+      Object.keys(s.locks).forEach(function (id) {
+        if (id.indexOf("o:") !== 0) return;
+        var c = origCheat(win, id);
+        if (c && safe(function () { return c.get(); }, null) !== s.locks[id]) safe(function () { c.set(s.locks[id]); });
+      });
+      Object.keys(s.on).forEach(function (id) {
+        if (id.indexOf("o:") !== 0) return;
+        var c = origCheat(win, id);
+        if (c && c.hold) safe(function () { c.set(true); });
+      });
+    }
+  };
+
   var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, flash, unity, dino, cookie, retroBowl, gameMaker,
-    g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
+    original, g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
     particleClicker, quickClick, devLife, generic];
 
   function engineFor(win) {

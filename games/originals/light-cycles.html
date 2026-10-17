@@ -34,6 +34,7 @@
   var G=44,CELL=cv.width/G;
   var grid,p,ai,timer=null,speed=70,running=false,dead=false;
   var wins=0,best=+(localStorage.getItem("olightcycles.best")||0);
+  var CH={ghost:false,dumb:false};
   document.getElementById("b").textContent=best;
 
   function reset(){
@@ -51,6 +52,7 @@
   function stop(){running=false;document.getElementById("pause").textContent="Resume";clearInterval(timer);}
 
   function aiThink(){
+    if(CH.dumb&&Math.random()<0.5)return;
     // greedy: keep going straight if safe, else turn to side with most open space
     var opts=[[ai.dx,ai.dy],[ai.dy,-ai.dx],[-ai.dy,ai.dx]];
     var bestOpt=null,bestScore=-1;
@@ -74,7 +76,7 @@
   }
   function step(who,val){
     var nx=who.x+who.dx,ny=who.y+who.dy;
-    if(!free(nx,ny)){who.alive=false;return;}
+    if(!free(nx,ny)){if(who===p&&CH.ghost){nx=(nx+G)%G;ny=(ny+G)%G;who.x=nx;who.y=ny;return;}who.alive=false;return;}
     who.x=nx;who.y=ny;grid[idx(nx,ny)]=val;
   }
   function tick(){
@@ -128,6 +130,13 @@
   document.getElementById("start").addEventListener("click",reset);
   document.getElementById("pause").addEventListener("click",function(){if(!dead)running?stop():run();});
   reset();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  window.ACH_MODS={name:"Light Cycles",cheats:[
+    {id:"ghost",label:"Ghost mode",type:"toggle",set:function(on){CH.ghost=on;},hint:"Pass through walls and trails"},
+    {id:"dumb",label:"Clumsy CPU",type:"toggle",set:function(on){CH.dumb=on;}},
+    {id:"crash",label:"Crash the CPU",type:"button",run:function(){if(!dead&&running){ai.alive=false;tick();}}},
+    {id:"wins",label:"Win streak",type:"value",noLock:true,get:function(){return wins;},set:function(v){wins=Math.max(0,v|0);document.getElementById("w").textContent=wins;}}
+  ]};
 })();
 </script>
 </body>

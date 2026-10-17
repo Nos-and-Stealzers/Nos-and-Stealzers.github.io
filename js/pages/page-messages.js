@@ -49,7 +49,21 @@
 
       /* ------------------------------------------------------ list */
 
+      /* Many things ask for a fresh list at once (new message, badges, the
+         poll, opening a thread). Run one request at a time and fold extra asks
+         into a single follow-up, so a slow old response can't overwrite a newer
+         one and one event doesn't cost three fetches. */
+      var listInFlight = null, listAgain = false;
       function loadList() {
+        if (listInFlight) { listAgain = true; return listInFlight; }
+        listInFlight = fetchList().then(function (res) {
+          listInFlight = null;
+          if (listAgain) { listAgain = false; return loadList(); }
+          return res;
+        });
+        return listInFlight;
+      }
+      function fetchList() {
         return API.threads().then(function (res) {
           threads = res.threads || [];
           loaded = true;
@@ -168,10 +182,10 @@
         var acts = el("div", "msgs-head-acts");
         if (window.Calls && window.Calls.supported && window.Calls.supported()) {
           acts.appendChild(headBtn("phone", "Voice call", function () {
-            window.Calls.start({ threadId: current.id, kind: "audio" });
+            window.Calls.start({ threadId: current.id, kind: "audio" }).catch(function () {});
           }, "is-call"));
           acts.appendChild(headBtn("video", "Video call", function () {
-            window.Calls.start({ threadId: current.id, kind: "video" });
+            window.Calls.start({ threadId: current.id, kind: "video" }).catch(function () {});
           }, "is-call"));
         }
         var infoBtn = headBtn("info", "Details", function () {

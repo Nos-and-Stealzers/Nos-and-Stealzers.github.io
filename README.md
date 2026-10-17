@@ -46,6 +46,8 @@ A flat "catalogue" system rather than a storefront:
 | `categories.html` | Category index plus a sample strip per category |
 | `play.html?id=…` | Player: in-page frame or new-tab launch, fullscreen, aspect toggle, spec sheet, rating, related titles |
 | `library.html` | Pins (grid), history (list), top rated, most played |
+| `music.html` | Built-in music player: stations, search, releases, liked songs, playlists, queue. Public-domain and Creative Commons tracks streamed from the Internet Archive; a mini player keeps playing (and resumes) on every page |
+| `campus-plus.html` | Campus+ video player for YouTube, TikTok and Instagram links, with playlists (TikTok/Instagram saving needs `supabase/2026-10-16-campus-plus-sources.sql`) |
 | `stats.html` | Total time, time-by-category meters, top ten, untouched categories |
 | `about.html` | Manual: build notes, flag legend, storage, keys, catalog schema |
 | `404.html` | Not-found + suggestions |

@@ -122,6 +122,18 @@
   });
   document.getElementById("new").addEventListener("click",newWord);
   newWord();
+  /* Campus+ mod menu: exact cheats for this game (see js/features/game-cheats.js). */
+  function typeWord(w){if(done)return;while(col>0)press("back");w.split("").forEach(function(ch){press(ch);});}
+  window.ACH_MODS={name:"Word Guess",cheats:[
+    {id:"letter",label:"Reveal a letter",type:"button",run:function(){if(done)return;var i=(Math.random()*5)|0;
+      overEl.textContent="Letter "+(i+1)+" is "+answer[i].toUpperCase();}},
+    {id:"peek",label:"Show the word",type:"button",run:function(){overEl.textContent="Psst: "+answer.toUpperCase();}},
+    {id:"solve",label:"Type the answer",type:"button",run:function(){typeWord(answer);}},
+    {id:"rows",label:"Extra row",type:"button",run:function(){if(done&&row<6)return;var rw=document.createElement("div");rw.className="rw";var cells=[];
+      for(var c=0;c<5;c++){var t=document.createElement("div");t.className="tl";rw.appendChild(t);cells.push(t);}gridEl.appendChild(rw);grid.push(cells);
+      if(done&&row>=6){done=false;overEl.textContent="One more try";}}},
+    {id:"streak",label:"Streak",type:"value",noLock:true,get:function(){return streak;},set:function(v){streak=Math.max(0,v|0);document.getElementById("streak").textContent=streak;}}
+  ]};
 })();
 </script>
 </body>

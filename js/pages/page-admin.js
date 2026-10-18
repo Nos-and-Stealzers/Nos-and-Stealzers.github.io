@@ -135,6 +135,7 @@
           state.promise = Promise.resolve().then(fn).then(function (result) {
             if (loadGeneration[name] !== generation) return false;
             state.pending = false;
+            labelDataRows();
             loadedOnce[name] = result !== false;
             paintLoadState();
             return result !== false;
@@ -289,7 +290,10 @@
             row.appendChild(UI.el("span", "plays", UI.formatWhen(e.at)));
             host.appendChild(row);
           });
-        }).catch(function () { /* non-critical */ });
+        }).catch(function (err) {
+          host.textContent = "Recent activity unavailable.";
+          throw err;
+        });
       }
 
       /* Site switches (dev+). The server re-checks every change. */
@@ -318,7 +322,7 @@
             if (msg === null) return;
             busy(mBtn, API.adminSetFlag("maintenance", { on: !maint, message: msg || "" }).then(function () {
               UI.toast(maint ? "Maintenance mode off" : "Maintenance mode on");
-              loadFlags();
+              return loadFlags();
             }));
           });
           row("Maintenance mode" + (maint ? " \u2014 ON" : ""),
@@ -330,7 +334,7 @@
           sBtn.type = "button";
           sBtn.addEventListener("click", function () {
             busy(sBtn, API.adminSetFlag("signups_closed", !closed).then(function () {
-              UI.toast(closed ? "Sign-ups open" : "Sign-ups closed"); loadFlags();
+              UI.toast(closed ? "Sign-ups open" : "Sign-ups closed"); return loadFlags();
             }));
           });
           row("Sign-ups" + (closed ? " \u2014 CLOSED" : ""),
@@ -340,13 +344,14 @@
           rBtn.type = "button";
           rBtn.addEventListener("click", function () {
             if (!window.confirm("Make every open tab on the site reload within a minute?")) return;
-            busy(rBtn, API.adminSetFlag("force_reload_at", null).then(function () { UI.toast("Reload sent"); loadFlags(); }));
+            busy(rBtn, API.adminSetFlag("force_reload_at", null).then(function () { UI.toast("Reload sent"); return loadFlags(); }));
           });
           row("Push an update", "Every open tab reloads within a minute and picks up the newest files" +
             (f.force_reload_at ? ". Last sent " + UI.formatWhen(Number(f.force_reload_at)) : "."), rBtn);
         }).catch(function (err) {
           host.innerHTML = "";
-          host.appendChild(UI.el("p", "tiny dimmer", "Site switches need the dev-role SQL update: " + err.message));
+          host.appendChild(UI.el("p", "tiny dimmer", "Could not load site switches: " + err.message));
+          throw err;
         });
       }
 
@@ -370,7 +375,10 @@
           text.textContent = a.body;
           row.appendChild(text);
           host.appendChild(row);
-        }).catch(function () { host.innerHTML = ""; });
+        }).catch(function (err) {
+          host.textContent = "Could not check the current announcement.";
+          throw err;
+        });
       }
 
       var annPost = document.getElementById("ann-post");
@@ -384,7 +392,7 @@
             .then(function () {
               UI.toast("Announcement posted");
               document.getElementById("ann-body").value = "";
-              loadAnnouncement();
+              return loadAnnouncement();
             }));
         });
       }
@@ -393,7 +401,7 @@
         annClear.addEventListener("click", function () {
           busy(annClear, API.adminClearAnnouncement().then(function () {
             UI.toast("Banner cleared");
-            loadAnnouncement();
+            return loadAnnouncement();
           }));
         });
       }
@@ -458,7 +466,9 @@
            even when the primary count request fails first. */
         var failure;
         var failed = false;
-        return Promise.all([counts.catch(function (err) { failed = true; failure = err; })].concat(extras))
+        return Promise.all([counts].concat(extras).map(function (request) {
+          return Promise.resolve(request).catch(function (err) { failed = true; failure = err; });
+        }))
           .then(function () { if (failed) throw failure || new Error("Could not load overview."); });
       }
 
@@ -474,6 +484,18 @@
       var userFilter = document.getElementById("user-filter");
       var userCache = [];
       var selectedUserId = null;
+      var selectedUserSnapshot = "";
+
+      function canManage(u) {
+        return u.id !== me.id && u.role !== "owner" && !u.noProfile && rankOf(me.role) > rankOf(u.role);
+      }
+      function resetUserDetail(message) {
+        selectedUserId = null;
+        selectedUserSnapshot = "";
+        var body = document.getElementById("user-detail");
+        body.innerHTML = "";
+        body.appendChild(UI.el("p", "user-detail-empty", message || "Select an account to manage it."));
+      }
 
       var userSort = document.getElementById("user-sort");
       userQ.addEventListener("input", UI.debounce(function () { loadUsers(); }, 240));
@@ -559,10 +581,12 @@
               "\nRank: " + (made.role || fields.role);
             ucDone.appendChild(creds);
             ucDone.hidden = false;
-            ["uc-username", "uc-display", "uc-email", "uc-password"].forEach(function (id) {
-              document.getElementById(id).value = "";
-            });
-            ucRole.value = "user";
+            if (generation === ucGeneration && JSON.stringify(createFields()) === JSON.stringify(fields)) {
+              ["uc-username", "uc-display", "uc-email", "uc-password"].forEach(function (id) {
+                document.getElementById(id).value = "";
+              });
+              ucRole.value = "user";
+            }
             UI.toast("@" + (made.username || fields.username) + " created");
             loadUsers();
           }).catch(function (err) {
@@ -661,6 +685,21 @@
         host.innerHTML = "";
         setText("user-count", rows.length + " of " + userCache.length);
 
+        if (selectedUserId) {
+          var selected = rows.find(function (u) { return u.id === selectedUserId; });
+          if (!selected) resetUserDetail("The selected account is not in these results. Select an account to manage it.");
+          else if (JSON.stringify(selected) !== selectedUserSnapshot) {
+            var detail = document.getElementById("user-detail");
+            var drafts = {};
+            detail.querySelectorAll("input[aria-label]").forEach(function (input) { drafts[input.getAttribute("aria-label")] = input.value; });
+            var expanded = Array.from(detail.querySelectorAll("details[open]")).map(function (section) { return section.dataset.section; });
+            renderUserDetail(selected, canManage(selected));
+            selectedUserSnapshot = JSON.stringify(selected);
+            detail.querySelectorAll("input[aria-label]").forEach(function (input) { input.value = drafts[input.getAttribute("aria-label")] || ""; });
+            detail.querySelectorAll("details").forEach(function (section) { section.open = expanded.indexOf(section.dataset.section) !== -1; });
+          }
+        }
+
         if (!rows.length) {
           host.appendChild(UI.el("p", "dim admin-empty", "Nobody matches that."));
           return;
@@ -698,8 +737,7 @@
           /* One rule decides whether anything is offered at all, and it is
              the same rule the server applies: you may act only on someone
              below your own rank. Everything else is a label saying why not. */
-          var manageable = u.id !== me.id && u.role !== "owner" && !u.noProfile &&
-            rankOf(me.role) > rankOf(u.role);
+          var manageable = canManage(u);
           if (u.id === me.id) {
             acts.appendChild(UI.el("span", "tiny dimmer", "that's you"));
           } else if (u.role === "owner") {
@@ -719,13 +757,15 @@
           row.tabIndex = 0;
           row.setAttribute("role", "button");
           row.setAttribute("aria-label", "Manage @" + u.username);
+          row.setAttribute("aria-controls", "user-detail");
+          row.setAttribute("aria-pressed", selectedUserId === u.id ? "true" : "false");
           function open(event) {
             if (event && event.target.closest("a")) return;
             selectUser(u, row, manageable);
           }
           row.addEventListener("click", open);
           row.addEventListener("keydown", function (event) {
-            if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
+            if (event.target === row && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); open(); }
           });
           if (selectedUserId === u.id) row.classList.add("is-on");
 
@@ -736,10 +776,15 @@
       /* Clicking a row selects it and fills the pane beside the list — a master-detail layout rather than a sheet… */
       function selectUser(u, row, manageable) {
         selectedUserId = u.id;
+        selectedUserSnapshot = JSON.stringify(u);
         document.querySelectorAll("#user-rows .user-row").forEach(function (r) {
           r.classList.toggle("is-on", r === row);
+          r.setAttribute("aria-pressed", r === row ? "true" : "false");
         });
         renderUserDetail(u, manageable);
+        var detail = document.getElementById("user-detail");
+        detail.focus({ preventScroll: true });
+        if (window.matchMedia && window.matchMedia("(max-width: 1180px)").matches && detail.scrollIntoView) detail.scrollIntoView({ block: "start" });
       }
 
       function renderUserDetail(u, manageable) {
@@ -779,10 +824,7 @@
         }
 
         function clearDetail() {
-          var host = document.getElementById("user-detail");
-          host.innerHTML = "";
-          host.appendChild(UI.el("p", "user-detail-empty", "Select an account to manage it."));
-          selectedUserId = null;
+          if (selectedUserId === u.id) resetUserDetail();
         }
 
         /* Mods get the moderation tools; rank, suspension, bans, Campus+,
@@ -944,6 +986,7 @@
         warnRow.style.marginBottom = "0.5rem";
         var warnInput = UI.el("input");
         warnInput.type = "text";
+        warnInput.setAttribute("aria-label", "Warning message");
         warnInput.maxLength = 240;
         warnInput.placeholder = "Warning they'll see, e.g. \u201cno spam in chat\u201d";
         warnInput.style.flex = "1";
@@ -1045,9 +1088,12 @@
         var notesList = UI.el("div", "rows");
         notesList.style.marginBottom = "0.5rem";
         notesWrap.appendChild(notesList);
+        var notesGeneration = 0;
 
         function drawNotes() {
-          API.adminListNotes(u.id).then(function (notes) {
+          var generation = ++notesGeneration;
+          return API.adminListNotes(u.id).then(function (notes) {
+            if (generation !== notesGeneration || !body.contains(notesList)) return;
             notesList.innerHTML = "";
             if (!notes || !notes.length) {
               notesList.appendChild(UI.el("p", "tiny dimmer", "No notes yet."));
@@ -1069,12 +1115,13 @@
               del.type = "button";
               del.addEventListener("click", function () {
                 if (!window.confirm("Delete this note?")) return;
-                API.adminDeleteNote(n.id).then(drawNotes);
+                busy(del, API.adminDeleteNote(n.id).then(drawNotes));
               });
               row.appendChild(del);
               notesList.appendChild(row);
             });
           }).catch(function (err) {
+            if (generation !== notesGeneration || !body.contains(notesList)) return;
             notesList.innerHTML = "";
             notesList.appendChild(UI.el("p", "tiny dimmer", err.message));
           });
@@ -1085,6 +1132,7 @@
         noteRow.style.gap = "0.4rem";
         var noteInput = UI.el("input");
         noteInput.type = "text";
+        noteInput.setAttribute("aria-label", "New staff note");
         noteInput.placeholder = "Add a note staff will see on this account…";
         noteInput.style.flex = "1";
         noteRow.appendChild(noteInput);
@@ -1120,6 +1168,7 @@
           pwRow.style.gap = "0.4rem";
           var pwInput = UI.el("input");
           pwInput.type = "text";
+          pwInput.setAttribute("aria-label", "New account password");
           pwInput.placeholder = "New password (min 8 characters)";
           pwInput.autocomplete = "off";
           pwInput.spellcheck = false;
@@ -1211,16 +1260,38 @@
         Array.prototype.slice.call(body.children).forEach(function (node) {
           if (node.tagName === "HR") body.removeChild(node);
         });
-        if (isAdmin) rankBox.focus(); else warnInput.focus();
+
       }
 
       /* Every action in the pane reports its own failure, rather than
          leaving a disabled button and no explanation. */
+      function labelDataRows() {
+        ["live-rows", "login-rows", "pl-rows", "audit-rows", "recent-audit"].forEach(function (id) {
+          var host = document.getElementById(id);
+          if (!host) return;
+          var heading = host.querySelector(".rows-head");
+          var labels = heading ? Array.from(heading.children).map(function (node) { return node.textContent; }) : ["Activity", "When"];
+          host.querySelectorAll(".row").forEach(function (row) {
+            Array.from(row.children).forEach(function (cell, index) { if (labels[index]) cell.dataset.label = labels[index]; });
+          });
+        });
+      }
+
       function busy(button, promise) {
         button.disabled = true;
+        button.setAttribute("aria-busy", "true");
+        var scope = button.closest(".admin-detail-section-body, .panel") || button.parentNode;
+        var error = scope.querySelector(".admin-action-error");
+        if (error) error.remove();
         return promise.catch(function (err) {
-          UI.toast(err.message || "That didn't work");
-        }).then(function () { button.disabled = false; });
+          var message = (err && err.message) || "That didn't work. Please try again.";
+          UI.toast(message);
+          if (scope.isConnected) {
+            error = UI.el("p", "form-error admin-action-error", message);
+            error.setAttribute("role", "alert");
+            scope.appendChild(error);
+          }
+        }).then(function () { button.disabled = false; button.removeAttribute("aria-busy"); });
       }
 
       /* -------------------------------------------------------- reports */

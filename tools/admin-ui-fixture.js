@@ -1,0 +1,15 @@
+/* TEST ONLY: substituted for session.js by test-admin-ui.py; never ship in HTML. */
+(function () {
+ const role = new URL(location.href).searchParams.get('testRole') || 'owner';
+ const me = {id:'fixture-me',username:'staff_fixture',displayName:'Staff fixture',role,state:'active'};
+ const ranks = ['user','mod','admin','dev','owner'];
+ window.Session={user:me,ready:Promise.resolve({backend:true,user:me}),isStaff:()=>ranks.indexOf(role)>=1,isAdmin:()=>ranks.indexOf(role)>=2,isDev:()=>ranks.indexOf(role)>=3,isOwner:()=>role==='owner',rank:()=>ranks.indexOf(role),badges:{},on:()=>{},refresh:()=>Promise.resolve(),loggedIn:()=>true};
+ const users=[me,...Array.from({length:14},(_,i)=>({id:'fixture-'+i,username:'student_'+i,displayName:'Student '+i,role:i===1?'admin':'user',state:i===2?'suspended':'active',email:'fixture'+i+'@example.invalid',friends:3,messages:12,reports:0,createdAt:Date.now()-i*86400000,lastSeen:Date.now(),lastLogin:Date.now(),online:i<3}))];
+ window.__fixtureUsers=users;
+ const answer={adminOverview:{users:{total:15,online:3,newThisWeek:4,suspended:1,staff:2},social:{friendships:20,messages:45,messagesToday:5},queues:{reports:1,tickets:1,feedback:1,calls:0},topGames:[]},adminReports:{reports:[{id:1,kind:'user',target:'student_0',reason:'Fixture report to test layout',reporter:'student_3',state:'open',at:Date.now()}]},adminFeedback:{counts:{new:1},feedback:[{id:1,kind:'bug',subject:'Fixture feedback',body:'Test queue body',from:'student_0',state:'new',at:Date.now()}]},adminTickets:{counts:{open:1},tickets:[{id:1,priority:'normal',category:'account',subject:'Fixture support ticket',opening:'Test support message',from:'student_0',replies:1,updatedAt:Date.now(),state:'open'}]},adminLive:{online:3,playing:0,users:users.slice(1,4)},adminLogins:{failuresVisible:false,logins:[{username:'student_0',outcome:'ok',ip:'192.0.2.1',agent:'Fixture browser with a longer description',at:Date.now()}]},adminAudit:{entries:[{id:1,action:'user-update',actor:'staff_fixture',target:'student_0',detail:'Fixture audit detail',at:Date.now()}]},adminListPlaylists:[{id:1,title:'Fixture playlist with a readable long title',ownerUsername:'student_0',itemCount:8,isPublic:true,updatedAt:new Date().toISOString()}],adminListNotes:[],customCatalog:{added:[],removed:[]},siteFlags:{},currentAnnouncement:null,ticket:{messages:[]},unread:{messages:0,requests:0,notifications:0},pendingCalls:{calls:[]},threads:{threads:[]}};
+ window.__fixtureCalls=[];
+ const base=window.API;
+ Object.keys(answer).forEach(k=>base[k]=()=>{window.__fixtureCalls.push(k);if(window.__failMethod===k)return Promise.reject(new Error('Fixture request failed'));return Promise.resolve(answer[k]);});
+ base.adminUsers=q=>new Promise(resolve=>setTimeout(()=>resolve({users:users.filter(u=>!q||u.username.includes(q))}),q==='student_1'?160:10));
+ ['adminSetPassword','adminUpdateUser','adminSetMute','adminWarn','adminAddNote','adminDeleteUser'].forEach(k=>base[k]=(...args)=>{window.__fixtureCalls.push([k,...args]);return window.__failMethod===k?Promise.reject(new Error('Fixture action refused')):Promise.resolve({ok:true});});
+})();

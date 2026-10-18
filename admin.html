@@ -247,7 +247,7 @@
               <button class="btn btn-sm" type="button" id="uc-gen">Generate</button>
             </div>
           </div>
-          <p class="form-error wide" id="uc-error" hidden></p>
+          <p class="form-error wide" id="uc-error" role="alert" hidden></p>
           <div class="panel wide" id="uc-done" hidden></div>
           <div class="btn-row wide">
             <button class="btn btn-cta" type="submit" id="uc-save">Create account</button>
@@ -256,7 +256,7 @@
         </form>
         <div class="two-col-list-wide admin-users-layout">
           <div class="rows-scroll" aria-label="Account list"><div class="rows" id="user-rows"></div></div>
-          <div class="panel" id="user-detail" aria-label="Selected account details">
+          <div class="panel" id="user-detail" tabindex="-1" role="region" aria-label="Selected account details">
             <p class="user-detail-empty">Select an account to manage it.</p>
           </div>
         </div>
@@ -465,7 +465,7 @@
             </div>
           </div>
 
-          <p class="form-error wide" id="cg-error" hidden></p>
+          <p class="form-error wide" id="cg-error" role="alert" hidden></p>
           <div class="btn-row wide">
             <button class="btn btn-cta" type="submit" id="cg-save">Add to the catalogue</button>
             <button class="btn btn-flat" type="button" id="cg-reset">Clear</button>

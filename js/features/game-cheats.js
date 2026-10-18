@@ -2494,6 +2494,187 @@
     }
   };
 
+  /* CS:GO Clicker keeps state in a closure and autosaves every 30 seconds.
+     Only this exact page/schema may use the otherwise generic savegame key. */
+  function csgoSave(win) {
+    try {
+      var data = JSON.parse(win.localStorage.getItem("savegame"));
+      return data && typeof data.money === "number" && isFinite(data.money) &&
+        data.inventory && !Array.isArray(data.inventory) && typeof data.inventory === "object" &&
+        typeof data.itemCounter === "number" && typeof data.currentCase === "string" &&
+        data.stackingUpgradesPurchased && typeof data.stackingUpgradesPurchased === "object" ? data : null;
+    } catch (e) { return null; }
+  }
+  var csgoClicker = {
+    name: "CS:GO Clicker",
+    detect: function (win) {
+      return /\/csgo-clicker\/(?:index\.html)?$/i.test(String(win.location.pathname)) &&
+        /CS:?GO\s*Clicker/i.test(String(win.document.title || ""));
+    },
+    items: function (win) {
+      var data = csgoSave(win);
+      if (!data) return { items: [], note: "Wait 30 seconds for the game's first autosave, then Refresh." };
+      return { note: "Edits your wallet only; restarts the game. Inventory and shop purchases are preserved.", items: [
+        { id: "csgo-money", label: "Wallet ($)", type: "value", group: "Wallet", value: data.money, noLock: true },
+        { id: "csgo-rich", label: "+$1 million", type: "button", group: "Wallet" }
+      ] };
+    },
+    action: function (win, s, id, arg) {
+      var data = csgoSave(win), v = Number(arg && arg.value);
+      if (!data) throw new Error("Wait for the first autosave, then Refresh.");
+      if (id === "csgo-rich") data.money = Math.min(999999999, data.money + 1000000);
+      else if (id === "csgo-money" && arg && arg.value !== "" && isFinite(v) && v >= 0) data.money = Math.min(999999999, Math.round(v * 100) / 100);
+      else return;
+      s.csgoPending = JSON.stringify(data);
+      if (!s.csgoPut) {
+        s.csgoPut = function () { win.localStorage.setItem("savegame", s.csgoPending); };
+        /* An autosave while waiting to reload must not replace the edit. */
+        ["beforeunload", "pagehide"].forEach(function (ev) { win.addEventListener(ev, s.csgoPut); });
+      }
+      s.csgoPut();
+      s.restart = true;
+    }
+  };
+
+  /* Trimps: change actual owned resources, never storage caps, progression
+     or perk internals. save(true) exports locally without PlayFab uploads. */
+  var TRIMP_RES = [["food", "Food"], ["wood", "Wood"], ["metal", "Metal"]];
+  var trimps = {
+    name: "Trimps",
+    detect: function (win) {
+      return /\/trimps\/(?:index\.html)?$/i.test(String(win.location.pathname)) &&
+        /^Trimps\b/i.test(String(win.document.title || "")) && !!(win.game && win.game.resources &&
+        win.game.resources.food && win.game.global && typeof win.getMaxForResource === "function" &&
+        typeof win.save === "function" && typeof win.updateLabels === "function");
+    },
+    items: function (win) {
+      return { note: "Food, wood and metal stay within your current storage caps. Changes save locally immediately.", items: [
+        { id: "trimp-fill", label: "Fill food, wood and metal storage", type: "button", group: "Resources" }
+      ].concat(TRIMP_RES.map(function (r) {
+        return { id: "trimp-" + r[0], label: r[1], type: "value", group: "Resources", noLock: true,
+          value: Math.floor(win.game.resources[r[0]].owned), hint: "Maximum: " + Math.floor(win.getMaxForResource(r[0])) };
+      })) };
+    },
+    action: function (win, s, id, arg) {
+      var res = TRIMP_RES.filter(function (r) { return id === "trimp-fill" || id === "trimp-" + r[0]; });
+      var v = Number(arg && arg.value);
+      if (!res.length || (id !== "trimp-fill" && (!arg || arg.value === "" || !isFinite(v) || v < 0))) return;
+      res.forEach(function (r) {
+        var cap = win.getMaxForResource(r[0]);
+        win.game.resources[r[0]].owned = id === "trimp-fill" ? cap : Math.min(cap, Math.floor(v));
+      });
+      win.updateLabels();
+      win.localStorage.setItem("trimpSave1", win.save(true));
+    }
+  };
+
+  /* Space Company 0.5: the data-driven entries are not the live balances;
+     its resource API still reads the legacy metal/gem/wood globals. */
+  var SC_RES = [["metal", "Metal"], ["gem", "Gems"], ["wood", "Wood"]];
+  var spaceCompany = {
+    name: "Space Company",
+    detect: function (win) {
+      return /\/(?:spacecompany|space-company)\/(?:index\.html)?$/i.test(String(win.location.pathname)) &&
+        /^Space Company(?:\s*\||$)/i.test(String(win.document.title || "")) && !!(win.Game && win.Game.resources &&
+        typeof win.Game.resources.getStorage === "function" && typeof win.Game.resources.addResource === "function" &&
+        win.Game.ui && typeof win.Game.ui.updateBoundElements === "function" && typeof win.Game.save === "function" &&
+        SC_RES.every(function (r) { return typeof win[r[0]] === "number" && typeof win[r[0] + "Storage"] === "number"; }));
+    },
+    items: function (win) {
+      return { note: "Uses your current storage limits; no locked resources or buildings are changed. Saves locally immediately.", items: [
+        { id: "sc-fill", label: "Fill metal, gems and wood storage", type: "button", group: "Earth resources" }
+      ].concat(SC_RES.map(function (r) {
+        return { id: "sc-" + r[0], label: r[1], type: "value", group: "Earth resources", value: Math.floor(win[r[0]]),
+          noLock: true, hint: "Maximum: " + win.Game.resources.getStorage(r[0]) };
+      })) };
+    },
+    action: function (win, s, id, arg) {
+      var res = SC_RES.filter(function (r) { return id === "sc-fill" || id === "sc-" + r[0]; });
+      var v = Number(arg && arg.value);
+      if (!res.length || (id !== "sc-fill" && (!arg || arg.value === "" || !isFinite(v) || v < 0))) return;
+      res.forEach(function (r) {
+        var cap = win.Game.resources.getStorage(r[0]);
+        var target = id === "sc-fill" ? cap : Math.min(cap, Math.floor(v));
+        win.Game.resources.addResource(r[0], target - win[r[0]]);
+      });
+      win.Game.ui.updateBoundElements();
+      win.Game.save();
+    }
+  };
+
+  /* The site's two small idle originals keep their running state private.
+     Their exact page + validated save schema is required. Never infer the
+     game from a save left by another page on this shared origin. */
+  function originalSave(win, key) {
+    try {
+      var d = JSON.parse(win.localStorage.getItem(key));
+      if (!d || typeof d !== "object" || Array.isArray(d)) return null;
+      var fields = key === "idleMiner" ? ["gold", "depth", "pick", "drills", "layer"] : ["cookies"];
+      if (!fields.every(function (k) { return typeof d[k] === "number" && isFinite(d[k]) && d[k] >= 0; })) return null;
+      if (key === "cookieEmpire" && (!d.owned || Array.isArray(d.owned) || typeof d.owned !== "object")) return null;
+      return d;
+    } catch (e) { return null; }
+  }
+  function originalWrite(win, s, key, data) {
+    s.originalPending = s.originalPending || {};
+    s.originalPending[key] = JSON.stringify(data);
+    if (!s.originalPut) {
+      s.originalPut = function () {
+        Object.keys(s.originalPending).forEach(function (k) { win.localStorage.setItem(k, s.originalPending[k]); });
+      };
+      ["beforeunload", "pagehide"].forEach(function (ev) { win.addEventListener(ev, s.originalPut); });
+    }
+    s.originalPut();
+    s.restart = true;
+  }
+  var originalMiner = {
+    name: "Idle Miner",
+    detect: function (win) {
+      return /\/games\/originals\/idle-miner\.html$/i.test(String(win.location.pathname)) && win.document.title === "Idle Miner";
+    },
+    items: function (win) {
+      var d = originalSave(win, "idleMiner");
+      if (!d) return { items: [], note: "Wait two seconds for the first autosave, then Refresh." };
+      return { note: "Save edits restart the game. Depth and layer progress are preserved.", items: [
+        { id: "im-gold", label: "Gold", type: "value", group: "Mining", value: Math.floor(d.gold), noLock: true },
+        { id: "im-rich", label: "+100,000 gold", type: "button", group: "Mining" }
+      ] };
+    },
+    action: function (win, s, id, arg) {
+      var d = originalSave(win, "idleMiner"), v = Number(arg && arg.value);
+      if (!d) throw new Error("Wait for the first autosave, then Refresh.");
+      if (id === "im-rich") d.gold = Math.min(999999999, d.gold + 100000);
+      else if (id === "im-gold" && arg && arg.value !== "" && isFinite(v) && v >= 0) d.gold = Math.min(999999999, Math.floor(v));
+      else return;
+      originalWrite(win, s, "idleMiner", d);
+    }
+  };
+  var CE_BUILDINGS = ["cursor", "grandma", "farm", "factory", "bank", "temple", "rocket"];
+  var originalCookies = {
+    name: "Cookie Empire",
+    detect: function (win) {
+      return /\/games\/originals\/cookie-empire\.html$/i.test(String(win.location.pathname)) && win.document.title === "Cookie Empire";
+    },
+    items: function (win) {
+      var d = originalSave(win, "cookieEmpire");
+      if (!d) return { items: [], note: "Wait two seconds for the first autosave, then Refresh." };
+      return { note: "Save edits restart the game. Existing buildings are preserved.", items: [
+        { id: "ce-cookies", label: "Cookies", type: "value", group: "Cookies", value: Math.floor(d.cookies), noLock: true },
+        { id: "ce-rich", label: "+1 million cookies", type: "button", group: "Cookies" },
+        { id: "ce-buildings", label: "+10 of every building", type: "button", group: "Buildings" }
+      ] };
+    },
+    action: function (win, s, id, arg) {
+      var d = originalSave(win, "cookieEmpire"), v = Number(arg && arg.value);
+      if (!d) throw new Error("Wait for the first autosave, then Refresh.");
+      if (id === "ce-rich") d.cookies = Math.min(999999999, d.cookies + 1000000);
+      else if (id === "ce-cookies" && arg && arg.value !== "" && isFinite(v) && v >= 0) d.cookies = Math.min(999999999, Math.floor(v));
+      else if (id === "ce-buildings") CE_BUILDINGS.forEach(function (k) { d.owned[k] = (Number(d.owned[k]) || 0) + 10; });
+      else return;
+      originalWrite(win, s, "cookieEmpire", d);
+    }
+  };
+
   /* ---------------------------------------- any game: its own variables */
 
   /* Plain JavaScript games keep their state in globals. Walk the ones the
@@ -2866,7 +3047,7 @@
 
   var ENGINES = [sm64, clickteam, construct, moto, phaser, eagler, flash, unity, dino, cookie, retroBowl, gameMaker,
     g2048, flappy, templeRun, crossy, darkRoom, bitcoinClicker,
-    particleClicker, quickClick, devLife, generic];
+    particleClicker, quickClick, devLife, csgoClicker, trimps, spaceCompany, originalMiner, originalCookies, generic];
 
   function engineFor(win) {
     var s = state(win);

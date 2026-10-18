@@ -138,6 +138,11 @@
       ["particle", "Particle Clicker", "Max data, funding and reputation, or set each one, and more data per click."],
       ["quickclick", "QuickClick", "Set your clicks or add a billion, and raise the mouse rating."],
       ["devlife", "devLife", "Set your money or add a million, and end the month early."],
+      ["csgo", "CS:GO Clicker", "Set your wallet or add $1 million, without changing inventory or purchases. Wait for the first autosave; edits restart the game."],
+      ["trimps", "Trimps", "Fill food, wood and metal storage, or set each amount within its current capacity. Changes save locally immediately."],
+      ["spacecompany", "Space Company", "Fill metal, gems and wood storage, or set each amount within its current capacity. Changes save locally immediately."],
+      ["idleminer", "Idle Miner", "Set your gold or add 100,000, preserving depth, layers and upgrades. Edits restart the game."],
+      ["cookieempire", "Cookie Empire", "Set cookies, add a million, or add ten of each building. Edits restart the game."],
       ["unity", "Unity games", "A save editor for what the game stores (coins, levels, unlocks), with undo. House of Hazards also gets super speed, super jump, every character unlocked and task skipping."],
       ["values", "Other games", "Their coins, points and score, with Max everything and Lock."]
     ];

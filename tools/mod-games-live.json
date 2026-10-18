@@ -2553,11 +2553,14 @@
   "labels": []
  },
  "huge-csgo-clicker": {
-  "engine": "Any game",
+  "engine": "CS:GO Clicker",
   "err": null,
-  "items": 0,
-  "kind": null,
-  "labels": []
+  "items": 2,
+  "kind": "csgo",
+  "labels": ["Wallet ($)"],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "huge-ctr-tr": {
   "engine": "Any game",
@@ -4126,32 +4129,32 @@
   "labels": []
  },
  "huge-space-company": {
-  "engine": "Game values",
+  "engine": "Space Company",
   "err": null,
-  "items": 21,
-  "kind": "values",
+  "items": 4,
+  "kind": "spacecompany",
   "labels": [
-   "energy",
-   "gem",
-   "gemStorage",
-   "gemNextStorage",
-   "gemMiner",
-   "gemMinerOutput"
-  ]
+   "Metal",
+   "Gems",
+   "Wood"
+  ],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "huge-spacecompany": {
-  "engine": "Game values",
+  "engine": "Space Company",
   "err": null,
-  "items": 21,
-  "kind": "values",
+  "items": 4,
+  "kind": "spacecompany",
   "labels": [
-   "energy",
-   "gem",
-   "gemStorage",
-   "gemNextStorage",
-   "gemMiner",
-   "gemMinerOutput"
-  ]
+   "Metal",
+   "Gems",
+   "Wood"
+  ],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "huge-spacegarden": {
   "engine": "Any game",
@@ -4501,18 +4504,18 @@
   "labels": []
  },
  "huge-trimps": {
-  "engine": "Game values",
+  "engine": "Trimps",
   "err": null,
-  "items": 37,
-  "kind": "values",
+  "items": 4,
+  "kind": "trimps",
   "labels": [
-   "global.soldierHealth",
-   "global.soldierHealthMax",
-   "global.soldierHealthRemaining",
-   "global.soldierEnergyShield",
-   "global.soldierEnergyShieldMax",
-   "global.health"
-  ]
+   "Food",
+   "Wood",
+   "Metal"
+  ],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "huge-tube-jumpers": {
   "engine": "Unity",
@@ -13995,11 +13998,16 @@
   "labels": []
  },
  "original-cookie-empire": {
-  "engine": "Any game",
+  "engine": "Cookie Empire",
   "err": null,
-  "items": 0,
-  "kind": null,
-  "labels": []
+  "items": 3,
+  "kind": "cookieempire",
+  "labels": [
+   "Cookies"
+  ],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "original-dino-run": {
   "engine": "Any game",
@@ -14065,11 +14073,16 @@
   "labels": []
  },
  "original-idle-miner": {
-  "engine": "Any game",
+  "engine": "Idle Miner",
   "err": null,
-  "items": 0,
-  "kind": null,
-  "labels": []
+  "items": 2,
+  "kind": "idleminer",
+  "labels": [
+   "Gold"
+  ],
+  "verified": true,
+  "verification": "Actual ModMenu, framed live game, post-reload UI; tools/test-live-mod-adapters.py",
+  "verifiedOn": "2026-10-14"
  },
  "original-light-cycles": {
   "engine": "Any game",

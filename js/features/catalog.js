@@ -163,8 +163,8 @@
       list = list.filter(function (g) { return g.platform === "local"; });
     }
     if (opts.favoritesOnly) {
-      var favs = window.Store.favorites();
-      list = list.filter(function (g) { return favs.indexOf(g.id) !== -1; });
+      var favs = new Set(window.Store.favorites());
+      list = list.filter(function (g) { return favs.has(g.id); });
     }
     if (opts.query) list = search(opts.query, list);
     return list;

@@ -6,7 +6,8 @@
    served through play.<domain> (the github.io repos, see SITE.gameProxy).
    Each game page is fetched and its engine read from the scripts it loads.
 
-   Usage: node tools/scan-mod-games.js            (needs curl on PATH) */
+   Usage: node tools/scan-mod-games.js            (needs curl on PATH)
+          node tools/scan-mod-games.js --verified-only (offline, preserves existing list) */
 "use strict";
 
 const fs = require("fs");
@@ -49,7 +50,14 @@ const SPECIAL = {
   "huge-particle-clicker": "particle",
   "huge-particleclicker": "particle",
   "ext-quickclick": "quickclick",
-  "ext2-devlife": "devlife"
+  "ext2-devlife": "devlife",
+  /* Dedicated adapters verified through the real ModMenu + framed game UI. */
+  "huge-csgo-clicker": "csgo",
+  "huge-trimps": "trimps",
+  "huge-spacecompany": "spacecompany",
+  "huge-space-company": "spacecompany",
+  "original-idle-miner": "idleminer",
+  "original-cookie-empire": "cookieempire"
 };
 const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
 
@@ -123,11 +131,20 @@ async function engineOf(url) {
 
 async function main() {
   const games = loadCatalog();
-  const hosts = loadHosts();
+  /* Offline refresh after verifying a dedicated adapter: preserve the existing
+     list and update only explicit SPECIAL mappings for catalogued games. */
+  const verifiedOnly = process.argv.includes("--verified-only");
+  const hosts = verifiedOnly ? {} : loadHosts();
   const out = {};
+  if (verifiedOnly && fs.existsSync(OUT)) {
+    const context = { window: {} };
+    require("vm").runInNewContext(fs.readFileSync(OUT, "utf8"), context);
+    Object.assign(out, context.window.MOD_GAMES || {});
+  }
   const todo = [];
   games.forEach((g) => {
     if (SPECIAL[g.id]) { out[g.id] = SPECIAL[g.id]; return; }
+    if (verifiedOnly) return;
     if (SPECIAL_HOST[g.host]) { out[g.id] = SPECIAL_HOST[g.host]; return; }
     if (/(^|\/)games\/flash\.html\?/.test(String(g.source || ""))) { out[g.id] = "flash"; return; }
     if (EXCLUDE.has(g.id)) return;
@@ -151,7 +168,7 @@ async function main() {
   /* Engines found by loading each game in a browser (tools/scan-mod-games-live.py):
      catches games whose engine the page HTML doesn't name. It only adds. */
   const LIVE = path.join(ROOT, "tools", "mod-games-live.json");
-  if (fs.existsSync(LIVE)) {
+  if (!verifiedOnly && fs.existsSync(LIVE)) {
     const live = JSON.parse(fs.readFileSync(LIVE, "utf8"));
     const known = new Set(games.map((g) => g.id));
     Object.keys(live).forEach((id) => {

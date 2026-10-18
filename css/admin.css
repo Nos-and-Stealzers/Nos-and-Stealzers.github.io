@@ -128,3 +128,18 @@
 .admin-page .admin-detail-section > summary { cursor: pointer; font-weight: 650; padding: .35rem 0; color: var(--ink); }
 .admin-page .admin-detail-section-body { padding-top: .65rem; }
 .admin-page .admin-detail-section[data-section="danger"] > summary { color: var(--bad); }
+.admin-page .admin-action-error { margin: .65rem 0 0; overflow-wrap: anywhere; }
+.admin-page #user-detail { scroll-margin-top: 1rem; }
+.admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) .row > * { min-width: 0; }
+@media (max-width: 1180px) {
+  .admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) .rows-head { display: none; }
+  .admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) .row { grid-template-columns: minmax(0, 1fr) !important; gap: .5rem; padding: .8rem; }
+  .admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) .row > * { display: block !important; grid-column: auto; white-space: normal; overflow: visible; text-align: left; overflow-wrap: anywhere; }
+  .admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) [data-label]::before { content: attr(data-label) ": "; color: var(--ink-3); font: 500 .7rem var(--mono); }
+  .admin-page :is(#live-rows, #login-rows, #pl-rows, #audit-rows, #recent-audit) .row > .btn { justify-self: start; }
+}
+@media (max-width: 540px) {
+  .admin-page .admin-urow-who { flex: 1 1 100%; }
+  .admin-page .admin-urow-meta { flex: 1 1 auto; max-width: none; text-align: left; align-items: flex-start; }
+  .admin-page .admin-urow-stats { text-align: left; }
+}

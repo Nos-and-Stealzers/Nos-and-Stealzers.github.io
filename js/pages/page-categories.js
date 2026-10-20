@@ -23,7 +23,7 @@
 
     var samples = document.getElementById("samples");
     Catalog.categories.forEach(function (cat) {
-      var pool = Catalog.all.filter(function (g) { return g.category === cat.id; });
+      var pool = Catalog.playable.filter(function (g) { return g.category === cat.id; });
       if (!pool.length) return;
 
       var section = UI.el("section", "block");

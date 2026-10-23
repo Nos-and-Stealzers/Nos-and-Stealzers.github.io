@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   // Invisible diagnostics only (no on-screen panel). Read with window.pfNetwork in DevTools.
-  const build = '3.7.2';
+  const build = '3.7.3';
   const lines = [];
   const state = { session: 'idle', build };
   const log = text => {

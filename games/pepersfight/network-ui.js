@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   // Invisible diagnostics only (no on-screen panel). Read with window.pfNetwork in DevTools.
-  const build = '3.7.9';
+  const build = '3.7.10';
   const lines = [];
   const state = { session: 'idle', build };
   // NGO lifecycle signals are authoritative; transport opens and console text

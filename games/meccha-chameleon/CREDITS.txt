@@ -1,0 +1,4 @@
+3D props: Kenney (https://kenney.nl) - Furniture Kit, Food Kit, Survival Kit, Mini Market, Toy Car Kit, Holiday Kit, Mini Arcade, Nature Kit, Pirate Kit, Graveyard Kit, Platformer Kit. License: CC0 1.0 (public domain).
+GLTFLoader.js: three.js r147 examples (MIT).
+Player model: supplied by Lucas (meccha-chameleon-player-rig).
+Rebuild models.js: python tools/pack_models.py  (needs the unzipped packs in assets/kenney/, gitignored)

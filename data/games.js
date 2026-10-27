@@ -13,8 +13,25 @@ window.GAME_CATALOG = [
     "embed": "allowed",
     "schoolRisk": "low",
     "dateAdded": "2026-10-15",
-    "download": "https://github.com/Nos-and-Stealzers/pepersfight/releases/latest/download/Pepersfight-Windows.zip",
-    "downloadLabel": "Download for Windows",
+    "download": "https://github.com/Nos-and-Stealzers/pepersfight/releases/latest/download/PepersfightSetup.exe",
+    "downloadLabel": "Windows installer",
+    "sponsored": true
+  },
+  {
+    "id": "meccha-chameleon",
+    "title": "Meccha Chameleon",
+    "category": "multiplayer",
+    "description": "Paint-yourself hide and seek. You're a tiny chameleon in a full-size house: paint your body to match the rug, freeze in a pose and hope the hunters walk right past. Public servers with up to 15 players, five furnished maps, poses, hunter paintballs and a walkable lobby. Want LAN games or your own servers? Grab the Windows download.",
+    "gradient": "linear-gradient(135deg, #38e0a0, #ff6fae)",
+    "source": "games/meccha-chameleon/index.html",
+    "direct": "games/meccha-chameleon/index.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "icon": "/assets/sponsored/meccha-chameleon/icon.jpg",
+    "dateAdded": "2026-10-26",
+    "download": "https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/MecchaChameleon-Windows.zip",
+    "downloadLabel": "Windows download",
     "sponsored": true
   },
   {

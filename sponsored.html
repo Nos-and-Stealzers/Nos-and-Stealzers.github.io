@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sponsored: Pepersfight — Arcade Campus Hub</title>
-  <meta name="description" content="Sponsored game: Pepersfight, a birds vs peppers seed royale with online multiplayer, building, vendors and skins. Play in your browser or download for Windows.">
+  <title>Sponsored: Pepersfight and Meccha Chameleon — Arcade Campus Hub</title>
+  <meta name="description" content="Sponsored games: Pepersfight, a birds vs peppers seed royale, and Meccha Chameleon, paint-yourself hide and seek. Play in your browser or download for Windows.">
   <meta name="theme-color" content="#0c0d10">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
@@ -39,6 +39,9 @@
     .sp-keys { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; color: var(--ink-2); }
     .sp-keys kbd { font: 600 0.8rem var(--mono); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 0.15rem 0.4rem; }
     .sp-note { color: var(--ink-3); font-size: 0.85rem; margin-top: 1rem; }
+    .sp-jump { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.4rem; }
+    .sp-game + .sp-game { margin-top: 2.6rem; padding-top: 2.2rem; border-top: 1px solid var(--line); }
+    .sp-game > .readout { margin: 0 0 1rem; }
   </style>
 </head>
 <body>
@@ -49,14 +52,20 @@
 
     <header class="page-head">
       <span class="label">Sponsored</span>
-      <h1>Featured partner game</h1>
-      <p>Games we're backing. This one runs on its own servers, so you can jump in with friends right from the hub.</p>
+      <h1>Featured partner games</h1>
+      <p>Games we're backing. Both run on their own servers, so you can jump in with friends right from the hub.</p>
+    </header>
+    <nav class="sp-jump" aria-label="Sponsored games">
+      <a class="btn btn-flat" href="#pepersfight">Pepersfight</a>
+      <a class="btn btn-flat" href="#meccha-chameleon">Meccha Chameleon</a>
+    </nav>
+
+    <article class="sp-game" id="pepersfight" aria-labelledby="sp-title">
       <div class="readout">
         <span class="sp-status"><i class="sp-dot" id="sp-dot"></i> server <b id="sp-server">checking…</b></span>
         <span>mode <b>battle royale</b></span>
         <span>players <b>up to 16</b></span>
       </div>
-    </header>
 
     <section class="sp-hero" aria-labelledby="sp-title">
       <img src="assets/sponsored/pepersfight/drop.jpg" alt="Gliding over the Pepersfight island from the Big Bird">
@@ -116,6 +125,64 @@
       </div>
       <p class="sp-note">Sponsored placement. The browser version plays online only; solo vs bots, LAN games and hosting your own server need the Windows download.</p>
     </section>
+    </article>
+
+    <article class="sp-game" id="meccha-chameleon" aria-labelledby="mc-title">
+      <div class="readout">
+        <span class="sp-status"><i class="sp-dot" id="mc-dot"></i> servers <b id="mc-server">checking…</b></span>
+        <span>mode <b>hide and seek</b></span>
+        <span>players <b>up to 15 per server</b></span>
+      </div>
+
+      <section class="sp-hero">
+        <img src="assets/sponsored/meccha-chameleon/hero.jpg" alt="Tiny painted chameleons hiding in the Mansion living room">
+        <div class="sp-over">
+          <span class="sp-badge">Sponsored</span>
+          <h2 id="mc-title">Meccha Chameleon</h2>
+          <p>Paint-yourself hide and seek. You're a pocket-sized chameleon in a full-size house: paint your body to match the rug, freeze in a pose and hope the hunters walk right past.</p>
+          <div class="sp-actions">
+            <a class="btn btn-cta" href="play.html?id=meccha-chameleon">Play now in browser</a>
+            <a class="btn" href="https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/MecchaChameleon-Windows.zip" target="_blank" rel="noopener">Download for Windows</a>
+            <a class="btn btn-flat" href="games/meccha-chameleon/index.html" target="_blank" rel="noopener">Open full screen</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="mc-feat-h">
+        <div class="block-head"><h2 id="mc-feat-h">What's inside</h2><span class="fill"></span></div>
+        <div class="sp-feats">
+          <div class="sp-feat"><b>Paint yourself</b><span>Brush, sample colours off the room, or use Mimic to paint whatever is behind you. Match roughness and shine too.</span></div>
+          <div class="sp-feat"><b>Public servers</b><span>Four always-on rooms with up to 15 players each. Quick match drops you in the busiest one.</span></div>
+          <div class="sp-feat"><b>Five real maps</b><span>Mansion, Backrooms, Sewer, Sugarland and an Art Gallery, furnished with real 3D props you can hide on, in and under.</span></div>
+          <div class="sp-feat"><b>13 poses and emotes</b><span>Curl up, lie flat, press into the wall like a painting, or star-jump on a pinboard.</span></div>
+          <div class="sp-feat"><b>Hunter tools</b><span>Bonk, paintball shots that reveal hiders and a sonar ping that makes chameleons chirp.</span></div>
+          <div class="sp-feat"><b>Lobby and locker</b><span>Walkable lobby with map voting and a camo tester, plus bodies, faces, hats and weapons to unlock.</span></div>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="mc-shots-h">
+        <div class="block-head"><h2 id="mc-shots-h">Screenshots</h2><span class="fill"></span></div>
+        <div class="sp-shots">
+          <figure><img src="assets/sponsored/meccha-chameleon/hide.jpg" alt="Chameleons hiding in the Mansion living room" loading="lazy"><figcaption>Mansion living room</figcaption></figure>
+          <figure><img src="assets/sponsored/meccha-chameleon/camo.jpg" alt="A camouflaged chameleon curled up on the library rug" loading="lazy"><figcaption>Spot the camouflaged ones</figcaption></figure>
+          <figure><img src="assets/sponsored/meccha-chameleon/sugarland.jpg" alt="Chameleons in the Sugarland candy park" loading="lazy"><figcaption>Sugarland</figcaption></figure>
+          <figure><img src="assets/sponsored/meccha-chameleon/lobby.jpg" alt="Players on the ready pad in the Meccha Club lobby" loading="lazy"><figcaption>The Meccha Club lobby</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="block" aria-labelledby="mc-keys-h">
+        <div class="block-head"><h2 id="mc-keys-h">Controls</h2><span class="fill"></span></div>
+        <div class="sp-keys">
+          <kbd>WASD</kbd><span>Move, Space to jump, Shift to sneak</span>
+          <kbd>F</kbd><span>Paint mode: left-drag paints, right-drag orbits, Alt+click samples a colour</span>
+          <kbd>R, 1–0</kbd><span>Pose wheel and quick poses, Z/X to turn</span>
+          <kbd>C Q V</kbd><span>Clone, taunt and decoy</span>
+          <kbd>Mouse</kbd><span>Hunters: left click bonks, right click fires paintballs, E pings</span>
+          <kbd>Tab</kbd><span>Scoreboard in a round, lobby settings in the lobby</span>
+        </div>
+        <p class="sp-note">Sponsored placement. The browser version plays on the public servers and offline modes; LAN games and running your own servers (the Server Manager runs two at once) need the Windows download. A fan-made tribute to MECCHA CHAMELEON; 3D props by Kenney (CC0).</p>
+      </section>
+    </article>
 
     <div data-shell="foot"></div>
   </main>

@@ -726,7 +726,7 @@ function loadMap(id) {
   sun.shadow.camera.updateProjectionMatrix();
   scene.background = new THREE.Color(L.bg ?? 0x151a26);
   scene.fog = L.fog ? new THREE.Fog(L.fog[0], L.fog[1], L.fog[2]) : null;
-  const extra = def.build() || [];
+  const extra = def.build() || []; if (typeof contactShadows === 'function') contactShadows();
   if (def.gate) {
     const g = def.gate, w = g.w || 1.8, h = g.h || 2.3;
     gateMesh = new THREE.Mesh(new THREE.BoxGeometry(g.a === 'h' ? w : 0.16, h, g.a === 'h' ? 0.16 : w), tm('hazard', 3, 4, 0.7));

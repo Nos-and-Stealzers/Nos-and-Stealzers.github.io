@@ -88,6 +88,7 @@ function prop(key, x, z, o = {}) {
     unders.push({ x: (wb.min.x + wb.max.x) / 2, z: (wb.min.z + wb.max.z) / 2, w: wb.max.x - wb.min.x, d: wb.max.z - wb.min.z, h: cbox.min.y, zone: zn ? zn.id : null });
   }
   if (o.top ?? (col !== 'none' && h < 1.6)) addTop((wb.min.x + wb.max.x) / 2, (wb.min.z + wb.max.z) / 2, (wb.max.x - wb.min.x) * 0.8, (wb.max.z - wb.min.z) * 0.8, wb.max.y);
+  if (!o.noShadow && h >= 0.12) _csList.push(obj);
   obj.userData.box = cbox; obj.userData.wb = wb;
   return obj;
 }
@@ -121,4 +122,62 @@ function fillShelves(obj, o = {}) {
     }
   }
   return ys.length;
+}
+
+/* Contact shadows: one soft dark blob under every grounded prop, merged into a single mesh per map (1 draw call).
+   The sun shadow map spans the whole map, so it is too coarse to ground chair legs and crates on its own.
+   The blobs are not in env, so paint/eyedropper/bonk raycasts and colliders ignore them. */
+const _csList = [];
+let _csMesh = null, _csMat = null;
+function contactShadowTex() {
+  const n = 64, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), img = g.createImageData(n, n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const u = Math.abs((x + 0.5) / n * 2 - 1), v = Math.abs((y + 0.5) / n * 2 - 1);
+    const d = Math.pow(Math.pow(u, 4) + Math.pow(v, 4), 0.25), a = clamp((1 - d) / 0.45, 0, 1);
+    const i = (y * n + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = 0; img.data[i + 3] = Math.round(255 * a * a * (3 - 2 * a));
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t;
+}
+function contactShadows() {
+  if (_csMesh) { mapGroup.remove(_csMesh); _csMesh.geometry.dispose(); _csMesh = null; }
+  const list = _csList.splice(0), own = new Set(), rc = new THREE.Raycaster(), pos = [], uv = [], col = [], idx = [];
+  if (!list.length) return 0;
+  for (const o of list) o.traverse((c) => c.isMesh && own.add(c));
+  const ground = env.filter((m) => !own.has(m));
+  for (const o of list) {
+    const wb = o.userData.wb, w = wb.max.x - wb.min.x, d = wb.max.z - wb.min.z, h = wb.max.y - wb.min.y;
+    if (w < 0.12 || d < 0.12 || w > 7 || d > 7) continue;
+    const cx = (wb.min.x + wb.max.x) / 2, cz = (wb.min.z + wb.max.z) / 2;
+    rc.set(new V3(cx, wb.min.y + 0.03, cz), new V3(0, -1, 0)); rc.far = 0.09;
+    let hit = rc.intersectObjects(ground, false)[0];
+    if (!hit) for (const [ox, oz] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) {
+      rc.set(new V3(cx + ox * w, wb.min.y + 0.03, cz + oz * d), new V3(0, -1, 0)); hit = rc.intersectObjects(ground, false)[0]; if (hit) break;
+    }
+    if (!hit && Math.abs(wb.min.y - (MAP.floorY || 0)) > 0.03) continue;
+    const y = (hit ? hit.point.y : wb.min.y) + 0.012, m = Math.min(0.35, 0.12 + 0.18 * Math.min(h, 1.5));
+    const hw = w / 2 + m, hd = d / 2 + m, a = clamp(0.3 + 0.12 * h, 0.3, 0.5), b = pos.length / 3;
+    pos.push(cx - hw, y, cz - hd, cx + hw, y, cz - hd, cx + hw, y, cz + hd, cx - hw, y, cz + hd);
+    uv.push(0, 0, 1, 0, 1, 1, 0, 1);
+    for (let k = 0; k < 4; k++) col.push(a, a, a);
+    idx.push(b, b + 2, b + 1, b, b + 3, b + 2);
+  }
+  if (!idx.length) return 0;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx); geo.computeBoundingSphere();
+  if (!_csMat) {
+    _csMat = new THREE.ShaderMaterial({
+      uniforms: { map: { value: contactShadowTex() }, fogNear: { value: 1e4 }, fogFar: { value: 2e4 } }, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      vertexShader: 'attribute vec3 color; varying vec2 vUv; varying float vA; varying float vD; void main(){ vUv = uv; vA = color.r; vec4 mv = modelViewMatrix * vec4(position, 1.0); vD = -mv.z; gl_Position = projectionMatrix * mv; }',
+      fragmentShader: 'uniform sampler2D map; uniform float fogNear; uniform float fogFar; varying vec2 vUv; varying float vA; varying float vD; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, texture2D(map, vUv).a * vA * (1.0 - smoothstep(fogNear, fogFar, vD))); }',
+    });
+  }
+  _csMat.uniforms.fogNear.value = scene.fog ? scene.fog.near : 1e4; _csMat.uniforms.fogFar.value = scene.fog ? scene.fog.far : 2e4;
+  _csMesh = new THREE.Mesh(geo, _csMat);
+  _csMesh.renderOrder = -1; _csMesh.userData.shared = true; _csMesh.raycast = () => {};
+  mapGroup.add(_csMesh);
+  return idx.length / 6;
 }

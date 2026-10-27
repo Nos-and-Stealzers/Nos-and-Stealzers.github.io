@@ -3,13 +3,13 @@
    pepersfight's Build files, which are version-stamped in their URLs and cached
    so returning players skip the wasm download. Bump SHELL_VERSION after a deploy. */
 
-var SHELL_VERSION = "ach-shell-v110";
+var SHELL_VERSION = "ach-shell-v111";
 
 /* Pepersfight build files are version-stamped in their URL (?v=x.y.z), so a cached
    copy can never go stale: the first visit fills this cache and repeat visits skip
    the whole wasm/data download. Bumped game versions create a new cache and this one
    is pruned on activate. */
-var PF_BUILD_VERSION = "3.7.22";
+var PF_BUILD_VERSION = "3.7.23";
 var PF_BUILD_CACHE = "pf-build-" + PF_BUILD_VERSION;
 
 var SHELL = [

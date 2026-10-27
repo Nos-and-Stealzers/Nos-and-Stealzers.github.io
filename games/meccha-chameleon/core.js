@@ -61,12 +61,46 @@ function canvasTex(w, h, draw) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
   const g = c.getContext('2d');
+  const hc = document.createElement('canvas');
+  hc.width = w; hc.height = h;
+  const hg = hc.getContext('2d');
+  hg.fillStyle = '#fff'; hg.fillRect(0, 0, w, h);
+  g._h = hg; g._hUsed = false;
   draw(g, w, h);
   c._data = g.getImageData(0, 0, w, h);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
+  if (g._hUsed) t._nrm = reliefNormal(hc, w, h);
   return t;
+}
+/* Seams, grout and mortar drawn by tiles/planks/bricks also go into a height canvas
+   (white = surface, black = joint). A softened copy becomes a tangent-space normal map,
+   so joints catch real light instead of being painted-on lines. Albedo is untouched,
+   so paint sampling and hunter vision read exactly the same colours as before. */
+function reliefNormal(hc, w, h) {
+  const b = document.createElement('canvas');
+  b.width = w; b.height = h;
+  const bg = b.getContext('2d');
+  bg.filter = 'blur(1.2px)';
+  for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) bg.drawImage(hc, ox, oy);
+  const src = bg.getImageData(0, 0, w, h).data;
+  const out = new Uint8Array(w * h * 4);
+  const H = (x, y) => src[(((y + h) % h) * w + ((x + w) % w)) * 4] / 255;
+  const k = 2.2;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = (H(x + 1, y) - H(x - 1, y)) * k, dy = (H(x, y + 1) - H(x, y - 1)) * k;
+    const nx = -dx, ny = dy, l = Math.hypot(nx, ny, 1);
+    const i = (y * w + x) * 4;
+    out[i] = (nx / l * 0.5 + 0.5) * 255; out[i + 1] = (ny / l * 0.5 + 0.5) * 255; out[i + 2] = (1 / l * 0.5 + 0.5) * 255; out[i + 3] = 255;
+  }
+  const n = new THREE.DataTexture(out, w, h, THREE.RGBAFormat);
+  n.flipY = true;
+  n.wrapS = n.wrapT = THREE.RepeatWrapping;
+  n.magFilter = THREE.LinearFilter; n.minFilter = THREE.LinearMipmapLinearFilter; n.generateMipmaps = true;
+  n.anisotropy = 4;
+  n.needsUpdate = true;
+  return n;
 }
 function shade(hex, amt) { const c = new THREE.Color(hex); c.offsetHSL(0, 0, amt); return '#' + c.getHexString(); }
 function speckle(g, w, h, density, alpha) {
@@ -85,13 +119,16 @@ function wainscot(g, w, h, meters, color, line, rail, wallH = 3.2) {
   g.fillStyle = shade(color, -0.12); g.fillRect(0, h - 20, w, 20);
 }
 function tiles(g, x0, y0, w, h, size, colors, grout, gw = 3) {
+  const H = g._h; if (H) { g._hUsed = true; H.fillStyle = '#000'; H.fillRect(x0, y0, w, h); H.fillStyle = '#fff'; }
   g.fillStyle = grout; g.fillRect(x0, y0, w, h);
   for (let y = y0; y < y0 + h; y += size) for (let x = x0; x < x0 + w; x += size) {
     g.fillStyle = spick(colors); g.fillRect(x + gw / 2, y + gw / 2, size - gw, Math.min(size, y0 + h - y) - gw);
+    if (H) H.fillRect(x + gw / 2, y + gw / 2, size - gw, Math.min(size, y0 + h - y) - gw);
   }
 }
 function planks(g, w, h, rows, palette, seam) {
   const rh = h / rows;
+  const H = g._h; if (H) { g._hUsed = true; H.fillStyle = '#000'; }
   for (let r = 0; r < rows; r++) {
     let x = -sr(0, 120);
     while (x < w) {
@@ -100,14 +137,17 @@ function planks(g, w, h, rows, palette, seam) {
       g.strokeStyle = 'rgba(0,0,0,.12)'; g.lineWidth = 1;
       for (let k = 0; k < 3; k++) { const yy = r * rh + sr(4, rh - 4); g.beginPath(); g.moveTo(x, yy); g.bezierCurveTo(x + len * .3, yy + sr(-3, 3), x + len * .6, yy + sr(-3, 3), x + len, yy); g.stroke(); }
       g.fillStyle = seam; g.fillRect(x, r * rh, 2, rh);
+      if (H) H.fillRect(x, r * rh, 2, rh);
       x += len;
     }
     g.fillStyle = seam; g.fillRect(0, r * rh, w, 2);
+    if (H) H.fillRect(0, r * rh, w, 2);
   }
 }
 function bricks(g, w, h, bw, bh, palette, mortar, gap = 3) {
+  const H = g._h; if (H) { g._hUsed = true; H.fillStyle = '#000'; H.fillRect(0, 0, w, h); H.fillStyle = '#fff'; }
   g.fillStyle = mortar; g.fillRect(0, 0, w, h);
-  for (let y = 0, r = 0; y < h; y += bh, r++) for (let x = (r % 2) * -bw / 2; x < w; x += bw) { g.fillStyle = spick(palette); g.fillRect(x + gap / 2, y + gap / 2, bw - gap, bh - gap); }
+  for (let y = 0, r = 0; y < h; y += bh, r++) for (let x = (r % 2) * -bw / 2; x < w; x += bw) { g.fillStyle = spick(palette); g.fillRect(x + gap / 2, y + gap / 2, bw - gap, bh - gap); if (H) H.fillRect(x + gap / 2, y + gap / 2, bw - gap, bh - gap); }
 }
 function sprinkles(g, w, h, n, cols) {
   for (let i = 0; i < n; i++) { g.save(); g.translate(sr(0, w), sr(0, h)); g.rotate(sr(0, 3.14)); g.fillStyle = spick(cols); g.fillRect(-4, -1.5, 8, 3); g.restore(); }
@@ -431,7 +471,9 @@ let ZONES = [], NODES = [], MAP = null, gateBox = null, gateMesh = null;
 function tm(key, rx = 1, ry = 1, rough = 0.85, metal = 0) {
   const base = typeof key === 'string' ? TEX[key] : key;
   const t = base.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); t.updateMatrix();
-  return new THREE.MeshStandardMaterial({ map: t, roughness: rough, metalness: metal });
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: rough, metalness: metal });
+  if (base._nrm && SETTINGS.quality !== 'low') { const n = base._nrm.clone(); n.needsUpdate = true; n.repeat.set(rx, ry); n.updateMatrix(); m.normalMap = n; m.normalScale.set(0.9, 0.9); }
+  return m;
 }
 const cm = (hex, rough = 0.85, metal = 0) => new THREE.MeshStandardMaterial({ color: hex, roughness: rough, metalness: metal });
 function reg(m, o = {}) { m.castShadow = o.cast !== false; m.receiveShadow = true; mapGroup.add(m); env.push(m); return m; }

@@ -25,16 +25,40 @@ const sr = (a, b) => a + srand() * (b - a);
 const spick = (a) => a[Math.floor(srand() * a.length)];
 
 /* ---------- settings ---------- */
-const SETTINGS = Object.assign({ sens: 1, vol: 0.6, fov: 72, quality: 'high', invertY: false, music: true }, JSON.parse(localStorage.getItem('mc_settings') || '{}'));
+const SETTINGS = Object.assign({ sens: 1, vol: 0.6, fov: 72, quality: 'auto', invertY: false, music: true }, JSON.parse(localStorage.getItem('mc_settings') || '{}'));
+// Legacy High was the unmeasured default; migrate it once to Auto, retaining all other preferences.
+if (!SETTINGS.perfVersion) { if (SETTINGS.quality === 'high') SETTINGS.quality = 'auto'; SETTINGS.perfVersion = 1; }
 function saveSettings() { localStorage.setItem('mc_settings', JSON.stringify(SETTINGS)); }
 
 /* ---------- renderer ---------- */
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const QUALITY = { level: 'medium', autoLevel: 'medium', frames: 0, elapsed: 0 };
+try {
+  const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
+  QUALITY.gpu = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '';
+  QUALITY.autoLevel = PeperPerf.chooseQuality(QUALITY.gpu, navigator.hardwareConcurrency);
+} catch (e) { /* balanced default if GPU identity is hidden */ }
+let qualityMap = null;
 function applyQuality() {
-  const q = SETTINGS.quality;
-  renderer.setPixelRatio(q === 'low' ? 0.75 : q === 'medium' ? 1 : Math.min(window.devicePixelRatio, 1.5));
+  const q = SETTINGS.quality === 'auto' ? QUALITY.autoLevel : SETTINGS.quality;
+  QUALITY.level = q;
+  renderer.setPixelRatio(q === 'low' ? 0.6 : q === 'medium' ? 1 : Math.min(window.devicePixelRatio, 1.5));
   renderer.shadowMap.enabled = q !== 'low';
+  renderer.shadowMap.needsUpdate = true;
   renderer.setSize(innerWidth, innerHeight);
+  if (qualityMap) PeperPerf.applyMapQuality(THREE, qualityMap, q);
+}
+function adaptQuality(dt) {
+  if (performance.now() < (QUALITY.warmupUntil || 0)) { QUALITY.frames = 0; QUALITY.elapsed = 0; return; }
+  if (SETTINGS.quality !== 'auto') { QUALITY.frames = 0; QUALITY.elapsed = 0; return; }
+  QUALITY.frames++; QUALITY.elapsed += dt;
+  if (QUALITY.elapsed < 2 || QUALITY.frames < 8) return;
+  const mean = QUALITY.elapsed * 1000 / QUALITY.frames;
+  QUALITY.frames = 0; QUALITY.elapsed = 0;
+  if (mean > 32 && QUALITY.autoLevel !== 'low') {
+    QUALITY.autoLevel = QUALITY.autoLevel === 'high' ? 'medium' : 'low';
+    applyQuality();
+  }
 }
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
@@ -432,7 +456,7 @@ TEX.graffiti = [0, 1, 2, 3].map((k) => canvasTex(256, 160, (g, w, h) => {
   const cols = [['#ff4fa3', '#33e1ff', '#ffe14d'], ['#7bff5a', '#ff7a1a', '#ffffff'], ['#b14dff', '#ffd23f', '#00e0b0'], ['#ff3b3b', '#ffffff', '#2f8cff']][k];
   g.lineCap = 'round'; g.lineJoin = 'round';
   g.font = `900 ${64 - k * 6}px Impact, Arial Black, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const word = ['HIDE', 'MECCHA', 'BOO!', 'SEEK'][k];
+  const word = ['HIDE', 'PEPER', 'BOO!', 'SEEK'][k];
   g.lineWidth = 14; g.strokeStyle = cols[1]; g.strokeText(word, w / 2, h / 2);
   g.fillStyle = cols[0]; g.fillText(word, w / 2, h / 2);
   for (let i = 0; i < 6; i++) { g.fillStyle = cols[2]; g.beginPath(); g.arc(sr(20, w - 20), sr(10, h - 10), sr(3, 7), 0, 7); g.fill(); }
@@ -472,7 +496,7 @@ function tm(key, rx = 1, ry = 1, rough = 0.85, metal = 0) {
   const base = typeof key === 'string' ? TEX[key] : key;
   const t = base.clone(); t.needsUpdate = true; t.repeat.set(rx, ry); t.updateMatrix();
   const m = new THREE.MeshStandardMaterial({ map: t, roughness: rough, metalness: metal });
-  if (base._nrm && SETTINGS.quality !== 'low') { const n = base._nrm.clone(); n.needsUpdate = true; n.repeat.set(rx, ry); n.updateMatrix(); m.normalMap = n; m.normalScale.set(0.9, 0.9); }
+  if (base._nrm) { const n = base._nrm.clone(); n.needsUpdate = true; n.repeat.set(rx, ry); n.updateMatrix(); m.normalMap = n; m.normalScale.set(0.9, 0.9); }
   return m;
 }
 const cm = (hex, rough = 0.85, metal = 0) => new THREE.MeshStandardMaterial({ color: hex, roughness: rough, metalness: metal });
@@ -744,6 +768,7 @@ function setGate(closed) {
 const MAPS = {};
 function disposeObj(o) {
   o.traverse((c) => {
+    PeperPerf.releaseMesh(c);
     if (c.userData.shared) return;
     if (c.geometry) c.geometry.dispose();
     if (c.material) { const ms = Array.isArray(c.material) ? c.material : [c.material]; for (const m of ms) { if (m.map) m.map.dispose(); m.dispose(); } }
@@ -782,5 +807,8 @@ function loadMap(id) {
   }
   buildNav(extra);
   setGate(true);
+  qualityMap = mapGroup;
+  QUALITY.warmupUntil = performance.now() + 3000;
+  PeperPerf.applyMapQuality(THREE, mapGroup, QUALITY.level);
   return MAP;
 }

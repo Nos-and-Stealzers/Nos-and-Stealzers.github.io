@@ -70,7 +70,7 @@ code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:5px;font:12p
 #shell::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(8,10,16,.85) 0,rgba(8,10,16,0) 140px),linear-gradient(0deg,rgba(8,10,16,.8) 0,rgba(8,10,16,0) 260px)}
 body:not(.page-home) #shell::before{background:rgba(8,10,16,.72);backdrop-filter:blur(6px)}
 #topbarNav{position:relative;display:flex;align-items:center;gap:28px;padding:0 28px;height:68px;flex:none}
-.brand{display:flex;flex-direction:column;font:800 18px/0.92 var(--display);letter-spacing:.06em}
+.brand{display:flex;flex-direction:row;gap:0;font:800 25px/1 var(--display);letter-spacing:0}
 .brand .b1{color:var(--pink)} .brand .b2{color:var(--accent)}
 .tabs{display:flex;gap:4px;height:100%}
 .tabs button{position:relative;padding:0 18px;font:700 15px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}

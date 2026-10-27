@@ -262,9 +262,10 @@ function findSpot(ch, taken) {
 const VW = 128, VH = 96;
 /* Chameleons used to be 1.3 m tall; detection is pixel-area based, so scale it back up for the smaller body. */
 const AREA_COMP = (1.3 / CHAM_H) ** 2;
-const visRT = new THREE.WebGLRenderTarget(VW, VH);
+// Pack the identical with/without-hider views side by side: one GPU readback instead of two.
+const visRT = new THREE.WebGLRenderTarget(VW * 2, VH);
 const visCam = new THREE.PerspectiveCamera(78, VW / VH, 0.1, 30);
-const bufA = new Uint8Array(VW * VH * 4), bufB = new Uint8Array(VW * VH * 4);
+const bufA = new Uint8Array(VW * VH * 4), bufB = new Uint8Array(VW * VH * 4), bufPair = new Uint8Array(VW * 2 * VH * 4);
 
 /* ---------- hunter team brain ---------- */
 function teamMem() { if (!G.tm || G.tm.P !== G.P) G.tm = { P: G.P, seen: {}, claim: {} }; return G.tm; }
@@ -470,12 +471,21 @@ class Hunter {
     if (cand.length) {
       const hiddenH = []; for (const h of G.hunters) if (h.group.visible) { h.group.visible = false; hiddenH.push(h); }
       const fxHidden = []; for (const s of G.fxHide) if (s.visible) { s.visible = false; fxHidden.push(s); }
-      renderer.setRenderTarget(visRT);
-      renderer.render(scene, visCam); renderer.readRenderTargetPixels(visRT, 0, 0, VW, VH, bufA);
-      const hid = []; for (const c of G.hiders) if (c.root.visible) { c.root.visible = false; hid.push(c); }
-      renderer.render(scene, visCam); renderer.readRenderTargetPixels(visRT, 0, 0, VW, VH, bufB);
-      for (const c of hid) c.root.visible = true; for (const h of hiddenH) h.group.visible = true; for (const s of fxHidden) s.visible = true;
-      renderer.setRenderTarget(null);
+      const oldTarget = renderer.getRenderTarget(), oldViewport = renderer.getViewport(new THREE.Vector4()), oldScissor = renderer.getScissor(new THREE.Vector4()), oldTest = renderer.getScissorTest();
+      const hid = [];
+      try {
+        // Render-target viewport/scissor are physical pixels (renderer.setViewport would scale by DPR).
+        visRT.scissorTest = true; visRT.viewport.set(0, 0, VW, VH); visRT.scissor.set(0, 0, VW, VH);
+        renderer.setRenderTarget(visRT); renderer.render(scene, visCam);
+        for (const c of G.hiders) if (c.root.visible) { c.root.visible = false; hid.push(c); }
+        visRT.viewport.set(VW, 0, VW, VH); visRT.scissor.set(VW, 0, VW, VH);
+        renderer.setRenderTarget(visRT); renderer.render(scene, visCam);
+        renderer.readRenderTargetPixels(visRT, 0, 0, VW * 2, VH, bufPair);
+        PeperPerf.splitVision(bufPair, VW, VH, bufA, bufB);
+      } finally {
+        for (const c of hid) c.root.visible = true; for (const h of hiddenH) h.group.visible = true; for (const s of fxHidden) s.visible = true;
+        renderer.setRenderTarget(oldTarget); renderer.setViewport(oldViewport); renderer.setScissor(oldScissor); renderer.setScissorTest(oldTest);
+      }
       const D = G.D;
       for (const [t, r] of cand) {
         const px0 = clamp(Math.floor((r.x0 * 0.5 + 0.5) * VW), 0, VW - 1), px1 = clamp(Math.ceil((r.x1 * 0.5 + 0.5) * VW), 0, VW - 1);
@@ -1743,22 +1753,27 @@ function update(dt) {
   G.netTick(dt);
   hudT -= dt; if (hudT <= 0) { hudT = 0.1; UI.tick(); }
 }
+function advanceSimulation(dt) {
+  let left = Math.min(2, Math.max(0, dt));
+  while (left > 1e-6) { const tick = Math.min(0.05, left); left -= tick; update(tick); }
+}
 function step(dt) {
-  update(dt);
+  advanceSimulation(dt);
   for (const c of G.hiders) c.flush();
   Sound.listener(camera);
   if (renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
+  QUALITY.rendered = (QUALITY.rendered || 0) + 1;
 }
 let last = performance.now();
-function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; step(dt); requestAnimationFrame(frame); }
+function frame(now) { const dt = Math.max(0, (now - last) / 1000); if (dt < 1 / 60 - 0.001) { requestAnimationFrame(frame); return; } last = now; if (G.phase !== 'boot' && G.phase !== 'loading') adaptQuality(dt); step(dt); requestAnimationFrame(frame); }
 /* When the window is minimised or covered the browser stops animation frames. Keep the game and its networking
    ticking at 10 Hz without rendering so a host who alt-tabs doesn't freeze everyone else's round. */
 setInterval(() => {
   const now = performance.now();
   if (now - last < 250 || G.phase === 'boot') return;
   let left = Math.min(2, (now - last) / 1000); last = now;
-  while (left > 1e-4) { const dt = Math.min(0.05, left); left -= dt; update(dt); }
+  advanceSimulation(left);
   for (const c of G.hiders) c.flush();
 }, 100);
 

@@ -17,7 +17,7 @@
  },
  {
   "id": "meccha-chameleon",
-  "title": "Meccha Chameleon",
+  "title": "peperhide",
   "category": "multiplayer",
   "description": "Paint-yourself hide and seek. You're a tiny chameleon in a full-size house: paint your body to match the rug, freeze in a pose and hope the hunters walk right past. Public servers with up to 15 players, five big furnished maps, sprinting, wall-climbing, a pose wheel and team-searching AI hunters. Want LAN games or your own servers? Grab the Windows download.",
   "gradient": "linear-gradient(135deg, #38e0a0, #ff6fae)",
@@ -28,7 +28,7 @@
   "schoolRisk": "low",
   "icon": "/assets/sponsored/meccha-chameleon/icon.jpg",
   "dateAdded": "2026-10-26",
-  "download": "https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/MecchaChameleon-Windows.zip",
+  "download": "https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/peperhide-Windows.zip",
   "downloadLabel": "Windows download",
   "sponsored": true
  },

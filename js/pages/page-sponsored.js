@@ -37,7 +37,7 @@
   document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
 })();
 
-/* Meccha Chameleon: public room counts from its Cloudflare Worker. */
+/* peperhide: public room counts from its Cloudflare Worker. */
 (function () {
   'use strict';
   var dot = document.getElementById('mc-dot');

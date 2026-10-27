@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Meccha Chameleon</title>
+<title>peperhide</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="in-menu">
@@ -21,7 +21,7 @@
 <!-- ================= MENU SHELL (top bar shared by Play / Servers / Locker / Career) ================= -->
 <div id="shell" class="hidden">
   <header id="topbarNav">
-    <div class="brand"><span class="b1">MECCHA</span><span class="b2">CHAMELEON</span></div>
+    <div class="brand"><span class="b1">peper</span><span class="b2">hide</span></div>
     <nav class="tabs" id="navTabs">
       <button data-page="home" class="on">Play</button>
       <button data-page="servers">Servers</button>
@@ -43,8 +43,8 @@
     <div class="home-left">
       <div class="news glass">
         <span class="eyebrow">What's new</span>
-        <h3>Bigger maps, smarter hunters</h3>
-        <p>Every map grew new areas: a dining room and greenhouse, the Poolrooms, a drifter camp, a candy factory and a modern art wing. Hold Shift to sprint, G for poses, F to paint, and stick to walls. Hunters now search as a team.</p>
+        <h3>New name. Smoother play.</h3>
+        <p>Welcome to peperhide. Auto graphics now fits your device, lighter lighting helps weaker GPUs, and slow frames no longer slow the game clock. Change Graphics quality in Settings any time.</p>
       </div>
       <div class="tip glass"><span class="eyebrow">Tip</span><p id="tipText"></p></div>
     </div>
@@ -56,7 +56,7 @@
       </button>
       <button class="playbtn" id="playBtn"><span>Play</span><kbd>Enter</kbd></button>
     </div>
-    <div class="version">v4.0.3 · fan-made tribute to MECCHA CHAMELEON</div>
+    <div class="version">v4.1.0 · paint, hide, hunt</div>
   </section>
 
   <!-- MODE SELECT -->
@@ -151,7 +151,7 @@
         <div class="setrow"><div><b>Field of view</b><small>Wider shows more of the room</small></div><div class="ctl"><input id="setFov" type="range" min="55" max="100" step="1"><span id="setFovVal"></span></div></div>
       </div>
       <div class="setpane hidden" data-pane="video">
-        <div class="setrow"><div><b>Graphics quality</b><small>Low turns off shadows and lowers resolution</small></div><div class="ctl"><div class="seg" id="setQuality"><button data-v="low">Low</button><button data-v="medium">Medium</button><button data-v="high">High</button></div></div></div>
+        <div class="setrow"><div><b>Graphics quality</b><small>Auto adapts to your device. Low uses simpler lighting and lower resolution</small></div><div class="ctl"><div class="seg" id="setQuality"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="medium">Medium</button><button data-v="high">High</button></div></div></div>
         <div class="setrow"><div><b>Fullscreen</b><small>Also F11</small></div><div class="ctl"><button class="secbtn" id="fsBtn">Toggle</button></div></div>
       </div>
       <div class="setpane hidden" data-pane="audio">
@@ -305,6 +305,7 @@
 </div>
 
 <script src="three.min.js"></script>
+<script src="perf.js"></script>
 <script src="core.js"></script>
 <script src="GLTFLoader.js"></script>
 <script src="models.js"></script>

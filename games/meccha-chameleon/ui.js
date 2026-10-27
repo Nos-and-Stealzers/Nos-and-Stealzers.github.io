@@ -27,7 +27,7 @@ const ICON = {
 };
 const ico = (k, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ''}</svg>`;
 
-const WIN_DOWNLOAD = 'https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/MecchaChameleon-Windows.zip';
+const WIN_DOWNLOAD = 'https://github.com/Nos-and-Stealzers/meccha-chameleon/releases/latest/download/peperhide-Windows.zip';
 const TIPS = [
   'Lie face down on a rug and paint your back like the rug pattern.',
   'The Mimic brush paints whatever is behind you from the camera angle. Line the camera up with where hunters will look from.',
@@ -774,7 +774,7 @@ function makePoseThumbs() {
 (async () => {
   wire();
   UI.loading(true, 'Starting…');
-  $('#loadTitle').textContent = 'Meccha Chameleon'; $('#loadKicker').textContent = 'Starting up';
+  $('#loadTitle').textContent = 'peperhide'; $('#loadKicker').textContent = 'Starting up';
   try { await loadModels(); } catch (e) { console.warn('models', e); }
   try { await makeThumbs(); } catch (e) { console.warn('thumbs', e); }
   try { makePoseThumbs(); } catch (e) { console.warn('pose thumbs', e); }

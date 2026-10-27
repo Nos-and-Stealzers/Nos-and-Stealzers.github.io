@@ -741,7 +741,7 @@ MAPS.lobby = {
       TEX.neon = canvasTex(1024, 192, (g, w, h) => {
         g.fillStyle = '#0d1018'; g.fillRect(0, 0, w, h);
         g.font = '800 120px Segoe UI, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.shadowColor = '#3ad49c'; g.shadowBlur = 30; g.fillStyle = '#b9ffe6'; g.fillText('MECCHA CLUB', w / 2, h / 2 + 6);
+        g.shadowColor = '#3ad49c'; g.shadowBlur = 30; g.fillStyle = '#b9ffe6'; g.fillText('PEPERHIDE CLUB', w / 2, h / 2 + 6);
       });
     }
     const extra = buildShell([{ id: 'club', x0: 0, z0: 0, x1: 26, z1: 22, wall: 'hubWall', floor: 'hubFloor', floorScale: 4 }], [], { frame: false });

@@ -43,8 +43,8 @@
     <div class="home-left">
       <div class="news glass">
         <span class="eyebrow">What's new</span>
-        <h3>Tiny chameleons, real furniture</h3>
-        <p>Chameleons are pocket-sized now and every map is filled with real 3D props. Crawl under tables, hide in bookshelves, survive overtime.</p>
+        <h3>Bigger maps, smarter hunters</h3>
+        <p>Every map grew new areas: a dining room and greenhouse, the Poolrooms, a drifter camp, a candy factory and a modern art wing. Hold Shift to sprint, G for poses, F to paint, and stick to walls. Hunters now search as a team.</p>
       </div>
       <div class="tip glass"><span class="eyebrow">Tip</span><p id="tipText"></p></div>
     </div>
@@ -56,7 +56,7 @@
       </button>
       <button class="playbtn" id="playBtn"><span>Play</span><kbd>Enter</kbd></button>
     </div>
-    <div class="version">v3.2 · fan-made tribute to MECCHA CHAMELEON</div>
+    <div class="version">v4.0 · fan-made tribute to MECCHA CHAMELEON</div>
   </section>
 
   <!-- MODE SELECT -->
@@ -221,6 +221,7 @@
   <div id="eyes" class="hidden"><div class="eyeic" data-ico="eye"></div><div class="eyebody"><div class="eyes-label"><span>Hunter attention</span><b id="eyesTxt">Unseen</b></div><div class="bar"><i id="eyesBar"></i></div></div></div>
   <div id="crosshair" class="hidden"></div>
   <div id="hint"></div>
+  <div id="stamina" class="hidden"><i></i></div>
   <div id="blind" class="hidden"><div><span class="eyebrow">Hunters wait</span><b>Eyes closed</b><span>The chameleons are hiding</span><em id="blindTime">60</em></div></div>
   <div id="abilities"></div>
 
@@ -229,8 +230,8 @@
     <div class="tools">
       <button data-tool="brush" class="on" title="Brush (B)" data-ico="brush">Brush</button>
       <button data-tool="mimic" title="Mimic (M): paints whatever is behind you from this angle" data-ico="eye">Mimic</button>
-      <button data-tool="picker" title="Sample (I): click the room to pick a colour" data-ico="drop">Sample</button>
-      <button data-tool="fill" title="Fill whole body (G)" data-ico="splat">Fill</button>
+      <button data-tool="picker" title="Sample (I or Space): pick a colour off the room" data-ico="drop">Sample</button>
+      <button data-tool="fill" title="Fill whole body (N)" data-ico="splat">Fill</button>
     </div>
     <div class="colorrow"><label class="colorwell"><input type="color" id="color" value="#7a4a2c"><span id="colorHex">#7a4a2c</span></label><div id="swatches"></div></div>
     <label class="slider">Brush size <span id="sizeVal">10</span><input type="range" id="brushSize" min="2" max="48" value="10"></label>
@@ -242,7 +243,7 @@
     <div class="stack"><span class="eyebrow">Body</span><div class="seg wrap" id="shapeSeg"></div></div>
     <div class="stack"><span class="eyebrow">Size</span><div class="seg" id="sizeSeg"><button data-v="petite">Petite</button><button data-v="normal" class="on">Normal</button><button data-v="plump">Plump</button></div></div>
     <div class="stack"><span class="eyebrow">Turn</span><div class="seg"><button id="rotL">Left <kbd>Z</kbd></button><button id="rotR">Right <kbd>X</kbd></button></div></div>
-    <p class="tip">Left-drag paints · Right-drag orbits · Scroll zooms · Alt+click samples</p>
+    <p class="tip">Left-drag paints · Right-drag orbits · Scroll zooms · Space or Alt+click samples the colour under the cursor</p>
   </aside>
 </div>
 
@@ -252,7 +253,7 @@
 <!-- pose wheel -->
 <div id="poseWheel" class="hidden">
   <div class="wheelcard glass">
-    <div class="whead"><h3>Poses</h3><span class="muted">Click one or press its number · Esc to close</span></div>
+    <div class="whead"><h3>Poses</h3><span class="muted">Hold G, point at a pose and let go · or tap G and click · 1-0 quick poses</span></div>
     <div id="wheelPoses" class="wheelgrid"></div>
     <div id="wheelEmotes" class="emotes"><button data-emote="wave">Wave</button><button data-emote="dance">Dance</button><button data-emote="cheer">Cheer</button></div>
   </div>

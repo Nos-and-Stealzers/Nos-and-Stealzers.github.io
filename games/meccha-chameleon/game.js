@@ -45,6 +45,8 @@ const Sound = (() => {
     ping(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('sine', 1400, 380, t, 0.55, 0.28, d); osc('sine', 1400, 380, t + 0.18, 0.5, 0.1, d); },
     bonk(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('triangle', 240, 70, t, 0.25, 0.5, d); noise(t, 0.1, 0.5, 900, d); },
     thud() { if (!ok()) return; osc('sine', 140, 60, ac.currentTime, 0.12, 0.25, master); },
+    step(pos, v = 0.12) { if (!ok()) return; const t = ac.currentTime, d = out(pos); noise(t, 0.05, v, 900 + Math.random() * 500, d); osc('sine', 120 + Math.random() * 40, 70, t, 0.05, v * 0.6, d); },
+    pant() { if (!ok()) return; noise(ac.currentTime, 0.32, 0.05, 1600, master); },
     swoosh(pos) { if (!ok()) return; noise(ac.currentTime, 0.18, 0.25, 600, out(pos)); },
     shoot() { if (!ok()) return; const t = ac.currentTime; noise(t, 0.08, 0.35, 1400, master); osc('square', 320, 120, t, 0.09, 0.08, master); },
     splatHit(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); noise(t, 0.16, 0.6, 500, d); osc('sine', 180, 90, t, 0.12, 0.2, d); },
@@ -236,6 +238,39 @@ const visRT = new THREE.WebGLRenderTarget(VW, VH);
 const visCam = new THREE.PerspectiveCamera(78, VW / VH, 0.1, 30);
 const bufA = new Uint8Array(VW * VH * 4), bufB = new Uint8Array(VW * VH * 4);
 
+/* ---------- hunter team brain ---------- */
+function teamMem() { if (!G.tm || G.tm.P !== G.P) G.tm = { P: G.P, seen: {}, claim: {} }; return G.tm; }
+/** Points worth a look in a room: under tables, table tops, specials and wall spots at mixed heights. */
+function hidingChecks(zn) {
+  const out = [];
+  for (const u of unders) if (u.zone === zn.id) out.push({ x: u.x, y: 0.15, z: u.z });
+  for (const t of tops) if (t.zone === zn.id && t.w > 0.5) out.push({ x: t.x, y: t.y + 0.2, z: t.z });
+  for (const s of MAP.specials || []) if (s.zone === zn.id) out.push({ x: s.x, y: (s.y || 0) + 0.3, z: s.z });
+  const cx = (zn.x0 + zn.x1) / 2, cz = (zn.z0 + zn.z1) / 2;
+  for (const [x, z] of [[zn.x0 + 0.3, cz], [zn.x1 - 0.3, cz], [cx, zn.z0 + 0.3], [cx, zn.z1 - 0.3]]) out.push({ x, y: rand(0.3, 1.8), z });
+  for (let i = out.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [out[i], out[j]] = [out[j], out[i]]; }
+  return out.slice(0, 9);
+}
+function searchAround(p) {
+  const out = [];
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; out.push({ x: p.x + Math.cos(a) * 2.2, y: rand(0.1, 1.2), z: p.z + Math.sin(a) * 2.2 }); }
+  const zn = zoneAt(p.x, p.z); if (zn) for (const c of hidingChecks(zn)) if (Math.hypot(c.x - p.x, c.z - p.z) < 4.5) out.push(c);
+  return out;
+}
+/** A walkable nav point inside the room with a clear view of the check spot. */
+function overlookPoint(c, zn) {
+  let best = null, bd = 1e9;
+  for (const p of zn.pts) { const d = Math.abs(Math.hypot(p[0] - c.x, p[1] - c.z) - 2.2); if (d < bd) { bd = d; best = p; } }
+  return best || zn.pts[0];
+}
+function aiShoot(h, at) {
+  const from = h.eye(), aim = at.clone().add(new V3(rand(-0.15, 0.15), rand(-0.05, 0.15), rand(-0.15, 0.15)));
+  const d = from.distanceTo(aim), t = d / 19, v = aim.clone().sub(from).divideScalar(t); v.y += 0.5 * 9.8 * t;
+  h.doSwing(); Sound.shoot();
+  spawnBall(from, v.clone(), 'ai', h);
+  if (G.online) Net.relay({ k: 'ev', ev: { e: 'pb', by: h.id, p: [from.x, from.y, from.z], v: [v.x, v.y, v.z] } });
+}
+
 class Hunter {
   constructor({ id, name, avatar, ai = false, local = false, x = 0, z = 0, y = 0 }) {
     this.id = id; this.name = name; this.avatar = avatar; this.ai = ai; this.local = local; this.color = avatar.color;
@@ -273,12 +308,28 @@ class Hunter {
     this.sync();
   }
   goTo(x, z) { this.path = route(this.pos.x, this.pos.z, x, z); }
+  /** Team search: score rooms by how long since ANY hunter cleared them, skip rooms a teammate is heading to,
+      prefer nearby rooms, then walk to a spot that overlooks hiding places (under tables, shelves, walls). */
   pickGoal() {
-    const zones = ZONES.filter((z) => !z.hunters);
-    const zs = zones.slice().sort((a, b) => ((this.visited[a.id] ?? -99) + rand(0, 25)) - ((this.visited[b.id] ?? -99) + rand(0, 25)));
-    const zn = zs[0], p = pick(zn.pts);
-    this.goTo(p[0] + rand(-0.4, 0.4), p[1] + rand(-0.4, 0.4));
-    this.visited[zn.id] = G.t; this.state = 'patrol';
+    const tm = teamMem(), zones = ZONES.filter((z) => !z.hunters);
+    let best = null, bs = -1e9;
+    for (const z of zones) {
+      const since = G.t - (tm.seen[z.id] ?? -60), cx = (z.x0 + z.x1) / 2, cz = (z.z0 + z.z1) / 2;
+      const dist = Math.hypot(cx - this.pos.x, cz - this.pos.z);
+      const claimed = Object.entries(tm.claim).some(([hid, zid]) => hid !== this.id && zid === z.id);
+      const area = (z.x1 - z.x0) * (z.z1 - z.z0);
+      const s = Math.min(since, 70) - dist * 0.9 - (claimed ? 40 : 0) + Math.min(area, 120) * 0.05 + rand(0, 14);
+      if (s > bs) { bs = s; best = z; }
+    }
+    const zn = best || pick(zones);
+    tm.claim[this.id] = zn.id; tm.seen[zn.id] = G.t; this.visited[zn.id] = G.t;
+    this.checks = hidingChecks(zn);
+    const p = this.checks.length ? overlookPoint(this.checks[0], zn) : pick(zn.pts);
+    this.goTo(p[0] + rand(-0.3, 0.3), p[1] + rand(-0.3, 0.3));
+    this.state = 'patrol';
+  }
+  callout(p) {
+    for (const h of G.hunters) if (h !== this && h.ai && h.state !== 'chase' && h.pos.distanceTo(this.pos) < 16) h.hear(p, 1);
   }
   moveToward(x, z, speed, dt) {
     const dx = x - this.pos.x, dz = z - this.pos.z, d = Math.hypot(dx, dz);
@@ -291,10 +342,11 @@ class Hunter {
     this.yaw += angDiff(this.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 8);
     return d;
   }
-  hear(p) {
+  hear(p, spread = 2.5) {
     if (this.state === 'chase' || this.state === 'wait') return;
-    this.goTo(p.x + rand(-2.5, 2.5), p.z + rand(-2.5, 2.5));
+    this.goTo(p.x + rand(-spread, spread), p.z + rand(-spread, spread));
     this.state = 'patrol'; this.markT = 1.2;
+    const zn = zoneAt(p.x, p.z); this.checks = zn ? hidingChecks(zn).filter((c) => Math.hypot(c.x - p.x, c.z - p.z) < 5) : [];
   }
   update(dt, targets) {
     this.t += dt;
@@ -310,38 +362,59 @@ class Hunter {
     }
     let best = null, bs = 0;
     for (const t of targets) { const s = this.sus.get(t) || 0; if (s > bs) { bs = s; best = t; } }
-    if (best && bs >= 1) { if (this.state !== 'chase') { this.state = 'chase'; this.focus = best; this.repathT = 0; Sound.alert(this.eye()); } }
-    else if (best && bs >= 0.35 && this.state !== 'chase') { this.state = 'investigate'; this.focus = best; }
+    if (best && bs >= 1) { if (this.state !== 'chase') { this.state = 'chase'; this.focus = best; this.repathT = 0; this.lastSeen = best.root.position.clone(); this.seenT = G.t; Sound.alert(this.eye()); this.callout(best.root.position); } }
+    else if (best && bs >= 0.35 && this.state !== 'chase' && this.state !== 'search') { if (this.state !== 'investigate') { this.lastSeen = best.root.position.clone(); this.seenT = G.t; if (bs > 0.6) this.callout(best.root.position); } this.state = 'investigate'; this.focus = best; }
+    if (this.focus && this.lastVis && this.lastVis.has(this.focus)) { this.lastSeen = this.focus.root.position.clone(); this.seenT = G.t; }
+    this.shootCD = (this.shootCD ?? 3) - dt; this.ammoT = (this.ammoT || 0) + dt; if (this.ammoT > 9) { this.ammoT = 0; this.ammo = Math.min(3, (this.ammo ?? 3) + 1); }
     if ((this.state === 'chase' || this.state === 'investigate') && (!this.focus || this.focus.caught || !targets.includes(this.focus))) { this.focus = null; this.pickGoal(); }
     this.mark.visible = this.state === 'investigate' || this.markT > 0; this.markBang.visible = this.state === 'chase';
     const D = G.D;
     if (this.state === 'chase') {
-      const tp = this.focus.root.position;
+      const lost = G.t - (this.seenT ?? G.t);
+      if (lost > 3.5) { this.state = 'search'; this.scanT = 4; this.checks = this.lastSeen ? searchAround(this.lastSeen) : []; this.focus = null; if (this.lastSeen) this.goTo(this.lastSeen.x, this.lastSeen.z); this.sync(); return; }
+      const tp = lost < 0.6 ? this.focus.root.position : this.lastSeen;
       this.repathT -= dt;
       if (this.repathT <= 0) { this.goTo(tp.x, tp.z); this.repathT = 0.6; }
       this.follow(dt, D.huntSpeed * 1.35 * (G.overtime ? 1.2 : 1));
-      const d = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
-      this.faceTo(this.focus.center(), dt);
-      if (d < 1.35 && Math.abs(tp.y - this.pos.y) < 2.2 && this.swing <= 0) { this.doSwing(); G.hostTag(this.focus.id, this.id); this.sus.delete(this.focus); this.focus = null; this.state = 'scan'; this.scanT = 1.5; }
+      const fpz = this.focus.root.position, d = Math.hypot(fpz.x - this.pos.x, fpz.z - this.pos.z);
+      this.faceTo(lost < 0.6 ? this.focus.center() : this.lastSeen.clone().setY(this.lastSeen.y + 0.3), dt);
+      if (d < 1.35 && lost < 1.2 && Math.abs(fpz.y - this.pos.y) < 2.2 && this.swing <= 0) { this.doSwing(); G.hostTag(this.focus.id, this.id); this.sus.delete(this.focus); this.focus = null; this.state = 'scan'; this.scanT = 1.5; this.checks = []; }
+      else if (lost > 0.6 && Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z) < 0.7) { this.state = 'search'; this.scanT = 4; this.checks = searchAround(this.lastSeen); this.focus = null; this.path = []; }
     } else if (this.state === 'investigate') {
-      const c = this.focus.center(), tp = this.focus.root.position, d = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
+      const c = this.focus.center(), tp = this.lastSeen || this.focus.root.position, d = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
       if (d > 2.4) { this.repathT -= dt; if (this.repathT <= 0) { this.goTo(tp.x, tp.z); this.repathT = 1; } this.follow(dt, D.huntSpeed * 0.55, 2.4); }
       this.faceTo(c, dt);
-      if ((this.sus.get(this.focus) || 0) < 0.15) { this.focus = null; this.pickGoal(); }
+      const sv = this.sus.get(this.focus) || 0;
+      if (sv > 0.5 && d < 9 && d > 1.6 && this.shootCD <= 0 && (this.ammo ?? 3) > 0 && G.phase === 'hunt' && G.t - (this.seenT ?? 0) < 0.6) { this.shootCD = rand(3.5, 6); this.ammo = (this.ammo ?? 3) - 1; aiShoot(this, c); }
+      if (sv < 0.15) { this.focus = null; this.pickGoal(); }
+    } else if (this.state === 'search') {
+      if (this.path.length) this.follow(dt, G.D.huntSpeed * 0.9);
+      else this.lookChecks(dt);
+      this.scanT -= this.path.length ? 0 : dt;
+      if (this.scanT <= 0) this.pickGoal();
     } else if (this.state === 'patrol') {
-      if (!this.path.length) { this.state = 'scan'; this.scanT = rand(1.6, 3.2) * (G.overtime ? 0.6 : 1); } else this.follow(dt, D.huntSpeed * (G.overtime ? 1.25 : 1));
+      if (!this.path.length) { this.state = 'scan'; this.scanT = (this.checks?.length ? Math.min(6, 1.2 + this.checks.length * 0.7) : rand(1.6, 3.2)) * (G.overtime ? 0.6 : 1); this.checkI = 0; this.checkT = 0; } else this.follow(dt, D.huntSpeed * (G.overtime ? 1.25 : 1));
       this.look = this.yaw + Math.sin(this.t * 1.3 + this.id.length) * 0.6; this.pitch = -0.18 + Math.sin(this.t * 0.8) * 0.12;
     } else if (this.state === 'scan') {
-      this.scanT -= dt; this.look = this.yaw + Math.sin(this.t * 1.7) * 1.2; this.pitch = -0.25 + Math.sin(this.t * 1.1) * 0.2;
+      this.scanT -= dt;
+      if (this.checks?.length) this.lookChecks(dt); else { this.look = this.yaw + Math.sin(this.t * 1.7) * 1.2; this.pitch = -0.25 + Math.sin(this.t * 1.1) * 0.35; }
       if (this.pingCD <= 0 && G.phase === 'hunt') { this.pingCD = rand(26, 40); G.emit({ e: 'ping', id: this.id, x: this.pos.x, y: this.pos.y, z: this.pos.z }); }
       if (this.scanT <= 0) this.pickGoal();
     }
-    if (this.state === 'patrol' || this.state === 'chase') {
+    if (this.state === 'patrol' || this.state === 'chase' || (this.state === 'search' && this.path.length)) {
       this.stuckT = this.pos.distanceTo(this.lastP || this.pos) < 0.6 * dt ? this.stuckT + dt : 0;
       this.lastP = this.pos.clone();
       if (this.stuckT > 1.5) { this.stuckT = 0; if (this.state === 'patrol') this.pickGoal(); else this.path.shift(); }
     }
     this.sync();
+  }
+  /** Turn the head from one likely hiding place to the next (under tables, shelf tops, walls up high). */
+  lookChecks(dt) {
+    this.checkT = (this.checkT || 0) - dt;
+    if (this.checkT <= 0) { this.checkT = rand(0.55, 0.9); this.checkI = ((this.checkI ?? -1) + 1) % Math.max(1, this.checks.length); }
+    const c = this.checks[this.checkI || 0];
+    if (c && Math.hypot(c.x - this.pos.x, c.z - this.pos.z) < 14) this.faceTo(new V3(c.x, c.y, c.z), dt);
+    else { this.look = this.yaw + Math.sin(this.t * 1.7) * 1.2; this.pitch = -0.25 + Math.sin(this.t * 1.1) * 0.35; }
   }
   follow(dt, speed, stopAt = 0) {
     if (!this.path.length) return;
@@ -396,6 +469,7 @@ class Hunter {
       }
     }
     for (const [t, v] of this.sus) if (!seen.has(t)) this.sus.set(t, Math.max(0, v - 0.1 * dt));
+    this.lastVis = seen;
     return gains;
   }
 }
@@ -484,7 +558,7 @@ const G = {
       const c = new Cham({ id: a.id, name: a.name, shape: a.shape, eyes: a.eyes, color: a.color });
       c.size = a.size; c.setYaw(a.yaw); c.setPose(a.pose, true);
       c.root.position.set(a.x, a.y, a.z);
-      c.mat.roughness = a.rough; c.loadTex(a.tex);
+      c.mat.roughness = a.rough; c.loadTex(a.tex); c.ai = true;
       this.hiders.push(c);
     }
     const hs = MAP.hunterSpawns; let hi = 0, ci = 0;
@@ -686,6 +760,12 @@ const G = {
         if (this.isHost) for (const h of this.hunters) if (h.ai && h.pos.distanceTo(p) < 22 && Math.random() < (ev.chance ?? 0.6)) h.hear(p);
         break;
       }
+      case 'step': {
+        const c = this.findCham(ev.id); if (!c || c.caught || c === this.my) break;
+        const p = new V3(ev.x, ev.y, ev.z); Sound.step(p, 0.22);
+        if (this.isHost) for (const h of this.hunters) if (h.ai && h.pos.distanceTo(p) < 12 && Math.random() < 0.45) h.hear(p, 1.2);
+        break;
+      }
       case 'decoy': {
         const p = new V3(ev.x, ev.y, ev.z); Sound.whistle(p); noteSprite(p, '#ffd43b');
         const m = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd43b })); m.position.copy(p); scene.add(m);
@@ -821,7 +901,7 @@ const G = {
       const force = this.keepT <= 0; if (force) this.keepT = 1;
       if (this.my && !this.my.caught) {
         const c = this.my, p = c.root.position;
-        const msg = { k: hub ? 'hst' : 'st', a: 'c', id: c.id, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], y: +c.yaw.toFixed(2), po: c.pose, sh: c.shape, sz: c.size, r: +c.mat.roughness.toFixed(2), m: +c.mat.metalness.toFixed(2), mv: c.speed > 0.4 ? 1 : 0, em: c.emote || 0, air: c.body.onGround ? 0 : 1 };
+        const msg = { k: hub ? 'hst' : 'st', a: 'c', id: c.id, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], y: +c.yaw.toFixed(2), po: c.pose, sh: c.shape, sz: c.size, r: +c.mat.roughness.toFixed(2), m: +c.mat.metalness.toFixed(2), mv: c.speed > 0.4 ? 1 : 0, sp: c.sprinting ? 1 : 0, em: c.emote || 0, air: c.body.onGround ? 0 : 1 };
         if (hub) { msg.ready = this.hub.ready ? 1 : 0; msg.vote = this.hub.vote; msg.name = PROFILE.name; msg.eyes = c.eyes; msg.tag = PROFILE.tag; }
         const sig = JSON.stringify(msg);
         if (force || sig !== this.lastSig) { this.lastSig = sig; Net.relay(msg); }
@@ -848,7 +928,7 @@ const G = {
     switch (d.k) {
       case 'start': if (fromHost) this.setupRound(d.P); break;
       case 'late': if (fromHost && (this.phase === 'hub' || this.phase === 'menu')) this.joinLate(d); break;
-      case 'ev': if (fromHost || ['whistle', 'clone', 'swing', 'ping', 'pb', 'splat', 'splatw', 'decoy'].includes(d.ev.e)) this.applyEvent(d.ev); break;
+      case 'ev': if (fromHost || ['whistle', 'clone', 'swing', 'ping', 'pb', 'splat', 'splatw', 'decoy', 'step'].includes(d.ev.e)) this.applyEvent(d.ev); break;
       case 'tag': if (this.isHost) this.hostTag(d.target, d.by); break;
       case 'timer': if (fromHost && Math.abs(this.timer - d.t) > 0.6) this.timer = d.t; break;
       case 'ai': if (!fromHost) break; for (const [id, x, y, z, yaw, st] of d.list) { const h = this.findHunter(id); if (h) { h.target = { x, y, z, yaw }; if (h.state !== st && st === 'chase') Sound.alert(h.eye()); h.state = st; } } break;
@@ -861,6 +941,7 @@ const G = {
         break;
       }
       case 'tex': { const c = this.findCham(d.id); if (c && !c.local) c.loadTex(d.url); break; }
+      case 'aic': { if (!fromHost) break; const c = this.findCham(d.id); if (!c || c.local) break; if (c.pose !== d.po && POSES[d.po]) c.setPose(d.po, !d.mv); c.target = { x: d.p[0], y: d.p[1], z: d.p[2], yaw: d.y }; c.remoteMoving = d.mv; break; }
       case 'hst': hubRemote(from, d); break;
       case 'htex': { const o = this.hub?.others.get(from); if (o) o.cham.loadTex(d.url); else if (this.hub) this.hub.pendingTex.set(from, d.url); break; }
       case 'cd': if (fromHost && this.hub) { this.hub.cd = d.t; if (d.t != null && d.t <= 3 && d.t > 0) Sound.tick(); } break;
@@ -909,7 +990,7 @@ function applyRemoteCham(c, d) {
   if (c.pose !== d.po && POSES[d.po]) c.setPose(d.po);
   if (d.em && c.emote !== d.em) c.setEmote(d.em); else if (!d.em && c.emote) c.emote = null;
   c.mat.roughness = d.r; c.mat.metalness = d.m;
-  c.target = { x: d.p[0], y: d.p[1], z: d.p[2], yaw: d.y }; c.remoteMoving = d.mv; c.body.onGround = !d.air;
+  c.target = { x: d.p[0], y: d.p[1], z: d.p[2], yaw: d.y }; c.remoteMoving = d.mv; c.sprinting = !!d.sp; c.body.onGround = !d.air;
 }
 function unlockName(kind, k) {
   const label = { shape: SHAPES[k]?.label, eyes: EYES[k], hat: HATS[k], visor: VISORS[k], tool: TOOLS[k] }[kind];
@@ -1129,9 +1210,9 @@ function splatOn(c, uv, col) {
 }
 const ballGeo = new THREE.SphereGeometry(0.07, 12, 8);
 const rcBall = new THREE.Raycaster();
-function spawnBall(p, v, own) {
+function spawnBall(p, v, own, by) {
   const m = new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({ color: PAINTBALL })); m.position.copy(p); scene.add(m);
-  G.balls.push({ m, v, own, life: 3 }); G.fxHide.push(m);
+  G.balls.push({ m, v, own, by, life: 3 }); G.fxHide.push(m);
 }
 function updateBalls(dt) {
   G.balls = G.balls.filter((b) => {
@@ -1145,7 +1226,8 @@ function updateBalls(dt) {
       scene.remove(b.m);
       if (h && b.own) {
         const cham = h.object.userData.cham;
-        if (cham) { G.stats.splats++; emitAny({ e: 'splat', id: cham.id, uv: [h.uv.x, h.uv.y], col: PAINTBALL }); toast('Splat! Something over there is not a wall…', 'good'); }
+        if (cham && b.own === 'ai') { emitAny({ e: 'splat', id: cham.id, uv: [h.uv.x, h.uv.y], col: PAINTBALL }); if (b.by) b.by.sus.set(cham, (b.by.sus.get(cham) || 0) + 0.45); }
+        else if (cham) { G.stats.splats++; emitAny({ e: 'splat', id: cham.id, uv: [h.uv.x, h.uv.y], col: PAINTBALL }); toast('Splat! Something over there is not a wall…', 'good'); }
         else if (h.face) { const n = h.face.normal.clone().transformDirection(h.object.matrixWorld); emitAny({ e: 'splatw', p: [h.point.x, h.point.y, h.point.z], n: [n.x, n.y, n.z], col: PAINTBALL }); }
       } else if (h && !h.object.userData.cham && h.face) { /* remote ball: the shooter sends the splat */ }
       return false;
@@ -1155,8 +1237,10 @@ function updateBalls(dt) {
   });
 }
 function updateFx(dt) {
+  if (G.fxHide.length > 160) G.fxHide = G.fxHide.filter((m) => m.parent);
   G.fx = G.fx.filter((f) => {
     f.life -= dt;
+    if (f.puff) { const k = 1 - f.life / f.max; f.m.scale.setScalar(f.s * (0.4 + k * 1.4)); f.m.material.opacity = 0.55 * (1 - k); f.m.position.addScaledVector(f.v, dt); if (f.life <= 0) { scene.remove(f.m); f.m.material.dispose(); return false; } return true; }
     if (!f.still) { f.v.y -= 12 * dt; f.m.position.addScaledVector(f.v, dt); if (f.m.position.y < 0.04) { f.m.position.y = 0.04; f.v.multiplyScalar(0.4); } f.m.rotation.x += dt * 8; }
     f.m.scale.setScalar(Math.max(0.01, Math.min(1, f.life * 2)));
     if (f.life <= 0) { scene.remove(f.m); f.m.material.dispose(); return false; }
@@ -1196,10 +1280,16 @@ addEventListener('keydown', (e) => {
   if (e.repeat && keys[e.code]) return;
   keys[e.code] = true; onKey(e);
 });
+const wheelKey = { t: 0 };
 addEventListener('keyup', (e) => {
   keys[e.code] = false;
-  if (e.code === 'KeyR' && UI.wheelOpen && UI.wheelHold) { UI.wheel(false); G.lock(); }
+  if ((e.code === 'KeyG' || e.code === 'KeyR') && UI.wheelOpen && UI.wheelHold) {
+    if (performance.now() - wheelKey.t < 220) { UI.wheelHold = false; return; }
+    const pk = UI.wheelHover; UI.wheel(false); if (pk) { if (POSES[pk]) setPose(pk); else G.my?.setEmote(pk); } G.lock();
+  }
 });
+function sprintHeld() { return keys.ShiftLeft || keys.ShiftRight; }
+function crouchHeld() { return keys.KeyC || (window.mcNative && (keys.ControlLeft || keys.ControlRight)); }
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function playing() { return G.phase === 'prep' || G.phase === 'hunt'; }
 function active() { return playing() || G.phase === 'hub'; }
@@ -1212,26 +1302,52 @@ function onKey(e) {
   if (e.code === 'KeyF' && controllable()) { togglePaint(); e.preventDefault(); return; }
   if (e.code === 'Enter' && G.phase === 'prep' && (G.view === 'third' || (G.party && G.view === 'first'))) { if (G.party || !G.online || G.isHost) G.finishPrep(); return; }
   if (G.paint) {
-    if (e.code === 'KeyB') UI.tool('brush'); if (e.code === 'KeyM') UI.tool('mimic'); if (e.code === 'KeyI') UI.tool('picker'); if (e.code === 'KeyG') UI.tool('fill');
+    if (e.code === 'KeyB') UI.tool('brush'); if (e.code === 'KeyM') UI.tool('mimic'); if (e.code === 'KeyI') UI.tool('picker'); if (e.code === 'KeyN') UI.tool('fill');
+    if (e.code === 'Space') { pickColor({ clientX: mouse.x, clientY: mouse.y }); e.preventDefault(); return; }
     if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { undo(); e.preventDefault(); return; }
     if (e.code === 'Escape') togglePaint();
   }
   if (G.view === 'first' && G.phase === 'hunt' && e.code === 'KeyE') { hunterPing(); return; }
   if (!controllable()) { if (G.view === 'spec' && /Digit[1-9]/.test(e.code)) G.specIdx = +e.code.slice(5) - 1; return; }
-  if (e.code === 'KeyR') { UI.wheel(!UI.wheelOpen, true); return; }
+  if (e.code === 'KeyG' || e.code === 'KeyR') { if (UI.wheelOpen) { UI.wheel(false); G.lock(); } else { wheelKey.t = performance.now(); UI.wheel(true, true); } return; }
+  if (G.paint) return;
+  if (P.stick) {
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { unstick(P, true); return; }
+  } else if (e.code === 'Space' && !P.body.onGround && tryStick(P)) return;
   const pk = POSE_ORDER.find((k) => POSES[k].key && 'Digit' + POSES[k].key === e.code);
   if (pk) setPose(pk);
   if (e.code === 'KeyZ' && !e.ctrlKey) P.setYaw(P.yaw + Math.PI / 12);
   if (e.code === 'KeyX') P.setYaw(P.yaw - Math.PI / 12);
-  if (G.phase === 'hub') { if (e.code === 'KeyG') { const em = pick(['wave', 'dance', 'cheer']); P.setEmote(em); } return; }
-  if (e.code === 'KeyC') makeClone();
-  if (e.code === 'KeyQ') taunt();
+  if (G.phase === 'hub') return;
+  if (e.code === 'KeyQ') makeClone();
+  if (e.code === 'KeyH') taunt();
   if (e.code === 'KeyV') decoy();
 }
 function setPose(p) {
   const P = G.my; if (!P) return;
   if (POSES[p]?.emote) { P.setEmote(p); return; }
-  P.setPose(p); if (POSES[p].wall) snapToWall(P); UI.refreshBars();
+  if (P.stick && !POSES[p].wall) unstick(P, false);
+  P.setPose(p);
+  if (POSES[p].wall && !P.stick) { if (snapToWall(P)) stickAt(P, P.root.position.y); }
+  UI.refreshBars();
+}
+/* Wall-stick: Space in the air next to a wall grabs it (or pick Flat/Star), Space/C climb, Shift lets go. */
+function stickAt(P, y) {
+  P.stick = { y: clamp(y, 0, Math.max(0, MAP.ceilH - 1.1 * CHAM_H)) };
+  P.body.vy = 0; P.root.position.y = P.stick.y; Sound.thud();
+}
+function tryStick(P) {
+  const c = P.root.position.clone(); c.y += 0.4;
+  const fwd = new V3(Math.sin(P.yaw), 0, Math.cos(P.yaw));
+  const h = envHit(c, fwd, 0.6) || envHit(c, new V3(-Math.sin(G.ctrl.yaw), 0, -Math.cos(G.ctrl.yaw)), 0.6);
+  if (!h) return false;
+  const y = P.root.position.y;
+  P.setPose('flat'); if (!snapToWall(P, 0.8)) { P.setPose('stand'); return false; }
+  stickAt(P, y); UI.refreshBars(); toast('Stuck to the wall · Space up · C down · Shift let go'); return true;
+}
+function unstick(P, hop) {
+  if (!P.stick) return; P.stick = null;
+  if (hop) { const fwd = new V3(Math.sin(P.yaw), 0, Math.cos(P.yaw)); P.root.position.addScaledVector(fwd, 0.12); P.setPose('stand'); P.body.vy = 1.5; UI.refreshBars(); }
 }
 function emitAny(ev) { if (G.online) Net.relay({ k: 'ev', ev }); G.applyEvent(ev); }
 function makeClone() {
@@ -1383,15 +1499,31 @@ function updateMyCham(dt) {
   const P = G.my;
   if (!P || P.caught) return;
   let moving = false;
-  if (!G.paint && !UI.chatOpen && !UI.wheelOpen && !UI.panelOpen && !G.paused) {
+  const free = !G.paint && !UI.chatOpen && !UI.wheelOpen && !UI.panelOpen && !G.paused;
+  if (P.stick) {
+    if (free) {
+      if (keys.Space) P.stick.y += dt * 1.1; if (crouchHeld()) P.stick.y -= dt * 1.1;
+      P.stick.y = clamp(P.stick.y, 0, Math.max(0, MAP.ceilH - 1.1 * CHAM_H));
+      let side = 0; if (keys.KeyA) side -= 1; if (keys.KeyD) side += 1;
+      if (side) { const rx = Math.cos(P.yaw), rz = -Math.sin(P.yaw); P.root.position.x += rx * side * dt * 0.9; P.root.position.z += rz * side * dt * 0.9; if (!snapToWall(P, 0.6)) unstick(P, false); }
+    }
+    if (P.stick) { P.root.position.y = P.stick.y; P.body.vy = 0; collideBody(P.body, dt, false); P.root.position.y = P.stick.y; P.animate(dt, false); return; }
+  }
+  if (free) {
     let mx = 0, mz = 0;
     if (keys.KeyW) mz -= 1; if (keys.KeyS) mz += 1; if (keys.KeyA) mx -= 1; if (keys.KeyD) mx += 1;
     moving = !!(mx || mz);
+    const wantCrouch = crouchHeld() && P.body.onGround;
+    if (wantCrouch && P.pose === 'stand') { P.setPose('crouch'); P.autoCrouch = true; UI.refreshBars(); }
+    else if (!wantCrouch && P.autoCrouch && P.pose === 'crouch') { P.setPose('stand'); P.autoCrouch = false; UI.refreshBars(); }
     if (moving && !POSES[P.pose].move) { P.setPose('stand'); UI.refreshBars(); }
     if (moving) {
       const y = G.ctrl.yaw, fx = -Math.sin(y), fz = -Math.cos(y), rx = Math.cos(y), rz = -Math.sin(y);
       let vx = fx * -mz + rx * mx, vz = fz * -mz + rz * mx; const l = Math.hypot(vx, vz); vx /= l; vz /= l;
-      const sp = (keys.ShiftLeft || keys.ShiftRight ? 1.3 : 3.7) * (POSES[P.pose].speed || 1) * (P.size === 'petite' ? 0.85 : 1);
+      const sprint = sprintHeld() && G.stam > 0.02 && !G.tired && P.pose === 'stand';
+      P.sprinting = sprint;
+      const sp = 3.4 * (sprint ? 1.65 : 1) * (POSES[P.pose].speed || 1) * (P.size === 'petite' ? 0.85 : 1);
+      stepNoise(P, dt, sprint, P.root.position);
       P.root.position.x += vx * sp * dt; P.root.position.z += vz * sp * dt;
       P.setYaw(P.yaw + angDiff(P.yaw, Math.atan2(vx, vz)) * Math.min(1, dt * 12));
     }
@@ -1399,8 +1531,35 @@ function updateMyCham(dt) {
   }
   const wasMoving = P.wasMoving; P.wasMoving = moving;
   if (wasMoving && !moving) P.rebake();
+  if (!moving) P.sprinting = false;
+  updateStamina(dt, P.sprinting && moving);
   collideBody(P.body, dt, true);
   P.animate(dt, moving);
+}
+/* Stamina shared by both roles: sprinting drains it; a fully drained bar makes you wait until 35%. */
+function updateStamina(dt, sprinting) {
+  if (G.stam == null) G.stam = 1;
+  if (sprinting) { G.stam = Math.max(0, G.stam - dt / 4.5); G.stamRest = 0.9; if (G.stam <= 0.01 && !G.tired) { G.tired = true; Sound.pant(); } }
+  else { G.stamRest = (G.stamRest || 0) - dt; if (G.stamRest <= 0) G.stam = Math.min(1, G.stam + dt / 3.2); }
+  if (G.tired && G.stam > 0.35) G.tired = false;
+  UI.stamina?.(G.stam, G.tired);
+}
+const puffGeo = new THREE.SphereGeometry(0.06, 8, 6);
+function dustPuff(p, n = 2, s = 1) {
+  if (G.fx.length > 140) return;
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color: 0xf2efe8, transparent: true, opacity: 0.55, depthWrite: false }));
+    m.position.set(p.x + rand(-0.06, 0.06), p.y + 0.04, p.z + rand(-0.06, 0.06)); scene.add(m);
+    G.fx.push({ m, v: new V3(rand(-0.4, 0.4), rand(0.2, 0.5), rand(-0.4, 0.4)), life: 0.55, max: 0.55, s: s * rand(0.7, 1.2), puff: true });
+    G.fxHide.push(m);
+  }
+}
+/* Footsteps: sprinting hiders make noise AI hunters can hear and players hear spatially. */
+function stepNoise(who, dt, sprint, pos) {
+  who.stepT = (who.stepT || 0) - dt * (sprint ? 1.6 : 1);
+  if (who.stepT > 0) return; who.stepT = 0.34;
+  if (sprint) { Sound.step(pos, 0.16); dustPuff(pos, 1, 0.8); }
+  if (sprint && G.phase === 'hunt' && who === G.my && Math.random() < 0.55) emitAny({ e: 'step', id: who.id, x: pos.x, y: pos.y, z: pos.z });
 }
 function updateFP(dt) {
   const f = G.fp; if (!f) return;
@@ -1409,9 +1568,14 @@ function updateFP(dt) {
   if (mx || mz) {
     const y = f.yaw, fx = -Math.sin(y), fz = -Math.cos(y), rx = Math.cos(y), rz = -Math.sin(y);
     const vx = fx * -mz + rx * mx, vz = fz * -mz + rz * mx, l = Math.hypot(vx, vz);
-    const sp = keys.ShiftLeft ? 2 : 4.6;
+    const sprint = sprintHeld() && G.stam > 0.02 && !G.tired && !UI.chatOpen;
+    f.sprinting = sprint;
+    const sp = sprint ? 7.0 : 4.6;
     f.pos.x += vx / l * sp * dt; f.pos.z += vz / l * sp * dt;
-  }
+    if (f.onGround) { f.stepT = (f.stepT || 0) - dt * (sprint ? 1.5 : 1); if (f.stepT <= 0) { f.stepT = 0.42; Sound.step(null, sprint ? 0.07 : 0.04); } }
+  } else f.sprinting = false;
+  updateStamina(dt, f.sprinting && (mx || mz));
+  const tf = sprintHeld() && f.sprinting && (mx || mz) ? 6 : 0; camera.fov = lerp(camera.fov, (SETTINGS.fov || 75) + tf, Math.min(1, dt * 6)); camera.updateProjectionMatrix();
   if (keys.Space && f.onGround && !UI.chatOpen) { f.vy = 6.4; f.onGround = false; }
   collideBody(f, dt, true);
   camera.position.set(f.pos.x, f.pos.y + 1.6, f.pos.z);
@@ -1446,6 +1610,58 @@ function updateCamera(dt) {
   else { camTarget.copy(P.root.position); camTarget.y += Math.max(0.32, Math.min(P.body.h, CHAM_H) * 0.95); thirdCam(camTarget, G.ctrl.yaw, G.ctrl.pitch, G.ctrl.dist, dt, false); }
 }
 let lastTickSec = -1, hudT = 0;
+/* ---------- AI hiders: hold still, but bolt for a new spot when a hunter is closing in on them ---------- */
+const BOLT = { sloppy: 0.2, medium: 0.4, good: 0.6, pro: 0.7 };
+function updateAIHiders(dt) {
+  for (const c of G.hiders) {
+    if (!c.ai || c.caught) continue;
+    if (c.bolt) { stepBolt(c, dt); continue; }
+    c.thinkT = (c.thinkT ?? Math.random() * 0.3) - dt; if (c.thinkT > 0) continue; c.thinkT = 0.3;
+    let sus = 0, near = 1e9, who = null;
+    for (const h of G.hunters) { const s = h.sus.get(c) || 0, d = h.pos.distanceTo(c.root.position); if (s > sus) { sus = s; who = h; } near = Math.min(near, d); }
+    if (c.boltTried) { if (near > 9) c.boltTried = false; continue; }
+    if (who && sus > 0.45 && sus < 1 && near < 5.5 && who.state === 'investigate') {
+      c.boltTried = true;
+      if (Math.random() < (BOLT[G.D.hiderSkill] ?? 0.4)) startBolt(c);
+    }
+  }
+}
+function startBolt(c) {
+  const p = c.root.position, keep = { x: p.x, y: p.y, z: p.z, yaw: c.yaw, pose: c.pose };
+  const taken = G.hiders.filter((o) => o !== c && !o.caught).map((o) => ({ x: o.root.position.x, z: o.root.position.z }));
+  let spot = null;
+  for (let i = 0; i < 10 && !spot; i++) {
+    const s = findSpot(c, taken);
+    const far = G.hunters.every((h) => Math.hypot(h.pos.x - s.x, h.pos.z - s.z) > 7), dist = Math.hypot(s.x - keep.x, s.z - keep.z);
+    if (far && dist > 4 && dist < 22) spot = s;
+  }
+  c.root.position.set(keep.x, keep.y, keep.z); c.setYaw(keep.yaw); c.setPose(keep.pose, true);
+  if (!spot) return;
+  const path = route(keep.x, keep.z, spot.x, spot.z);
+  if (!path.length) return;
+  c.setPose('stand'); c.root.position.y = 0; c.body.vy = 0; c.sprinting = true;
+  c.bolt = { path, spot, t: 0 };
+}
+function stepBolt(c, dt) {
+  const B = c.bolt, p = c.root.position; B.t += dt;
+  const n = B.path[0];
+  if (n && B.t < 12) {
+    const dx = n.x - p.x, dz = n.z - p.z, d = Math.hypot(dx, dz), sp = 5.4;
+    if (d < 0.3) B.path.shift();
+    else { const k = Math.min(d, sp * dt); p.x += dx / d * k; p.z += dz / d * k; c.setYaw(c.yaw + angDiff(c.yaw, Math.atan2(dx, dz)) * Math.min(1, dt * 12)); }
+    collideBody(c.body, dt, true);
+    stepNoise(c, dt, true, p);
+    c.target = { x: p.x, y: p.y, z: p.z, yaw: c.yaw }; c.remoteMoving = 1;
+    if (G.online) { c.boltSend = (c.boltSend || 0) - dt; if (c.boltSend <= 0) { c.boltSend = 0.1; Net.relay({ k: 'aic', id: c.id, p: [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)], y: +c.yaw.toFixed(2), po: c.pose, mv: 1 }); } }
+    return;
+  }
+  const s = B.spot; c.bolt = null; c.remoteMoving = 0; c.sprinting = false;
+  p.set(s.x, s.y || 0, s.z); c.setYaw(s.yaw); c.setPose(s.pose, true); c.body.vy = 0;
+  if (POSES[s.pose]?.wall) snapToWall(c, 0.6);
+  c.target = { x: p.x, y: p.y, z: p.z, yaw: c.yaw };
+  try { autoCamo(c, G.D.hiderSkill || 'medium'); c.flush(); } catch (e) { /* keep old paint */ }
+  if (G.online) { Net.relay({ k: 'aic', id: c.id, p: [p.x, p.y, p.z], y: c.yaw, po: c.pose, mv: 0 }); Net.relay({ k: 'tex', id: c.id, url: c.texURL() }); }
+}
 function update(dt) {
   G.t += dt;
   updateFx(dt);
@@ -1461,6 +1677,7 @@ function update(dt) {
   const sec = Math.ceil(G.timer);
   if (sec <= 10 && sec !== lastTickSec && sec > 0) { lastTickSec = sec; Sound.tick(); }
   if (G.view === 'first') updateFP(dt); else updateMyCham(dt);
+  if (G.isHost && G.phase === 'hunt') updateAIHiders(dt);
   for (const c of G.hiders) {
     if (!c.local && c.target) {
       const k = Math.min(1, dt * 12), p = c.root.position;
@@ -1468,6 +1685,7 @@ function update(dt) {
       c.setYaw(c.yaw + angDiff(c.yaw, c.target.yaw) * k);
       c.animate(dt, !!c.remoteMoving);
     } else if (!c.local) c.animate(dt, false);
+    if (c.landed) { c.landed = false; dustPuff(c.root.position, 4, 1.1); }
     c.speed = c.lastPos ? c.root.position.distanceTo(c.lastPos) / Math.max(dt, 1e-4) : 0;
     c.lastPos = (c.lastPos || new V3()).copy(c.root.position);
   }

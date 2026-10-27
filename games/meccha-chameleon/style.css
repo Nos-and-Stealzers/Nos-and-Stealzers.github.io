@@ -504,3 +504,10 @@ label.slider input{margin-top:6px}
 #timer.overtime{color:var(--yellow);animation:pulseT .6s infinite alternate}
 @keyframes pulseT{to{transform:scale(1.08)}}
 .autoback{font-size:12px;color:var(--muted);text-align:center}
+
+/* stamina */
+#stamina { position: absolute; left: 50%; bottom: 112px; width: 220px; height: 6px; margin-left: -110px; border-radius: 4px; background: rgba(10,14,22,.55); box-shadow: 0 0 0 1px rgba(255,255,255,.08); overflow: hidden; transition: opacity .25s; }
+#stamina i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #38e0a0, #9af5c9); border-radius: 4px; }
+#stamina.tired i { background: linear-gradient(90deg, #ff5d6c, #ff9aa4); animation: stamPulse .6s ease-in-out infinite alternate; }
+@keyframes stamPulse { from { opacity: .55 } to { opacity: 1 } }
+#poseWheel .hot { outline: 2px solid var(--accent, #38e0a0); background: rgba(56,224,160,.16); transform: translateY(-1px); }

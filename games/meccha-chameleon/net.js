@@ -27,7 +27,7 @@ const Net = {
       const ws = new WebSocket(u);
       this.ws = ws; this.addr = u; this.isPublic = u.startsWith('wss://');
       const timer = setTimeout(() => { if (!settled) { settled = true; try { ws.close(); } catch { } reject(new Error('Timed out connecting to ' + addr)); } }, 8000);
-      ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', v: 2, name: PROFILE.name, profile: publicProfile(), password }));
+      ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', v: 3, name: PROFILE.name, profile: publicProfile(), password }));
       ws.onmessage = (ev) => {
         let m; try { m = JSON.parse(ev.data); } catch { return; }
         if (m.t === 'welcome') { this.id = m.id; this.hostId = m.hostId; this.connected = true; this.server = m.server; if (m.server?.public) this.isPublic = true; this.startPing(); if (!settled) { settled = true; clearTimeout(timer); resolve(m); } }

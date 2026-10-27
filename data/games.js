@@ -21,7 +21,7 @@ window.GAME_CATALOG = [
     "id": "meccha-chameleon",
     "title": "Meccha Chameleon",
     "category": "multiplayer",
-    "description": "Paint-yourself hide and seek. You're a tiny chameleon in a full-size house: paint your body to match the rug, freeze in a pose and hope the hunters walk right past. Public servers with up to 15 players, five furnished maps, poses, hunter paintballs and a walkable lobby. Want LAN games or your own servers? Grab the Windows download.",
+    "description": "Paint-yourself hide and seek. You're a tiny chameleon in a full-size house: paint your body to match the rug, freeze in a pose and hope the hunters walk right past. Public servers with up to 15 players, five big furnished maps, sprinting, wall-climbing, a pose wheel and team-searching AI hunters. Want LAN games or your own servers? Grab the Windows download.",
     "gradient": "linear-gradient(135deg, #38e0a0, #ff6fae)",
     "source": "games/meccha-chameleon/index.html",
     "direct": "games/meccha-chameleon/index.html",

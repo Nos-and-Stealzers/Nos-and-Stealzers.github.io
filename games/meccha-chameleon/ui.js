@@ -39,6 +39,11 @@ const TIPS = [
   'Hunters: Ping (E) makes nearby chameleons chirp. Close your eyes and listen.',
   'Stand in front of the Camo tester in the lobby to grade your paint job.',
   'Hold Tab during a round to see the scoreboard.',
+  'Sprinting (Shift) is loud. Hunters hear running footsteps, so walk the last few metres to your spot.',
+  'Jump at a wall and press Space again to stick to it. Space climbs, C lowers, Shift lets go.',
+  'Hold G, point at a pose and let go. Tap G to keep the wheel open and click instead.',
+  'Hunters split up and search rooms as a team. If one spots you, the others come running.',
+  'In paint mode, hover the room and press Space to grab that exact colour.',
 ];
 const MODES = [
   { id: 'quick', name: 'Quick match', kind: 'Online', desc: 'Jump into the busiest public server. Up to 15 players.', bg: 'lobby', tag: 'Live' },
@@ -236,9 +241,14 @@ const UI = {
   setColor(hex, addRecent) { this.color = hex; $('#color').value = hex; $('#colorHex').textContent = hex; if (addRecent) { this.recent = [hex, ...this.recent.filter((c) => c !== hex)].slice(0, 16); $('#swatches').innerHTML = this.recent.map((c) => `<i style="background:${c}" data-c="${c}" title="${c}"></i>`).join(''); } },
   setRough(r) { if (!G.my) return; G.my.mat.roughness = r; $('#rough').value = Math.round(r * 100); $('#roughVal').textContent = r.toFixed(2); },
   refreshInk() { $('#inkBar').style.width = G.ink + '%'; },
+  stamina(v, tired) {
+    const el = $('#stamina'); if (!el) return;
+    el.classList.toggle('hidden', v > 0.995); el.classList.toggle('tired', !!tired);
+    el.firstElementChild.style.width = (v * 100).toFixed(1) + '%';
+  },
   wheel(open, hold = false) {
     if (open && !controllable()) return;
-    this.wheelOpen = open; this.wheelHold = hold;
+    this.wheelOpen = open; this.wheelHold = hold; this.wheelHover = null;
     $('#poseWheel').classList.toggle('hidden', !open);
     if (open) {
       if (document.pointerLockElement) document.exitPointerLock();
@@ -254,7 +264,7 @@ const UI = {
       this.abKey = key;
       const A = (id, icon, label, kb) => `<button class="ab" id="ab-${id}" data-ab="${id}"><span class="cd"></span><kbd>${kb}</kbd>${ico(icon)}<b>${label}</b><em class="cnt"></em></button>`;
       $('#abilities').innerHTML = hunter ? A('paint', 'splat', 'Paint', 'RMB') + A('ping', 'ping', 'Ping', 'E') + A('bonk', 'hammer', 'Bonk', 'LMB')
-        : hider ? `<button class="ab ready" id="readyBtn"><b>Ready</b><kbd>Enter</kbd></button>` + A('pose', 'pose', 'Poses', 'R') + A('brush', 'brush', 'Paint', 'F') + A('clone', 'clone', 'Clone', 'C') + A('taunt', 'note', 'Taunt', 'Q') + A('decoy', 'decoy', 'Decoy', 'V') : '';
+        : hider ? `<button class="ab ready" id="readyBtn"><b>Ready</b><kbd>Enter</kbd></button>` + A('pose', 'pose', 'Poses', 'G') + A('brush', 'brush', 'Paint', 'F') + A('clone', 'clone', 'Clone', 'Q') + A('taunt', 'note', 'Taunt', 'H') + A('decoy', 'decoy', 'Decoy', 'V') : '';
     }
     if (!key) return;
     const set = (id, frac, cnt, off) => { const el = $('#ab-' + id); if (!el) return; el.style.setProperty('--p', clamp(frac, 0, 1)); el.querySelector('.cnt').textContent = cnt ?? ''; el.classList.toggle('off', !!off); };
@@ -294,8 +304,8 @@ const UI = {
     let phase = '', sub = '', hint = '';
     if (G.phase === 'prep') { phase = 'Hiding'; sub = G.view === 'first' ? 'Hunters wait for the gate' : G.party ? `${G.my?.name}: paint and pose` : 'Paint yourself and find a spot'; }
     else if (G.phase === 'hunt') { phase = 'Hunt'; sub = G.view === 'spec' ? 'Spectating' : MAP.name; }
-    if (G.view === 'third' && !G.paint) hint = 'WASD move · Space jump · Shift sneak · 1-0 poses · Z/X turn' + (G.online ? ' · T chat' : '') + ' · Tab scoreboard';
-    else if (G.view === 'first') hint = 'WASD move · Space jump · Listen for whistles and chirps' + (G.online ? ' · T chat' : '') + ' · Tab scoreboard';
+    if (G.view === 'third' && !G.paint) hint = G.my?.stick ? 'Stuck to the wall · Space up · C down · A/D slide · Shift let go' : 'Shift sprint · C crouch · F paint · G poses · Space twice by a wall to stick' + (G.online ? ' · T chat' : '') + ' · Tab scores';
+    else if (G.view === 'first') hint = 'Shift sprint · LMB bonk · RMB paintball · E ping · Listen for footsteps and chirps' + (G.online ? ' · T chat' : '');
     else if (G.view === 'spec') { const hs = G.hunters.filter((h) => !h.local); hint = hs.length ? `Spectating ${hs[G.specIdx % hs.length].name} · 1-9 switch hunter · Tab scoreboard` : ''; }
     $('#phase').textContent = phase; $('#sub').textContent = sub; $('#hint').textContent = hint;
     if (G.phase === 'hunt' && G.my) {
@@ -587,9 +597,9 @@ function sendProfile() { if (G.online) Net.send({ t: 'profile', name: PROFILE.na
 
 /* ================= settings ================= */
 const KEYS = [
-  ['Chameleon', [['Move', 'WASD'], ['Jump', 'Space'], ['Sneak', 'Shift'], ['Paint mode', 'F'], ['Pose wheel', 'R'], ['Quick poses', '1-0'], ['Turn', 'Z / X'], ['Clone', 'C'], ['Taunt', 'Q'], ['Decoy', 'V'], ['Ready (prep)', 'Enter']]],
-  ['Hunter', [['Bonk', 'Left click'], ['Paintball', 'Right click'], ['Ping', 'E']]],
-  ['General', [['Scoreboard', 'Tab (hold)'], ['Lobby settings', 'Tab (lobby)'], ['Chat', 'T'], ['Emote (lobby)', 'G'], ['Menu', 'Esc'], ['Fullscreen', 'F11']]],
+  ['Chameleon', [['Move', 'WASD'], ['Sprint (stamina)', 'Shift (hold)'], ['Crouch / sneak', 'C (hold)' + (window.mcNative ? ' or Ctrl' : '')], ['Jump', 'Space'], ['Stick to a wall', 'Space in the air by a wall'], ['On a wall', 'Space up · C down · Shift let go'], ['Paint mode (colours)', 'F'], ['Sample colour (painting)', 'Space or Alt+click'], ['Pose wheel', 'G (hold, point, release)'], ['Quick poses', '1-0'], ['Turn', 'Z / X'], ['Clone', 'Q'], ['Taunt', 'H'], ['Decoy', 'V'], ['Ready (prep)', 'Enter']]],
+  ['Hunter', [['Sprint (stamina)', 'Shift (hold)'], ['Bonk', 'Left click'], ['Paintball', 'Right click'], ['Ping', 'E']]],
+  ['General', [['Scoreboard', 'Tab (hold)'], ['Lobby settings', 'Tab (lobby)'], ['Chat', 'T'], ['Emotes (lobby)', 'G'], ['Menu', 'Esc'], ['Fullscreen', 'F11']]],
 ];
 function openSettings(back) {
   UI.settingsBack = back;
@@ -679,6 +689,11 @@ function wire() {
   $('#rotR').onclick = () => G.my?.setYaw(G.my.yaw - Math.PI / 12);
   $('#paintPoses').innerHTML = POSE_ORDER.map((k) => `<button data-pose="${k}">${POSES[k].label}</button>`).join('');
   $('#paintPoses').onclick = (e) => { const b = e.target.closest('[data-pose]'); if (b && G.my) { setPose(b.dataset.pose); G.my.rebake(); } };
+  $('#poseWheel').onmouseover = (e) => {
+    const b = e.target.closest('[data-pose],[data-emote]'); if (!b) return;
+    UI.wheelHover = b.dataset.pose || b.dataset.emote;
+    for (const o of $('#poseWheel').querySelectorAll('.hot')) o.classList.remove('hot'); b.classList.add('hot'); Sound.hover?.();
+  };
   $('#poseWheel').onclick = (e) => {
     const b = e.target.closest('[data-pose],[data-emote]');
     if (b) { Sound.click(); if (b.dataset.emote) G.my?.setEmote(b.dataset.emote); else setPose(b.dataset.pose); }

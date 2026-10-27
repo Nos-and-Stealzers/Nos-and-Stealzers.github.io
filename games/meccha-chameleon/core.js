@@ -181,6 +181,45 @@ TEX.wallGarage = canvasTex(256, 410, (g, w, h) => {
   const y = h - 40;
   for (let x = -40; x < w; x += 24) { g.fillStyle = '#f2c230'; g.beginPath(); g.moveTo(x, h); g.lineTo(x + 12, h); g.lineTo(x + 52, y); g.lineTo(x + 40, y); g.fill(); }
 });
+TEX.wallDining = canvasTex(256, 410, (g, w, h) => {
+  g.fillStyle = '#7a1f2b'; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(214,170,92,.42)';
+  for (let y = 0; y < h; y += 52) for (let x = 0; x < w; x += 42) {
+    const cx = x + ((y / 52) % 2 ? 21 : 0), cy = y + 26;
+    g.beginPath(); g.moveTo(cx, cy - 16); g.bezierCurveTo(cx + 12, cy - 8, cx + 12, cy + 8, cx, cy + 16); g.bezierCurveTo(cx - 12, cy + 8, cx - 12, cy - 8, cx, cy - 16); g.fill();
+    g.fillRect(cx - 1, cy - 22, 2, 44);
+  }
+  speckle(g, w, h, 0.25, 0.04);
+  wainscot(g, w, h, 1.05, '#f1e9da', '#d8cdb8', '#c4b69c');
+});
+TEX.wallSun = canvasTex(256, 410, (g, w, h) => {
+  const grd = g.createLinearGradient(0, 0, 0, h); grd.addColorStop(0, '#cfeee4'); grd.addColorStop(1, '#a9d9c6'); g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(255,255,255,.35)'; for (let i = 0; i < 6; i++) { g.save(); g.translate(sr(0, w), sr(0, h * 0.6)); g.rotate(-0.6); g.fillRect(0, 0, 80, 8); g.restore(); }
+  g.strokeStyle = '#f7f7f2'; g.lineWidth = 7;
+  for (let x = 0; x <= w; x += 64) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+  for (let y = 0; y <= h * 0.72; y += 70) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+  const y = h * 0.74; g.fillStyle = '#e9e2d3'; g.fillRect(0, y, w, h - y); bricksLow(g, y, w, h);
+});
+function bricksLow(g, y0, w, h) { g.strokeStyle = 'rgba(120,90,60,.35)'; g.lineWidth = 2; for (let y = y0; y < h; y += 18) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = ((y - y0) / 18 % 2) * 22; x < w; x += 44) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 18); g.stroke(); } } }
+TEX.wallOffice = canvasTex(256, 410, (g, w, h) => {
+  g.fillStyle = '#26354f'; g.fillRect(0, 0, w, h);
+  for (let x = 0; x < w; x += 32) { g.fillStyle = '#2d3e5b'; g.fillRect(x, 0, 16, h); }
+  speckle(g, w, h, 0.25, 0.04);
+  wainscot(g, w, h, 1.0, '#5a3a22', '#3d2615', '#6e4a2c');
+});
+TEX.ripple = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 40; i++) { g.strokeStyle = `rgba(${sr(150, 210) | 0},${sr(190, 230) | 0},255,.35)`; g.lineWidth = sr(1, 3); g.beginPath(); const y = sr(0, h), x = sr(0, w); g.ellipse(x, y, sr(10, 40), sr(2, 6), 0, 0, 7); g.stroke(); } });
+TEX.terraTile = canvasTex(256, 256, (g, w, h) => tiles(g, 0, 0, w, h, 64, ['#c77a52', '#bf7049', '#cc8460', '#b9693f'], '#e8d8c0', 4));
+TEX.poolTile = canvasTex(256, 256, (g, w, h) => { tiles(g, 0, 0, w, h, 16, ['#f6f8f7', '#eef3f2', '#f1f5f4'], '#c9d6d4', 2); speckle(g, w, h, 0.15, 0.03); });
+TEX.poolBlue = canvasTex(256, 256, (g, w, h) => tiles(g, 0, 0, w, h, 16, ['#5ec2d9', '#55b8d0', '#66c9df'], '#9fe0ee', 2));
+TEX.factoryWall = canvasTex(256, 410, (g, w, h) => {
+  g.fillStyle = '#ffb3cf'; g.fillRect(0, 0, w, h);
+  for (let x = -h; x < w; x += 36) { g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.moveTo(x, h); g.lineTo(x + 16, h); g.lineTo(x + 16 + h, 0); g.lineTo(x + h, 0); g.fill(); }
+  g.fillStyle = '#ff6fae'; g.fillRect(0, h - 40, w, 40); g.fillStyle = '#fff'; for (let x = 8; x < w; x += 24) { g.beginPath(); g.arc(x, h - 20, 6, 0, 7); g.fill(); }
+});
+TEX.picnic = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#fff4ef'; g.fillRect(0, 0, w, h); g.fillStyle = 'rgba(224,49,73,.75)'; for (let x = 0; x < w; x += 64) g.fillRect(x, 0, 32, h); for (let y = 0; y < h; y += 64) g.fillRect(0, y, w, 32); });
+TEX.modernWall = canvasTex(256, 410, (g, w, h) => { g.fillStyle = '#1b1d24'; g.fillRect(0, 0, w, h); speckle(g, w, h, 0.25, 0.03); g.fillStyle = '#2a2d36'; g.fillRect(0, h - 14, w, 14); });
+TEX.shopWall = canvasTex(256, 410, (g, w, h) => { g.fillStyle = '#f7efe1'; g.fillRect(0, 0, w, h); g.fillStyle = '#ef6f6c'; g.fillRect(0, h * 0.62, w, 10); g.fillStyle = '#3fb7a6'; g.fillRect(0, h * 0.62 + 10, w, 6); speckle(g, w, h, 0.2, 0.03); g.fillStyle = '#d9cdb6'; g.fillRect(0, h - 16, w, 16); });
+TEX.cistern = canvasTex(256, 410, (g, w, h) => { g.fillStyle = '#6b6156'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 26) for (let x = ((y / 26) % 2) * 26; x < w; x += 52) { g.fillStyle = spick(['#756a5e', '#62584d', '#7d7164', '#5a5148']); g.fillRect(x + 2, y + 2, 48, 22); } g.fillStyle = 'rgba(40,70,55,.45)'; g.fillRect(0, h * 0.78, w, h * 0.22); speckle(g, w, h, 0.6, 0.06); });
 TEX.wood = canvasTex(256, 256, (g, w, h) => planks(g, w, h, 8, ['#a86b3c', '#b47744', '#9c6234', '#b98050', '#a56838'], 'rgba(60,30,10,.55)'));
 TEX.woodDark = canvasTex(256, 256, (g, w, h) => planks(g, w, h, 8, ['#6b4024', '#5e381f', '#734628', '#62391f'], 'rgba(25,10,3,.6)'));
 TEX.woodLight = canvasTex(256, 256, (g, w, h) => planks(g, w, h, 8, ['#d8b484', '#cfa877', '#e0bd8e', '#c99f6c'], 'rgba(90,60,30,.35)'));

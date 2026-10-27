@@ -114,7 +114,7 @@ const POSES = {
 const POSE_ORDER = ['stand', 'crouch', 'sit', 'curl', 'lie', 'prone', 'side', 'flat', 'star', 'reach', 'tpose', 'kneel', 'thinker'];
 const SIZES = { petite: [0.72, 0.72], normal: [1, 1], plump: [1.32, 1.04] };
 
-const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler(), _x = new V3(1, 0, 0);
+const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler(), _x = new V3(1, 0, 0), _lean = new THREE.Quaternion();
 const mirror = (d) => [-d[0], d[1], d[2]];
 const rotX = (d, a) => new V3(...d).applyAxisAngle(_x, a);
 function poseTargets(G, def, anim = {}) {
@@ -354,7 +354,7 @@ class Cham {
     const def = POSES[this.pose] || POSES.stand, rig = this.rig;
     const want = moving && def.move ? 1 : 0;
     this.walkAmt = lerp(this.walkAmt, want, Math.min(1, dt * 10));
-    if (moving) this.walkT += dt * (def.speed ? 7 : 10.5) * (this.size === 'petite' ? 1.25 : 1);
+    if (moving) this.walkT += dt * (def.speed ? 7 : 10.5) * (this.size === 'petite' ? 1.25 : 1) * (this.sprinting ? 1.45 : 1);
     if (moving && this.emote) this.emote = null;
     let anim = { walk: this.walkT, walkAmt: this.walkAmt, breath: Math.sin(this.t * 2.2) * 0.02 * (1 - this.walkAmt) };
     let bounce = 0;
@@ -363,8 +363,17 @@ class Cham {
     const T = (this.walkAmt > 0.01 || anim.breath || this.emote || anim.override) ? poseTargets(rig.G, def, anim) : this.target_;
     const k = 1 - Math.exp(-dt * 14);
     rig.apply(T, k); rig.group.quaternion.copy(rig.rootQ);
+    /* sprint lean + landing squash */
+    this.lean = lerp(this.lean || 0, this.sprinting && moving ? 0.22 : moving ? 0.06 : 0, Math.min(1, dt * 8));
+    if (this.lean > 0.002) rig.group.quaternion.premultiply(_lean.setFromAxisAngle(_x, this.lean));
+    const air = !this.body.onGround;
+    if (this.wasAir && !air && def.move) { this.squash = 0.22; this.landed = true; }
+    this.wasAir = air;
+    this.squash = Math.max(0, (this.squash || 0) - dt * 1.6);
+    const sq = Math.sin(this.squash / 0.22 * Math.PI) * this.squash;
+    if (sq > 0.001 || this.squashing) { const sv = this.scaleVec(); rig.group.scale.set(sv.x * (1 + sq * 0.5), sv.y * (1 - sq), sv.z * (1 + sq * 0.5)); this.squashing = sq > 0.001; }
     this.curBaseY = lerp(this.curBaseY, this.baseY, k);
-    rig.group.position.y = this.curBaseY + Math.abs(Math.sin(this.walkT)) * 0.035 * this.walkAmt + bounce;
+    rig.group.position.y = this.curBaseY + Math.abs(Math.sin(this.walkT)) * (this.sprinting ? 0.05 : 0.035) * this.walkAmt + bounce;
   }
   rebake() { this.rig.bake(); }
   paintDot(uv, rgb, r) {
@@ -442,6 +451,21 @@ function buildHunterModel(av) {
   const gear = buildHeadGear(av);
   gear.position.copy(G.headCenter).sub(G.heads[RIG.B.head]); gear.scale.setScalar(G.headR);
   hb.add(gear);
+  /* field kit: backpack with a lit antenna and a badge, so hunters read as a uniformed team, not big chameleons */
+  {
+    const bb = rig.pickGeo.boundingBox || (rig.pickGeo.computeBoundingBox(), rig.pickGeo.boundingBox);
+    const sp = rig.boneOf('sp3'), at = G.heads[RIG.B.sp3];
+    const dark = new THREE.Color(col).multiplyScalar(0.45);
+    const pack = new THREE.Group(); pack.position.set(-at.x, -at.y, -at.z); sp.add(pack);
+    const m = (geo, c, x, y, z, rough = 0.7, metal = 0, basic = false) => { const o = new THREE.Mesh(geo, basic ? new THREE.MeshBasicMaterial({ color: c }) : cm(c, rough, metal)); o.position.set(x, y, z); o.castShadow = true; pack.add(o); return o; };
+    const backZ = bb.min.z - 0.075, cy = at.y + 0.02;
+    m(new THREE.BoxGeometry(0.2, 0.21, 0.13), dark, 0, cy, backZ + 0.02, 0.8); m(new THREE.BoxGeometry(0.21, 0.04, 0.14), new THREE.Color(col).multiplyScalar(0.8), 0, cy + 0.1, backZ + 0.02, 0.6);
+    m(new THREE.BoxGeometry(0.15, 0.07, 0.04), '#2a2d36', 0, cy - 0.05, backZ - 0.06, 0.6);
+    m(new THREE.CylinderGeometry(0.006, 0.006, 0.16, 6), '#1d1f26', 0.07, cy + 0.17, backZ, 0.4, 0.6);
+    m(new THREE.SphereGeometry(0.014, 8, 6), '#ff4d4d', 0.07, cy + 0.255, backZ, 0, 0, true);
+    for (const s of [-1, 1]) m(new THREE.BoxGeometry(0.025, 0.24, 0.012), '#2a2d36', s * 0.07, cy + 0.01, bb.max.z * 0.85, 0.7);
+    const badge = m(new THREE.CircleGeometry(0.03, 5), '#ffd23f', 0.05, cy + 0.06, bb.max.z + 0.004, 0.3, 0.6); badge.rotation.z = Math.PI / 2;
+  }
   const tool = buildTool(av.tool || 'hammer');
   const fore = rig.boneOf('foreL');
   const hold = new THREE.Group(); hold.position.copy(G.tails[RIG.B.foreL]).sub(G.heads[RIG.B.foreL]).multiplyScalar(0.92);

@@ -2,3 +2,4 @@
 GLTFLoader.js: three.js r147 examples (MIT).
 Player model: supplied by Lucas (meccha-chameleon-player-rig).
 Rebuild models.js: python tools/pack_models.py  (needs the unzipped packs in assets/kenney/, gitignored)
+Sound effects (footsteps, impacts, UI clicks/ticks): Kenney (https://kenney.nl) - Impact Sounds, Interface Sounds. License: CC0 1.0 (public domain). Rebuild sounds.js: python tools/pack_sounds.py

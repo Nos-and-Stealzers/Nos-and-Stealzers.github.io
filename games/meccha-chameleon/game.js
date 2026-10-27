@@ -9,7 +9,30 @@ const Sound = (() => {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     ac = new (window.AudioContext || window.webkitAudioContext)();
     master = ac.createGain(); master.gain.value = SETTINGS.vol; master.connect(ac.destination);
+    load();
   };
+  /* Recorded one-shots (Kenney CC0, sounds.js). Each call falls back to the synth version until they decode. */
+  const buf = {}, last = {};
+  const load = () => {
+    if (typeof SOUND_SRC === 'undefined') return;
+    for (const [k, list] of Object.entries(SOUND_SRC)) {
+      buf[k] = [];
+      for (const b64 of list) {
+        const bin = atob(b64), u = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        ac.decodeAudioData(u.buffer).then((b) => buf[k].push(b), () => {});
+      }
+    }
+  };
+  const sample = (k, vol, dest, rate = 1) => {
+    const l = buf[k]; if (!l || !l.length) return false;
+    let i = (Math.random() * l.length) | 0; if (l.length > 1 && i === last[k]) i = (i + 1) % l.length; last[k] = i;
+    const s = ac.createBufferSource(), g = ac.createGain();
+    s.buffer = l[i]; s.playbackRate.value = rate * (0.94 + Math.random() * 0.12); g.gain.value = vol;
+    s.connect(g); g.connect(dest); s.start(ac.currentTime); return true;
+  };
+  const FLOOR = { mansion: 'wood', backrooms: 'carpet', sewer: 'concrete', sugar: 'grass', gallery: 'concrete', lobby: 'wood' };
+  const floor = () => 'step_' + ((typeof MAP !== 'undefined' && MAP && FLOOR[MAP.id]) || 'wood');
   const out = (pos) => {
     if (!pos) return master;
     const p = ac.createPanner(); p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 2.5; p.rolloffFactor = 1.1;
@@ -43,17 +66,22 @@ const Sound = (() => {
     whistle(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('sine', 1250, 2100, t, 0.2, 0.32, d); osc('sine', 2100, 1150, t + 0.22, 0.32, 0.32, d); },
     chirp(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('sine', 2600, 3400, t, 0.07, 0.22, d); osc('sine', 2800, 3600, t + 0.1, 0.07, 0.2, d); },
     ping(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('sine', 1400, 380, t, 0.55, 0.28, d); osc('sine', 1400, 380, t + 0.18, 0.5, 0.1, d); },
-    bonk(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('triangle', 240, 70, t, 0.25, 0.5, d); noise(t, 0.1, 0.5, 900, d); },
-    thud() { if (!ok()) return; osc('sine', 140, 60, ac.currentTime, 0.12, 0.25, master); },
-    step(pos, v = 0.12) { if (!ok()) return; const t = ac.currentTime, d = out(pos); noise(t, 0.05, v, 900 + Math.random() * 500, d); osc('sine', 120 + Math.random() * 40, 70, t, 0.05, v * 0.6, d); },
+    bonk(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); osc('triangle', 240, 70, t, 0.25, 0.5, d); if (!sample('punch', 0.7, d)) noise(t, 0.1, 0.5, 900, d); },
+    thud() { if (!ok()) return; if (!sample('soft', 0.5, master, 0.9)) osc('sine', 140, 60, ac.currentTime, 0.12, 0.25, master); },
+    step(pos, v = 0.12) {
+      if (!ok()) return; const t = ac.currentTime, d = out(pos);
+      if (sample(floor(), Math.min(0.8, 0.2 + v * 0.9), d, pos ? 1.22 : 0.95)) return;
+      noise(t, 0.05, v, 900 + Math.random() * 500, d); osc('sine', 120 + Math.random() * 40, 70, t, 0.05, v * 0.6, d);
+    },
     pant() { if (!ok()) return; noise(ac.currentTime, 0.32, 0.05, 1600, master); },
     swoosh(pos) { if (!ok()) return; noise(ac.currentTime, 0.18, 0.25, 600, out(pos)); },
     shoot() { if (!ok()) return; const t = ac.currentTime; noise(t, 0.08, 0.35, 1400, master); osc('square', 320, 120, t, 0.09, 0.08, master); },
-    splatHit(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); noise(t, 0.16, 0.6, 500, d); osc('sine', 180, 90, t, 0.12, 0.2, d); },
+    splatHit(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); if (!sample('splat', 0.75, d, 1.1)) noise(t, 0.16, 0.6, 500, d); osc('sine', 180, 90, t, 0.12, 0.2, d); },
     pop(pos) { if (!ok()) return; const t = ac.currentTime, d = out(pos); noise(t, 0.35, 0.7, 1800, d); osc('sine', 500, 1500, t, 0.18, 0.3, d); },
     horn() { if (!ok()) return; const t = ac.currentTime; [196, 247, 294].forEach((f, i) => osc('sawtooth', f, f, t + i * 0.03, 0.7, 0.09, master)); },
-    tick() { if (!ok()) return; osc('square', 1100, null, ac.currentTime, 0.04, 0.05, master); },
-    click() { if (!ok()) return; osc('sine', 720, null, ac.currentTime, 0.05, 0.08, master); },
+    tick() { if (!ok()) return; if (!sample('tick', 0.45, master)) osc('square', 1100, null, ac.currentTime, 0.04, 0.05, master); },
+    click() { if (!ok()) return; if (!sample('click', 0.4, master)) osc('sine', 720, null, ac.currentTime, 0.05, 0.08, master); },
+    loaded() { return Object.fromEntries(Object.entries(buf).map(([k, l]) => [k, l.length])); },
     hover() { if (!ok()) return; osc('sine', 1200, null, ac.currentTime, 0.025, 0.03, master); },
     splat() { if (!ok()) return; noise(ac.currentTime, 0.05, 0.12, 2800, master); },
     jump() { if (!ok()) return; osc('sine', 280, 620, ac.currentTime, 0.14, 0.12, master); },

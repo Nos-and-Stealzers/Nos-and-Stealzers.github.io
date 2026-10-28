@@ -704,7 +704,219 @@ function buildGallerySouth() {
   for (const [x, z] of [[21.5, 28], [29.5, 30]]) lamp(x, z, 0xfff1d6, 0.55, { fixture: 'panel', dist: 12 });
 }
 
-const MAP_ORDER = ['mansion', 'backrooms', 'sewer', 'sugar', 'gallery'];
+/* =================== MEGA MART =================== */
+/* Late-night supermarket: open shop floor with checkout lanes and five shelf aisles, produce, bakery café,
+   frozen foods, toy corner, and a back-of-house ring (stockroom, staff room, garden centre, loading dock pen). */
+function martTextures() {
+  if (TEX.martTile) return;
+  TEX.martTile = canvasTex(256, 256, (g, w, h) => { tiles(g, 0, 0, w, h, 64, ['#eceee9', '#e6e8e3', '#f1f2ee', '#e2e5df'], '#c3c8c0', 2); speckle(g, w, h, 0.35, 0.035); });
+  TEX.martWall = canvasTex(256, 410, (g, w, h) => {
+    g.fillStyle = '#f3f5f1'; g.fillRect(0, 0, w, h); speckle(g, w, h, 0.2, 0.025);
+    g.fillStyle = '#2fa865'; g.fillRect(0, h * 0.56, w, 18); g.fillStyle = '#ffd23f'; g.fillRect(0, h * 0.56 + 18, w, 6);
+    g.fillStyle = '#c9cdc6'; g.fillRect(0, h - 22, w, 22);
+  });
+  TEX.freezeWall = canvasTex(256, 410, (g, w, h) => {
+    tiles(g, 0, 0, w, h, 32, ['#dff1fb', '#d5ecf8', '#e6f5fc'], '#b4d4e6', 2);
+    g.fillStyle = '#3d8fd1'; g.fillRect(0, h * 0.56, w, 14); g.fillStyle = '#9aa7b0'; g.fillRect(0, h - 20, w, 20);
+  });
+}
+function martSign(text, bg, fg = '#ffffff', num) {
+  return canvasTex(512, 128, (g, w, h) => {
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, h - 10, w, 10);
+    let x = w / 2; g.textBaseline = 'middle';
+    if (num != null) {
+      g.fillStyle = '#ffffff'; g.fillRect(14, 14, 100, h - 28);
+      g.fillStyle = bg; g.font = '800 78px Segoe UI, system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(String(num), 64, h / 2 + 4);
+      x = 120 + (w - 120) / 2;
+    }
+    g.fillStyle = fg; g.font = '800 60px Segoe UI, system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(text, x, h / 2 + 3);
+  });
+}
+/* Two-sided ceiling sign on thin wires (not raycast/paint targets). */
+function hangSign(x, z, w, h, tex, axis = 'x', y = 2.75) {
+  const ry = axis === 'x' ? 0 : Math.PI / 2;
+  for (const flip of [0, Math.PI]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
+    p.position.set(x, y, z); p.rotation.y = ry + flip; mapGroup.add(p);
+    const o = 0.006; if (axis === 'x') p.position.z += flip ? -o : o; else p.position.x += flip ? -o : o;
+  }
+  for (const s of [-1, 1]) {
+    const wire = new THREE.Mesh(new THREE.BoxGeometry(0.02, MAP.ceilH - y - h / 2, 0.02), new THREE.MeshBasicMaterial({ color: 0x555a60 }));
+    wire.position.set(axis === 'x' ? x + s * (w / 2 - 0.15) : x, (MAP.ceilH + y + h / 2) / 2, axis === 'x' ? z : z + s * (w / 2 - 0.15)); mapGroup.add(wire);
+  }
+}
+/* Steel stock rack: slabs collide only as slabs, the bottom gap is a crawl-under hiding spot. */
+function stockRack(x, z, w, d, mat, fill) {
+  const slab = cm('#8a96a3', 0.5, 0.4), post = cm('#d9822b', 0.6, 0.3);
+  for (const y of [1.02, 2.0]) box(x, z, w, d, 0.06, slab, { y, top: y < 1.5 });
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(x + sx * (w / 2 - 0.04), z + sz * (d / 2 - 0.04), 0.07, 0.07, 2.2, post, { collide: false });
+  const zn = zoneAt(x, z), u = { x, z, w, d, h: 1.02, zone: zn ? zn.id : null };
+  unders.push(u); if (_mapTrack && _lastMapObj) physOf(_lastMapObj).unders.push(u);
+  if (fill) fill(x, z, w, d);
+}
+MAPS.market = {
+  id: 'market', name: 'Mega Mart', desc: 'A late-night supermarket: five shelf aisles, a frosty freezer section, toy corner, garden centre and a stockroom full of boxes. Blend into the shelves.', colors: ['#e9f5ee', '#2fa865'],
+  mapSet: 2,
+  bounds: { x0: 0, z0: 0, x1: 44, z1: 32 }, wallH: 3.6, ceilH: 3.6,
+  zones: [
+    { id: 'front', name: 'Checkouts', x0: 0, z0: 0, x1: 24, z1: 8.4 },
+    { id: 'aisles', name: 'Aisles', x0: 0, z0: 8.4, x1: 24, z1: 22, pts: [[1.6, 10], [1.6, 13.4], [1.6, 15.6], [1.6, 18.6], [1.6, 21], [5.5, 10.4], [5.5, 13.4], [5.5, 15.6], [5.5, 18.4], [5.5, 21], [9.5, 10.4], [9.5, 13.4], [9.5, 15.6], [9.5, 18.4], [9.5, 21], [13.5, 10.4], [13.5, 13.4], [13.5, 15.6], [13.5, 18.4], [13.5, 21], [17.5, 10.4], [17.5, 13.4], [17.5, 15.6], [17.5, 18.4], [17.5, 21], [21.4, 10], [21.4, 13], [21.4, 15.6], [21.4, 18.6], [21.4, 21], [3.5, 15.6], [7.5, 15.6], [11.5, 15.6], [15.5, 15.6], [19.5, 15.6], [3.5, 21], [7.5, 21], [11.5, 21], [15.5, 21], [19.5, 21]] },
+    { id: 'produce', name: 'Produce', x0: 24, z0: 0, x1: 34, z1: 11 },
+    { id: 'bakery', name: 'Bakery Café', x0: 34, z0: 0, x1: 44, z1: 11 },
+    { id: 'frozen', name: 'Frozen Foods', x0: 24, z0: 11, x1: 34, z1: 22 },
+    { id: 'toys', name: 'Toy Corner', x0: 34, z0: 11, x1: 44, z1: 22 },
+    { id: 'stock', name: 'Stockroom', x0: 0, z0: 22, x1: 16, z1: 32 },
+    { id: 'staff', name: 'Staff Room', x0: 16, z0: 22, x1: 26, z1: 32 },
+    { id: 'garden', name: 'Garden Centre', x0: 26, z0: 22, x1: 36, z1: 32 },
+    { id: 'dock', name: 'Loading Dock', x0: 36, z0: 22, x1: 44, z1: 32, pts: [[40, 26], [40, 29]], hunters: true },
+  ].map((z) => ({ ...z, pts: z.pts || gridPts(z.x0, z.z0, z.x1, z.z1, 2.2) })),
+  playerSpawn: [12, 6.2], hunterSpawns: [[38.4, 25.4], [41.6, 25.4], [38.4, 28.8], [41.6, 28.8]], gate: { x: 40, z: 22, a: 'h' },
+  light: { hemi: 0.82, sky: 0xffffff, ground: 0x8a8c84, amb: 0.2, sun: 0.3, sunPos: [-6, 30, -8], bg: 0x141820 },
+  build() {
+    martTextures(); setSeed(hashStr('market'));
+    const T = (o) => (o ? o.userData.wb.max.y : 0);
+    const rooms = [
+      { id: 'store', x0: 0, z0: 0, x1: 24, z1: 22, wall: 'martWall', floor: 'martTile', floorScale: 2.4 },
+      { id: 'produce', x0: 24, z0: 0, x1: 34, z1: 11, wall: 'martWall', floor: 'terraTile', floorScale: 1.6 },
+      { id: 'bakery', x0: 34, z0: 0, x1: 44, z1: 11, wall: 'shopWall', floor: 'woodLight' },
+      { id: 'frozen', x0: 24, z0: 11, x1: 34, z1: 22, wall: 'freezeWall', floor: 'martTile', floorScale: 2.4 },
+      { id: 'toys', x0: 34, z0: 11, x1: 44, z1: 22, wall: 'wallPlay', floor: 'mats' },
+      { id: 'stock', x0: 0, z0: 22, x1: 16, z1: 32, wall: 'wallGarage', floor: 'concrete' },
+      { id: 'staff', x0: 16, z0: 22, x1: 26, z1: 32, wall: 'wallOffice', floor: 'carpet' },
+      { id: 'garden', x0: 26, z0: 22, x1: 36, z1: 32, wall: 'wallSun', floor: 'terraTile', floorScale: 1.4 },
+      { id: 'dock', x0: 36, z0: 22, x1: 44, z1: 32, wall: 'wallGarage', floor: 'concrete' },
+    ];
+    const doors = [
+      { a: 'v', line: 24, at: 5.5, w: 4 }, { a: 'v', line: 24, at: 16.5, w: 4 },
+      { a: 'h', line: 11, at: 29, w: 3 }, { a: 'h', line: 11, at: 39, w: 2.4 },
+      { a: 'v', line: 34, at: 5.5, w: 3 }, { a: 'v', line: 34, at: 16.5, w: 2.4 },
+      { a: 'h', line: 22, at: 6, w: 2 }, { a: 'h', line: 22, at: 20 }, { a: 'h', line: 22, at: 30, w: 3 }, { a: 'h', line: 22, at: 40 },
+      { a: 'v', line: 16, at: 27 }, { a: 'v', line: 26, at: 27, w: 2 },
+    ];
+    const extra = buildShell(rooms, doors, { frame: '#d6dbd3', doorH: 2.6 });
+    plane(22, 3.6, 16, 44, 32, cm('#f2f3ef', 1), Math.PI / 2, 0).castShadow = false;
+
+    // ---- checkouts + entrance (south) ----
+    for (const x of [3.2, 7.4, 11.6, 15.8]) {
+      const reg_ = prop('mkt:cash-register', x, 3.0, { ry: 's' });
+      box(x + 1.25, 3.0 + 0.1, 0.62, 2.4, 0.86, cm('#3c4656', 0.6), { top: true });
+      box(x + 1.25, 3.1, 0.5, 2.3, 0.03, cm('#1b1d22', 0.5), { y: 0.86, collide: false });
+      prop('mkt:shelf-end', x - 1.45, 4.2, { h: 1.25, ry: 'e', s: 0.7 });
+      void reg_;
+    }
+    for (let i = 0; i < 4; i++) { const c = prop('mkt:shopping-cart', 23.35, 0.75 + i * 0.34, { ry: 's', h: 1.0, col: i ? 'none' : 'solid' }); if (!i) { const b = c.userData.box; b.max.z += 1.02; } }
+    for (let i = 0; i < 3; i++) prop('mkt:shopping-basket', 17.4, 0.7, { y: i * 0.22, col: i ? 'none' : 'solid', h: 0.3 });
+    prop('mkt:bottle-return', 0.05, 1.4, { ry: 'e', ax: 'min', h: 1.8 }); prop('mkt:bottle-return', 0.05, 2.9, { ry: 'e', ax: 'min', h: 1.8 });
+    { // sliding doors + store sign on the south wall
+      const glass = cm('#9fcfe0', 0.08, 0.3), frame = cm('#5b6470', 0.4, 0.6);
+      box(20.6, 0.13, 3.4, 0.05, 2.5, glass, { collide: false }); box(20.6, 0.13, 0.06, 0.07, 2.5, frame, { collide: false });
+      box(20.6, 0.13, 3.6, 0.08, 0.12, frame, { y: 2.5, collide: false });
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.05), new THREE.MeshBasicMaterial({ map: martSign('MEGA MART', '#2fa865') }));
+      s.position.set(20.6, 3.08, 0.13); mapGroup.add(s);
+      prop('f:rugDoormat', 20.6, 1.0, { col: 'none', s: 1.6, tint: '#3a4a3f' });
+    }
+    hangSign(5.3, 6.2, 2.6, 0.62, martSign('CHECKOUT', '#e94b4b'), 'x', 2.8); hangSign(13.7, 6.2, 2.6, 0.62, martSign('CHECKOUT', '#e94b4b'), 'x', 2.8);
+
+    // ---- five aisles + wall shelving ----
+    const aisleNames = [['Snacks', '#e94b4b'], ['Cereal', '#f08c2e'], ['Drinks', '#3a86d6'], ['Pantry', '#2fa865']];
+    for (const [ri, x] of [3.5, 7.5, 11.5, 15.5, 19.5].entries()) {
+      const kind = ri % 2 ? 'mkt:shelf-bags' : 'mkt:shelf-boxes';
+      for (const z of [10.28, 12.04, 13.8, 17.48, 19.24]) prop(kind, x, z, { ry: 'e' });
+      prop('mkt:shelf-end', x, 9.4, { ry: 'n', az: 'max', h: 1.9 });
+    }
+    aisleNames.forEach(([n, c], i) => hangSign(17.5 - i * 4, 11.2, 2.2, 0.55, martSign(n, c, '#fff', i + 1), 'x'));
+    for (const z of [10.0, 12.2, 17.5, 19.7]) prop('mkt:freezers-standing', 0.05, z, { ry: 'e', ax: 'min' });
+    for (const z of [9.6, 11.4, 13.2]) prop('mkt:shelf-boxes', 23.95, z, { ry: 'w', ax: 'max' });
+    { const p = box(22.6, 20.4, 1.2, 1.0, 0.14, tm('crate', 1, 1, 0.8), { top: true }); void p;
+      for (const [dx, dz] of [[-0.3, -0.24], [0.3, -0.24], [-0.3, 0.24], [0.3, 0.24]]) prop('surv:bottle-large', 22.6 + dx, 20.4 + dz, { y: 0.14, h: 0.6, col: 'none' }); }
+    for (const [x, z] of [[1.4, 7.6], [22.6, 7.6]]) prop('f:pottedPlant', x, z);
+
+    // ---- produce ----
+    for (const [x, z] of [[27, 3.6], [31, 3.6], [27, 7.6], [31, 7.6]]) prop('mkt:display-fruit', x, z, { ry: x < 29 ? 'e' : 'w' });
+    for (const [i, x] of [25.2, 26.6, 31.6, 33.0].entries()) {
+      const c = prop('pir:crate', x, 0.7, { h: 0.7 });
+      for (const [dx, dz] of [[-0.15, -0.1], [0.15, 0.08], [0, 0.12]]) prop(i % 2 ? 'food:watermelon' : 'food:apple', x + dx, 0.7 + dz, { y: T(c), col: 'none', h: i % 2 ? 0.3 : 0.13 });
+    }
+    prop('nat:plant_bushLarge', 24.6, 10.3, { h: 1.1 }); prop('nat:plant_bushLarge', 33.4, 10.3, { h: 1.1 });
+    hangSign(29, 5.5, 2.4, 0.58, martSign('PRODUCE', '#2fa865'), 'z');
+
+    // ---- bakery café ----
+    for (const x of [36.4, 38.8]) prop('mkt:display-bread', x, 0.05, { ry: 's', az: 'min' });
+    { const cnt = box(42.9, 3.4, 1.0, 4.0, 1.0, cm('#e88a4a', 0.6), { top: true }); void cnt;
+      box(42.9, 3.4, 1.1, 4.1, 0.06, cm('#f7efe1', 0.4), { y: 1.0, collide: false });
+      prop('f:kitchenCoffeeMachine', 43.1, 2.4, { y: 1.06, col: 'none', ry: 'w' }); prop('mkt:cash-register', 43.0, 4.6, { y: 1.06, col: 'none', ry: 'w', h: 0.35 });
+      for (const [z, k] of [[3.2, 'food:croissant'], [3.8, 'food:donut-sprinkles'], [4.0, 'food:muffin']]) prop(k, 42.7, z, { y: 1.06, col: 'none', h: 0.1 }); }
+    for (const [x, z] of [[36.6, 5.4], [39.8, 8.4], [36.6, 9.2]]) {
+      const t = prop('f:tableRound', x, z, { s: 0.85 }); const ty = T(t);
+      prop('f:chairModernCushion', x - 0.8, z, { ry: 'e', s: 0.9, tint: '#f2aa4c' }); prop('f:chairModernCushion', x + 0.8, z, { ry: 'w', s: 0.9, tint: '#f2aa4c' });
+      prop(spick(['food:cup-coffee', 'food:croissant', 'food:cupcake', 'food:pie', 'food:cake-birthday']), x, z, { y: ty, col: 'none', h: 0.12 });
+    }
+    prop('f:pottedPlant', 43.4, 10.4); prop('f:trashcan', 34.6, 10.5, { s: 0.42 });
+    hangSign(39, 4.6, 2.4, 0.58, martSign('BAKERY', '#c76b2a'), 'x');
+
+    // ---- frozen foods ----
+    for (const x of [25.3, 27.4, 32.7]) prop('mkt:freezers-standing', x, 21.95, { ry: 'n', az: 'max' });
+    for (const z of [12.4, 14.5]) prop('mkt:freezers-standing', 33.95, z, { ry: 'w', ax: 'max' });
+    for (const [x, z] of [[27.2, 15.4], [30.8, 15.4], [27.2, 18.6], [30.8, 18.6]]) prop('mkt:freezer', x, z, { ry: 'e' });
+    hangSign(29, 17, 2.4, 0.58, martSign('FROZEN', '#3a86d6'), 'x');
+
+    // ---- toy corner ----
+    box(39.2, 12.6, 5.6, 1.6, 0.32, cm('#4d7fd6', 0.7), { top: true });
+    [['hol:train-locomotive', 37.3], ['hol:train-tender', 38.7], ['hol:train-wagon', 40.1], ['hol:train-wagon', 41.5]].forEach(([k, x]) => prop(k, x, 12.6, { y: 0.32, ry: 'e', h: 0.7 }));
+    for (const z of [15.2, 17.0, 18.8]) prop('mkt:shelf-boxes', 43.95, z, { ry: 'w', ax: 'max', tint: spick(['#ffb3c7', '#b3d9ff', '#ffe08a']) });
+    { const t = box(37.4, 17.6, 2.0, 1.2, 0.6, cm('#ffd23f', 0.6), { top: true }); void t;
+      ['toy:vehicle-monster-truck', 'toy:vehicle-racer', 'toy:vehicle-suv'].forEach((k, i) => prop(k, 36.8 + i * 0.6, 17.6, { y: 0.6, col: 'none', h: 0.3, ry: 0.4 * i })); }
+    prop('hol:nutcracker', 34.6, 21.3, { h: 1.6, ry: 'e' }); prop('f:bear', 41.4, 20.9, { s: 1.4, ry: 's' });
+    for (const [x, z, k] of [[36.0, 20.8, 'hol:present-a-cube'], [36.9, 21.2, 'hol:present-b-round'], [35.2, 19.4, 'hol:present-b-cube']]) prop(k, x, z, { s: 1.2, ry: sr(0, 1) });
+    hangSign(39, 15.4, 2.4, 0.58, martSign('TOYS', '#a35bd6'), 'x');
+
+    // ---- stockroom ----
+    const boxes = (x, z, w) => { for (let i = -1; i <= 1; i += 2) prop(spick(['f:cardboardBoxClosed', 'f:cardboardBoxOpen', 'surv:box']), x + i * w * 0.25, z, { y: 1.08, col: 'none', s: 1.1, ry: sr(-0.2, 0.2) }); };
+    for (const z of [24.2, 29.8]) stockRack(3.4, z, 4.4, 1.0, null, boxes);
+    stockRack(10.4, 24.2, 4.4, 1.0, null, boxes);
+    for (const [x, z] of [[9.0, 28.4], [9.0, 29.3], [10.0, 28.6], [13.8, 30.8]]) prop('pir:crate', x, z, { h: 0.9, ry: sr(-0.2, 0.2) });
+    prop('surv:barrel', 15.2, 23.0, { h: 0.95 }); prop('surv:barrel', 14.4, 23.0, { h: 0.95 });
+    box(13.4, 27.4, 1.3, 1.3, 0.14, tm('crate', 1, 1, 0.8), { top: true }); prop('f:cardboardBoxClosed', 13.4, 27.4, { y: 0.14, s: 1.6 });
+    prop('mkt:shopping-cart', 6.2, 27.0, { ry: 1.2, h: 1.0 });
+    hangSign(6, 22.4, 1.6, 0.4, martSign('STAFF ONLY', '#4a4f57'), 'x', 2.95);
+
+    // ---- staff room ----
+    { const t = prop('f:tableRound', 21, 27.6); const ty = T(t);
+      for (const [dx, dz, f] of [[-0.85, 0, 'e'], [0.85, 0, 'w'], [0, -0.85, 's'], [0, 0.85, 'n']]) prop('f:chairCushion', 21 + dx, 27.6 + dz, { ry: f });
+      prop('food:pizza-box', 21, 27.6, { y: ty, col: 'none', h: 0.1 }); }
+    prop('f:loungeSofa', 21, 31.95, { ry: 'n', az: 'max', tint: '#5b7fb8' });
+    prop('arc:vending-machine', 16.05, 30.6, { h: 1.9, ry: 'e', ax: 'min' });
+    for (const x of [22.6, 23.6, 24.6]) prop('f:bookcaseClosedDoors', x, 22.1, { ry: 's', az: 'min', tint: '#9aa5b1' });
+    prop('f:kitchenFridgeLarge', 25.95, 30.8, { ry: 'w', ax: 'max' }); prop('f:kitchenCabinet', 25.95, 29.6, { ry: 'w', ax: 'max' });
+    prop('f:kitchenMicrowave', 25.7, 29.6, { y: 0.9, col: 'none', ry: 'w' });
+    prop('f:coatRackStanding', 16.6, 23.0);
+
+    // ---- garden centre ----
+    for (const z of [25.0, 28.6]) {
+      box(31, z, 5.0, 1.1, 0.7, cm('#7a5a3a', 0.8), { top: true });
+      for (let i = 0; i < 5; i++) prop(spick(['f:plantSmall1', 'f:plantSmall2', 'f:plantSmall3', 'f:pottedPlant']), 29 + i, z, { y: 0.7, col: 'none', s: 0.9 });
+    }
+    for (const [x, z] of [[27.0, 31.0], [35.0, 31.0], [27.0, 23.2]]) prop(spick(['nat:plant_bushLarge', 'nat:plant_bushDetailed', 'nat:plant_flatTall']), x, z, { h: 1.3 });
+    prop('f:bench', 31, 31.4, { ry: 'n' }); prop('hol:rocks-medium', 34.8, 26.6, { h: 0.5 });
+    for (const x of [27.4, 28.2]) prop('surv:box-large', x, 27.0, { h: 0.6, tint: '#6b4a2e' });
+
+    // ---- loading dock (hunter pen) ----
+    for (const [x, z] of [[37.0, 31.2], [37.9, 31.2], [43.2, 31.2], [43.2, 30.3]]) prop('pir:crate', x, z, { h: 0.9 });
+    box(40, 31.7, 3.4, 0.12, 2.8, cm('#7d858f', 0.6, 0.4), { collide: false });
+    for (let i = 0; i < 7; i++) box(40, 31.62, 3.4, 0.02, 0.06, cm('#5b636c', 0.6), { y: 0.3 + i * 0.38, collide: false });
+
+    // ---- lights ----
+    for (const x of [3.5, 7.5, 11.5, 15.5, 19.5]) for (const z of [12, 18.5]) glowPanel(x + 2, z, 0.5, 2.6, 0xffffff);
+    for (const [x, z] of [[6, 4], [16, 4], [29, 5.5], [39, 2.5], [29, 16.5], [39, 17], [8, 27], [21, 27], [31, 27], [40, 27]]) glowPanel(x, z, 2.2, 0.6, 0xffffff);
+    for (const [x, z, c, i, d] of [[8, 5, 0xffffff, 0.5, 16], [8, 15, 0xffffff, 0.45, 16], [17, 15, 0xffffff, 0.45, 16], [29, 5.5, 0xfff6e0, 0.5, 12], [39, 5.5, 0xffd9a8, 0.55, 12],
+      [29, 16.5, 0xd6efff, 0.55, 12], [39, 16.5, 0xffeef8, 0.5, 12], [8, 27, 0xfff1d0, 0.45, 12], [21, 27, 0xfff1d6, 0.45, 10], [31, 27, 0xfff4d0, 0.5, 11], [40, 27, 0xffffff, 0.4, 9]]) lamp(x, z, c, i, { fixture: false, dist: d });
+    return extra;
+  },
+};
+
+const MAP_ORDER = ['mansion', 'backrooms', 'sewer', 'sugar', 'gallery', 'market'];
+const MAP_SET = 2;   // bump when a new map is added; online hosts only pick maps every player has
 
 /* ================= Lobby hub (not a playable round map) ================= */
 function signTex(title, sub, c1, c2, votes = 0, hot = false) {
@@ -759,7 +971,7 @@ MAPS.lobby = {
     { const s = canvasTex(256, 64, (g, w, h) => { g.fillStyle = '#fff'; g.font = '800 40px Segoe UI, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('READY UP', w / 2, h / 2); }); const p = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.5), new THREE.MeshBasicMaterial({ map: s, transparent: true })); p.rotation.set(-Math.PI / 2, 0, 0); p.position.set(13, 0.02, 12.4); mapGroup.add(p); }
     // vote pads + signs
     MAP_ORDER.forEach((id, i) => {
-      const m = MAPS[id], x = 3.6 + i * 4.7, z = 4.2;
+      const m = MAPS[id], x = MAP_ORDER.length > 1 ? 2.4 + i * (21.2 / (MAP_ORDER.length - 1)) : 13, z = 4.2;
       H.votePads.push({ id, x, z, r: 1.15, mesh: glow(x, z, 1.15, new THREE.Color(m.colors[1]).multiplyScalar(0.7).getHex()) });
       box(x - 1.2, 1.6, 0.1, 0.1, 2.2, f_steel(), { collide: false }); box(x + 1.2, 1.6, 0.1, 0.1, 2.2, f_steel(), { collide: false });
       const tex = signTex(m.name, 'Step here to vote', m.colors[0], m.colors[1]);
@@ -798,7 +1010,7 @@ MAPS.lobby = {
     prop('arc:air-hockey', 9.0, 18.4, { h: 0.9, ry: 'e' }); prop('arc:dance-machine', 25.9, 2.0, { h: 1.6, ry: 'w', ax: 'max' });
     // paint buckets
     ['#ff5d6c', '#ffd43b', '#3ad49c', '#4da3ff', '#b197fc'].forEach((c, i) => { cyl(16.5 + i * 0.75, 20.9, 0.3, 0.26, 0.5, cm('#d8dde6', 0.4, 0.5), { collide: true, top: true }); cyl(16.5 + i * 0.75, 20.9, 0.27, 0.27, 0.02, cm(c, 0.3), { y: 0.5, collide: false }); });
-    for (const [x, z] of [[0.7, 0.7], [25.3, 0.7], [0.7, 21.3], [20.5, 0.8]]) prop('f:pottedPlant', x, z, { s: 1.3 });
+    for (const [x, z] of [[0.7, 0.7], [25.3, 0.7], [0.7, 21.3], [21.48, 0.8]]) prop('f:pottedPlant', x, z, { s: 1.3 });
     for (const [x, z] of [[6, 6], [13, 6], [20, 6], [6, 15], [13, 15], [18, 18]]) lamp(x, z, 0xfff3e0, 0.5, { dist: 12 });
     lamp(13, 10.5, 0x3ad49c, 0.6, { dist: 6, y: 2.5, fixture: false });
     return extra;

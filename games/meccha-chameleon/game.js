@@ -31,7 +31,7 @@ const Sound = (() => {
     s.buffer = l[i]; s.playbackRate.value = rate * (0.94 + Math.random() * 0.12); g.gain.value = vol;
     s.connect(g); g.connect(dest); s.start(ac.currentTime); return true;
   };
-  const FLOOR = { mansion: 'wood', backrooms: 'carpet', sewer: 'concrete', sugar: 'grass', gallery: 'concrete', lobby: 'wood' };
+  const FLOOR = { mansion: 'wood', backrooms: 'carpet', sewer: 'concrete', sugar: 'grass', gallery: 'concrete', market: 'concrete', lobby: 'wood' };
   const floor = () => 'step_' + ((typeof MAP !== 'undefined' && MAP && FLOOR[MAP.id]) || 'wood');
   const out = (pos) => {
     if (!pos) return master;
@@ -354,6 +354,19 @@ class Hunter {
     }
     this.path = path;
   }
+  /** Walk next to a spot that may be unstandable (a hider lying on a table, shelf or freezer top): try the closest
+      free points within tag reach until one has a clear route. Plain goTo() there finds no path and freezes the hunter. */
+  goNear(x, z) {
+    if (freeAt(x, z, 0.3, 1.6)) return this.goTo(x, z);
+    const c = [];
+    for (const r of [0.6, 0.85, 1.1]) for (let k = 0; k < 16; k++) {
+      const a = k / 16 * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+      if (freeAt(px, pz, 0.3, 1.6)) c.push({ x: px, z: pz, d: Math.hypot(px - this.pos.x, pz - this.pos.z) + r });
+    }
+    c.sort((a, b) => a.d - b.d);
+    for (const p of c.slice(0, 5)) { this.goTo(p.x, p.z); if (this.path.length) return; }
+    this.goTo(x, z);
+  }
   /** Team search: score rooms by how long since ANY hunter cleared them, skip rooms a teammate is heading to,
       prefer nearby rooms, then walk to a spot that overlooks hiding places (under tables, shelves, walls). */
   pickGoal() {
@@ -432,10 +445,10 @@ class Hunter {
     const D = G.D;
     if (this.state === 'chase') {
       const lost = G.t - (this.seenT ?? G.t);
-      if (lost > 3.5) { this.state = 'search'; this.scanT = 4; this.checks = this.lastSeen ? searchAround(this.lastSeen) : []; this.focus = null; if (this.lastSeen) this.goTo(this.lastSeen.x, this.lastSeen.z); this.sync(); return; }
+      if (lost > 3.5) { this.state = 'search'; this.scanT = 4; this.checks = this.lastSeen ? searchAround(this.lastSeen) : []; this.focus = null; if (this.lastSeen) this.goNear(this.lastSeen.x, this.lastSeen.z); this.sync(); return; }
       const tp = this.lastSeen;
       this.repathT -= dt;
-      if (this.repathT <= 0) { this.goTo(tp.x, tp.z); this.repathT = 0.6; }
+      if (this.repathT <= 0) { this.goNear(tp.x, tp.z); this.repathT = 0.6; }
       this.follow(dt, D.huntSpeed * 1.35 * (G.overtime ? 1.2 : 1));
       const fpz = this.focus.root.position, d = Math.hypot(fpz.x - this.pos.x, fpz.z - this.pos.z);
       this.faceTo(this.lastSeen.clone().setY(this.lastSeen.y + 0.3), dt);
@@ -443,7 +456,7 @@ class Hunter {
       else if (lost > 0.6 && Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z) < 0.7) { this.state = 'search'; this.scanT = 4; this.checks = searchAround(this.lastSeen); this.focus = null; this.path = []; }
     } else if (this.state === 'investigate') {
       const tp = this.lastSeen, c = tp.clone().setY(tp.y + 0.3), d = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);
-      if (d > 2.4) { this.repathT -= dt; if (this.repathT <= 0) { this.goTo(tp.x, tp.z); this.repathT = 1; } this.follow(dt, D.huntSpeed * 0.55, 2.4); }
+      if (d > 2.4) { this.repathT -= dt; if (this.repathT <= 0) { this.goNear(tp.x, tp.z); this.repathT = 1; } this.follow(dt, D.huntSpeed * 0.55, 2.4); }
       this.faceTo(c, dt);
       const sv = this.sus.get(this.focus) || 0;
       if (sv > 0.5 && d < 9 && d > 1.6 && this.shootCD <= 0 && (this.ammo ?? 3) > 0 && G.phase === 'hunt' && G.t - (this.seenT ?? 0) < 0.3 && this.clearSight(this.focus)) { this.shootCD = rand(3.5, 6); this.ammo = (this.ammo ?? 3) - 1; aiShoot(this, c); }
@@ -1062,6 +1075,7 @@ const G = {
   /** Host: send the running round to someone who joined mid-round so they can spectate. */
   sendLate(id) {
     if (!this.isHost || !this.P || !(playing() || this.phase === 'end')) return;
+    if ((MAPS[this.P.map]?.mapSet || 1) > mapSetOf(this.lobby.players.get(id))) return;   // older client: waits in the lobby for the next round
     const caught = this.realHiders().filter((c) => c.caught).map((c) => c.id);
     const extra = this.hunters.filter((h) => !this.P.players.some((p) => p.id === h.id) && !this.P.aiHunters.some((a) => a.id === h.id)).map((h) => ({ id: h.id, name: h.name, avatar: h.avatar, ai: h.ai }));
     Net.to(id, { k: 'late', P: this.P, phase: this.phase === 'end' ? 'hunt' : this.phase, timer: this.timer, caught, extra });
@@ -1081,7 +1095,7 @@ const G = {
     if (!ids.length || this.starting) return;
     this.starting = true;
     try {
-      const map = mapOverride || s.map;
+      const map = onlineMap(mapOverride || s.map, ids.map((id) => L.players.get(id)));
       const want = s.hunters === 'auto' || !s.hunters ? Math.round(ids.length / 4) : +s.hunters;
       const nHunters = ids.length === 1 ? 0 : clamp(want, 1, ids.length - 1);
       const shuffled = ids.slice().sort(() => Math.random() - 0.5);
@@ -1169,6 +1183,17 @@ function voteCounts() {
   for (const o of H.others.values()) if (o.vote && G.t - o.seen < 3) counts[o.vote] = (counts[o.vote] || 0) + 1;
   return counts;
 }
+/* Online rounds only use maps every player in the room has (older clients lack newer maps). */
+function mapSetOf(p) { return (p && p.profile && +p.profile.ms) || 1; }
+function onlineMap(want, players) {
+  const min = Math.min(MAP_SET, ...players.map(mapSetOf));
+  if (MAPS[want] && (MAPS[want].mapSet || 1) <= min) return want;
+  const ok = MAP_ORDER.filter((id) => (MAPS[id].mapSet || 1) <= min);
+  const fb = ok.includes('mansion') ? 'mansion' : ok[0];
+  if (MAPS[want]) toast(`${MAPS[want].name} needs everyone on the latest version, playing ${MAPS[fb].name}`, 'warn');
+  return fb;
+}
+function hostMapSet() { return G.online ? mapSetOf(G.lobby.players.get(Net.hostId)) : MAP_SET; }
 function topVote() {
   const c = voteCounts(), ids = Object.keys(c);
   if (!ids.length) return null;
@@ -1203,7 +1228,8 @@ function updateHub(dt) {
   const onReady = Math.hypot(p.x - M.readyPad.x, p.z - M.readyPad.z) < M.readyPad.r && p.y < 0.3;
   if (onReady !== H.ready) { H.ready = onReady; Sound.ready(onReady); UI.renderHub(); M.readyPad.mesh.material.color.set(onReady ? 0x3ad49c : 0x1f8f66); }
   for (const vp of M.votePads) {
-    if (Math.hypot(p.x - vp.x, p.z - vp.z) < vp.r && p.y < 0.3 && H.vote !== vp.id) { H.vote = vp.id; Sound.click(); toast(`Voted for ${MAPS[vp.id].name}`, 'good'); refreshVotes(); }
+    if (Math.hypot(p.x - vp.x, p.z - vp.z) < vp.r && p.y < 0.3 && H.vote !== vp.id && (MAPS[vp.id].mapSet || 1) > hostMapSet()) { if (G.t - (H.oldHostT || -9) > 4) { H.oldHostT = G.t; toast(`The host's game is older and doesn't have ${MAPS[vp.id].name} yet`, 'warn'); } }
+    else if (Math.hypot(p.x - vp.x, p.z - vp.z) < vp.r && p.y < 0.3 && H.vote !== vp.id) { H.vote = vp.id; Sound.click(); toast(`Voted for ${MAPS[vp.id].name}`, 'good'); refreshVotes(); }
   }
   for (const jp of M.jumpPads) if (me.body.onGround && Math.hypot(p.x - jp.x, p.z - jp.z) < jp.r && p.y < 0.2) { me.body.vy = 11.8; me.body.onGround = false; Sound.boing(); }
   for (const [id, o] of H.others) {
@@ -1916,6 +1942,7 @@ const THUMB_CAM = {
   sewer: [2, 1.8, 14.2, 14, 1.0, 10.5],
   sugar: [12, 2.4, 27, 21, 1.2, 16],
   gallery: [11, 1.7, 12.5, 20, 1.4, 3],
+  market: [9.5, 1.8, 5.2, 9.5, 1.1, 20],
 };
 const THUMBS = {};
 async function makeThumbs() {

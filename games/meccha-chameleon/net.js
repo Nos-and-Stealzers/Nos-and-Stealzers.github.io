@@ -48,7 +48,7 @@ const Net = {
   get isHost() { return this.connected && this.id === this.hostId; },
 };
 /** Only the cosmetic parts of the profile go over the wire. */
-function publicProfile() { return { tag: PROFILE.tag, cham: PROFILE.cham, hunter: PROFILE.hunter, level: levelInfo(PROFILE.xp).level }; }
+function publicProfile() { return { tag: PROFILE.tag, cham: PROFILE.cham, hunter: PROFILE.hunter, level: levelInfo(PROFILE.xp).level, ms: typeof MAP_SET === 'number' ? MAP_SET : 1 }; }
 async function fetchInfo(addr) {
   const a = Net.normalize(addr);
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);

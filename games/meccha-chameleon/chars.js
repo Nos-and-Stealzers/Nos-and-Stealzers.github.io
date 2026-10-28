@@ -107,11 +107,25 @@ const POSES = {
   tpose: { label: 'T-pose', arm: [[1, 0, 0], [1, 0, 0]], leg: STAND.leg },
   kneel: { label: 'Kneel', bend: 0.08, arm: [[0.3, -0.7, 0.55], [0.1, -0.9, 0.5]], leg: [[0.12, -0.15, 1], [0.06, -1, 0.05]], legR: [[-0.1, -1, 0.05], [-0.03, -0.02, -1]] },
   thinker: { label: 'Thinker', bend: 0.35, head: [0.2, 0], arm: [[0.25, -0.7, 0.6], [0.05, -0.3, 1]], armR: [[-0.2, -0.75, 0.7], [-0.05, 1, 0.25]], leg: [[0.12, -0.04, 1], [0.08, -1, 0.1]] },
+  tuck: { label: 'Tuck', bend: 0.85, head: [0.7, 0], arm: [[0.18, -0.55, 0.85], [-0.6, -0.45, 0.7]], leg: [[0.1, 0.55, 1], [0.04, -1, -0.25]] },
+  slant: { label: 'Slanted', root: [-0.95, 0, 0], arm: [[0.2, -1, 0.02], [0.12, -1, 0.02]], leg: [[0.05, -1, 0], [0.04, -1, 0]] },
+  backbend: { label: 'Backbend', root: [-0.55, 0, 0], bend: -1.1, head: [-0.8, 0], arm: [[0.35, 0.85, -0.45], [0.15, 0.6, -0.8]], leg: [[0.12, -0.6, 0.8], [0.06, -1, -0.15]] },
+  plank: { label: 'Plank', root: [PI / 2, 0, 0], arm: [[0.25, 0.15, 1], [0.15, 1, 0.1]], leg: [[0.05, -1, 0], [0.04, -1, 0]] },
   wave: { label: 'Wave', emote: true, ...STAND },
   dance: { label: 'Dance', emote: true, ...STAND },
   cheer: { label: 'Cheer', emote: true, ...STAND },
+  clap: { label: 'Clap', emote: true, ...STAND },
+  shrug: { label: 'Shrug', emote: true, ...STAND },
 };
-const POSE_ORDER = ['stand', 'crouch', 'sit', 'curl', 'lie', 'prone', 'side', 'flat', 'star', 'reach', 'tpose', 'kneel', 'thinker'];
+const POSE_ORDER = ['stand', 'crouch', 'sit', 'curl', 'lie', 'prone', 'side', 'flat', 'star', 'reach', 'tpose', 'kneel', 'thinker', 'tuck', 'slant', 'backbend', 'plank'];
+/* Pose wheel pages (hold R/G, point, release; click to change page). */
+const POSE_PAGES = [
+  { name: 'Poses', list: ['stand', 'crouch', 'sit', 'curl', 'lie', 'prone', 'side', 'kneel'] },
+  { name: 'Shapes', list: ['flat', 'star', 'slant', 'backbend', 'tuck', 'plank', 'reach', 'tpose', 'thinker'] },
+  { name: 'Emotes', list: ['wave', 'dance', 'cheer', 'clap', 'shrug'] },
+];
+/** Poses that lie on the floor: stuck to a wall they turn so the side that was on the floor touches the wall. */
+const lyingPose = (p) => { const r = POSES[p]?.root; return !!r && (Math.abs(r[0]) > 0.5 || Math.abs(r[2]) > 0.5); };
 const SIZES = { petite: [0.72, 0.72], normal: [1, 1], plump: [1.32, 1.04] };
 
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler(), _x = new V3(1, 0, 0), _lean = new THREE.Quaternion();
@@ -155,6 +169,8 @@ function poseTargets(G, def, anim = {}) {
 function emoteAnim(kind, t) {
   if (kind === 'wave') return { override: (aL, aR, lL, lR) => ({ aL: [[0.55, 0.9, 0.15], [Math.sin(t * 9) * 0.7, 1, 0.2]] }), armsFixed: true };
   if (kind === 'cheer') { const u = Math.abs(Math.sin(t * 6)); return { override: () => ({ aL: [[0.4, 1, 0], [0.2 + u * 0.3, 1, 0]], aR: [[-0.4, 1, 0], [-0.2 - u * 0.3, 1, 0]] }), bounce: u * 0.12 }; }
+  if (kind === 'clap') { const u = Math.abs(Math.sin(t * 9)); return { override: () => ({ aL: [[0.3, -0.2, 1], [-0.25 - u * 0.5, 0.15, 1]], aR: [[-0.3, -0.2, 1], [0.25 + u * 0.5, 0.15, 1]] }), armsFixed: true, bounce: u * 0.02 }; }
+  if (kind === 'shrug') { const u = Math.min(1, t * 3) * (t < 1.6 ? 1 : Math.max(0, 1 - (t - 1.6) * 3)); return { headP: -0.15 * u, headY: 0.25 * u, override: () => ({ aL: [[0.75, -0.6 + u * 0.4, 0.1], [0.55, 0.6 * u, 0.45]], aR: [[-0.75, -0.6 + u * 0.4, 0.1], [-0.55, 0.6 * u, 0.45]] }), armsFixed: true }; }
   if (kind === 'dance') {
     const s = Math.sin(t * 7);
     return { side: s * 0.35, twist: Math.sin(t * 3.5) * 0.4, headY: s * 0.3, bounce: Math.abs(Math.cos(t * 7)) * 0.06,
@@ -295,6 +311,8 @@ class Cham {
     this.shape = SHAPES[shape] ? shape : 'classic'; this.size = 'normal'; this.pose = 'stand'; this.yaw = 0; this.emote = null; this.emoteT = 0;
     this.body = { pos: this.root.position, vy: 0, onGround: true, r: 0.15, h: CHAM_H };
     this.caught = false; this.isClone = false; this.painted = false; this.speed = 0; this.walkT = 0; this.walkAmt = 0; this.texVer = 0; this.t = Math.random() * 10;
+    this.tilt = 0; this.roll = 0; this.rollAxis = new V3(0, 0, 1); this.buried = 0;
+    this.root.rotation.order = 'YXZ';
     this.target = null; this.baseY = 0; this.curBaseY = 0; this.dims = new V3(0.4, CHAM_H, 0.3); this.bbCenter = new V3(0, CHAM_H / 2, 0);
     this.blank();
     this.rebuild();
@@ -332,7 +350,7 @@ class Cham {
     if (snap) { this.curBaseY = this.baseY; rig.group.position.y = this.baseY; }
     else { rig.bones.forEach((b, i) => b.quaternion.copy(keep[i])); rig.rootQ.copy(keepRoot); rig.group.quaternion.copy(keepRoot); }
     this.target_ = T;
-    this.root.rotation.y = this.yaw;
+    this.applyOrient();
   }
   setPose(p, snap = false) { if (!POSES[p] || POSES[p].emote) return; this.emote = null; if (p !== this.pose || snap) { this.pose = p; this.applyPose(snap); } }
   setEmote(kind) { this.emote = kind; this.emoteT = 0; if (this.pose !== 'stand') this.setPose('stand'); }
@@ -343,14 +361,28 @@ class Cham {
     this.rebuild();
   }
   setSize(s) { if (SIZES[s]) { this.size = s; this.applyPose(); } }
-  setYaw(y) { this.yaw = y; this.root.rotation.y = y; }
+  setYaw(y) { this.yaw = y; this.applyOrient(); }
+  /** Root rotation: roll about the surface normal, then yaw, then tilt (wall-lying = PI/2, ceiling = PI). */
+  applyOrient() {
+    this.root.rotation.set(this.tilt, this.yaw, 0, 'YXZ');
+    if (this.roll) this.root.quaternion.premultiply(_q1.setFromAxisAngle(this.rollAxis, this.roll));
+  }
+  setOrient(tilt, roll = 0, axis = null) { this.tilt = tilt; this.roll = roll; if (axis) this.rollAxis.copy(axis); this.applyOrient(); }
+  /** "Buried" warning: flashes the body red so hunters can see someone pushed too far into the map. */
+  setBuried(on) { this.buried = on ? 1 : 0; if (!on) { this.mat.emissive.setRGB(0, 0, 0); this.mat.emissiveIntensity = 1; } }
   halfDepth() { return this.dims.z / 2; }
   center() {
+    if (this.tilt || this.roll) { this.root.updateMatrixWorld(true); return new THREE.Box3().setFromObject(this.mesh).getCenter(new V3()); }
     const c = this.bbCenter, s = Math.sin(this.yaw), co = Math.cos(this.yaw), p = this.root.position;
     return new V3(p.x + c.x * co + c.z * s, p.y + c.y, p.z - c.x * s + c.z * co);
   }
   animate(dt, moving) {
     this.t += dt;
+    if (this.buried) {
+      const slow = typeof SETTINGS !== 'undefined' && SETTINGS.calmFlash;
+      const f = slow ? 0.45 + 0.35 * Math.sin(this.t * 3) : (Math.sin(this.t * 14) > -0.2 ? 1 : 0.15);
+      this.mat.emissive.setRGB(1, 0.06, 0.08); this.mat.emissiveIntensity = f * 0.95;
+    }
     const def = POSES[this.pose] || POSES.stand, rig = this.rig;
     const want = moving && def.move ? 1 : 0;
     this.walkAmt = lerp(this.walkAmt, want, Math.min(1, dt * 10));
@@ -376,11 +408,60 @@ class Cham {
     rig.group.position.y = this.curBaseY + Math.abs(Math.sin(this.walkT)) * (this.sprinting ? 0.05 : 0.035) * this.walkAmt + bounce;
   }
   rebake() { this.rig.bake(); }
-  paintDot(uv, rgb, r) {
+  paintDot(uv, rgb, r, hit = null) {
+    if (hit) return this.paintSurface(hit, rgb, r);
     const g = this.ctx, x = uv.x * TS, y = (1 - uv.y) * TS;
     g.fillStyle = Array.isArray(rgb) ? `rgb(${clamp(rgb[0], 0, 255) | 0},${clamp(rgb[1], 0, 255) | 0},${clamp(rgb[2], 0, 255) | 0})` : rgb;
     g.beginPath(); g.arc(x, y, Math.max(0.8, r * PSCALE), 0, 7); g.fill();
     this.painted = true; this.dirty = true;
+  }
+  // Rasterise the world-space footprint into each intersecting UV triangle.
+  // An atlas-space circle paints unrelated limbs and skips skin across UV seams.
+  paintSurface(hit, rgb, r) {
+    const mesh = hit.object || this.mesh, geo = mesh.geometry, pos = geo.attributes.position, uv = geo.attributes.uv, ix = geo.index;
+    mesh.updateWorldMatrix(true, false);
+    const world = this._brushWorld?.length === pos.count * 3 ? this._brushWorld : (this._brushWorld = new Float32Array(pos.count * 3));
+    const v = new V3();
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld); v.toArray(world, i * 3); }
+    const normal = hit.face.normal.clone().applyNormalMatrix(new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld));
+    const radius = Math.max(0.002, r / 118), rr = radius * radius, p = hit.point;
+    const tris = []; let minX = TS, minY = TS, maxX = -1, maxY = -1;
+    for (let t = 0, count = ix ? ix.count : pos.count; t < count; t += 3) {
+      const a = ix ? ix.getX(t) : t, b = ix ? ix.getX(t + 1) : t + 1, c = ix ? ix.getX(t + 2) : t + 2;
+      const ax = world[a * 3], ay = world[a * 3 + 1], az = world[a * 3 + 2];
+      const bx = world[b * 3], by = world[b * 3 + 1], bz = world[b * 3 + 2];
+      const cx = world[c * 3], cy = world[c * 3 + 1], cz = world[c * 3 + 2];
+      const dx = p.x - clamp(p.x, Math.min(ax, bx, cx), Math.max(ax, bx, cx));
+      const dy = p.y - clamp(p.y, Math.min(ay, by, cy), Math.max(ay, by, cy));
+      const dz = p.z - clamp(p.z, Math.min(az, bz, cz), Math.max(az, bz, cz));
+      if (dx * dx + dy * dy + dz * dz > rr) continue;
+      const abx = bx - ax, aby = by - ay, abz = bz - az, acx = cx - ax, acy = cy - ay, acz = cz - az;
+      if ((aby * acz - abz * acy) * normal.x + (abz * acx - abx * acz) * normal.y + (abx * acy - aby * acx) * normal.z <= 0) continue;
+      const x0 = uv.getX(a) * TS, y0 = (1 - uv.getY(a)) * TS;
+      const x1 = uv.getX(b) * TS, y1 = (1 - uv.getY(b)) * TS, x2 = uv.getX(c) * TS, y2 = (1 - uv.getY(c)) * TS;
+      const det = (x1 - x0) * (y2 - y0) - (y1 - y0) * (x2 - x0); if (Math.abs(det) < 1e-8) continue;
+      const l = clamp(Math.floor(Math.min(x0, x1, x2)), 0, TS - 1), top = clamp(Math.floor(Math.min(y0, y1, y2)), 0, TS - 1);
+      const right = clamp(Math.ceil(Math.max(x0, x1, x2)), 0, TS - 1), bottom = clamp(Math.ceil(Math.max(y0, y1, y2)), 0, TS - 1);
+      tris.push({ ax, ay, az, abx, aby, abz, acx, acy, acz, x0, y0, x1, y1, x2, y2, det, l, top, right, bottom });
+      minX = Math.min(minX, l); minY = Math.min(minY, top); maxX = Math.max(maxX, right); maxY = Math.max(maxY, bottom);
+    }
+    if (!tris.length) return;
+    const img = this.ctx.getImageData(minX, minY, maxX - minX + 1, maxY - minY + 1), data = img.data;
+    const col = Array.isArray(rgb) ? rgb : (() => { const c = new THREE.Color(rgb); return [c.r * 255, c.g * 255, c.b * 255]; })();
+    let changed = false;
+    for (const t of tris) {
+      for (let y = t.top; y <= t.bottom; y++) for (let x = t.l; x <= t.right; x++) {
+        const px = x + 0.5 - t.x0, py = y + 0.5 - t.y0;
+        const b = (px * (t.y2 - t.y0) - py * (t.x2 - t.x0)) / t.det;
+        const c = ((t.x1 - t.x0) * py - (t.y1 - t.y0) * px) / t.det;
+        if (b < -1e-6 || c < -1e-6 || b + c > 1.000001) continue;
+        const dx = t.ax + b * t.abx + c * t.acx - p.x, dy = t.ay + b * t.aby + c * t.acy - p.y, dz = t.az + b * t.abz + c * t.acz - p.z;
+        if (dx * dx + dy * dy + dz * dz > rr) continue;
+        const k = ((y - minY) * img.width + x - minX) * 4;
+        data[k] = col[0]; data[k + 1] = col[1]; data[k + 2] = col[2]; data[k + 3] = 255; changed = true;
+      }
+    }
+    if (changed) { this.ctx.putImageData(img, minX, minY); this.painted = true; this.dirty = true; }
   }
   fill(rgb) { this.ctx.fillStyle = rgb; this.ctx.fillRect(0, 0, TS, TS); this.painted = true; this.dirty = true; }
   flush() { if (this.dirty) { this.tex.needsUpdate = true; this.dirty = false; this.texVer++; } }
@@ -393,6 +474,7 @@ class Cham {
     this.shape = o.shape; this.size = o.size; this.pose = o.pose; this.yaw = o.yaw;
     this.ctx.drawImage(o.canvas, 0, 0); this.painted = true; this.tex.needsUpdate = true;
     this.mat.roughness = o.mat.roughness; this.mat.metalness = o.mat.metalness;
+    this.tilt = o.tilt; this.roll = o.roll; this.rollAxis.copy(o.rollAxis);
     this.rebuild(); this.root.position.copy(o.root.position); this.applyPose(true);
   }
   texURL() { return this.canvas.toDataURL('image/webp', 0.85); }

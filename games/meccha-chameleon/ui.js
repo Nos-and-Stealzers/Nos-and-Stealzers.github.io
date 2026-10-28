@@ -2,6 +2,8 @@
 /* Meccha Chameleon: UI. Menu shell (Play / Servers / Locker / Career), modals, HUD, hub overlay, boot. */
 
 const ICON = {
+  mark: '<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  wall: '<path d="M4 4h16v16H4z"/><path d="M4 9.5h16M4 15h16M10 4v5.5M15 9.5V15M9 15v5"/>',
   play: '<path d="M8 5.5v13l11-6.5z"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
   power: '<path d="M12 3v8"/><path d="M6.5 7a8 8 0 1 0 11 0"/>',
@@ -227,6 +229,9 @@ const UI = {
 
   /* ---------- in-round HUD ---------- */
   paintPanel(on) {
+    // The round HUD is hidden in the practice hub; keep the same controls in
+    // whichever HUD is actually visible rather than hiding the entire toolbox.
+    if (on) (G.phase === 'hub' ? $('#hubHud') : $('#hud')).appendChild($('#paintPanel'));
     $('#paintPanel').classList.toggle('hidden', !on);
     document.body.classList.toggle('painting', !!on);
     if (on && G.my) {
@@ -246,16 +251,63 @@ const UI = {
     el.classList.toggle('hidden', v > 0.995); el.classList.toggle('tired', !!tired);
     el.firstElementChild.style.width = (v * 100).toFixed(1) + '%';
   },
+  wheelPage: 0,
   wheel(open, hold = false) {
     if (open && !controllable()) return;
     this.wheelOpen = open; this.wheelHold = hold; this.wheelHover = null;
     $('#poseWheel').classList.toggle('hidden', !open);
+    document.body.classList.toggle('wheel-open', open);
     if (open) {
       if (document.pointerLockElement) document.exitPointerLock();
       const cur = G.my?.pose;
-      $('#wheelPoses').innerHTML = POSE_ORDER.map((k) => `<button data-pose="${k}" class="${k === cur ? 'on' : ''}"><span class="pz pz-${k}"></span><b>${POSES[k].label}</b>${POSES[k].key ? `<kbd>${POSES[k].key}</kbd>` : ''}</button>`).join('');
-      $('#wheelEmotes').classList.toggle('hidden', G.phase !== 'hub');
+      if (!POSE_PAGES[this.wheelPage]) this.wheelPage = 0;
+      if (POSE_PAGES[this.wheelPage].list.indexOf(cur) < 0) { const pi = POSE_PAGES.findIndex((pg) => pg.list.includes(cur)); if (pi >= 0 && !this.wheelKeepPage) this.wheelPage = pi; }
+      this.renderWheel();
     }
+  },
+  renderWheel() {
+    const pg = POSE_PAGES[this.wheelPage], n = pg.list.length, cur = G.my?.pose, R0 = 120, R1 = 268;
+    $('#wheelTabs').innerHTML = POSE_PAGES.map((p, i) => `<button data-page="${i}" class="${i === this.wheelPage ? 'on' : ''}">${p.name}</button>`).join('');
+    const seg = (i) => {
+      const a0 = (i - 0.5) / n * Math.PI * 2 - Math.PI / 2 + 0.012, a1 = (i + 0.5) / n * Math.PI * 2 - Math.PI / 2 - 0.012, L = a1 - a0 > Math.PI ? 1 : 0;
+      const P = (r, a) => `${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`;
+      return `M${P(R1, a0)} A${R1} ${R1} 0 ${L} 1 ${P(R1, a1)} L${P(R0, a1)} A${R0} ${R0} 0 ${L} 0 ${P(R0, a0)}Z`;
+    };
+    $('#wheelSvg').innerHTML = pg.list.map((k, i) => `<path class="wseg ${k === cur ? 'on' : ''}" data-i="${i}" d="${seg(i)}"/>`).join('');
+    $('#wheelRing').innerHTML = pg.list.map((k, i) => {
+      const a = i / n * Math.PI * 2 - Math.PI / 2, r = (R0 + R1) / 2, x = Math.cos(a) * r, y = Math.sin(a) * r;
+      return `<button class="wopt ${k === cur ? 'on' : ''}" data-i="${i}" data-pose="${k}" style="transform:translate(calc(${x.toFixed(1)}px - 50%),calc(${y.toFixed(1)}px - 50%))"><span class="pz pz-${k}"></span><b>${POSES[k].label}</b>${POSES[k].key ? `<kbd>${POSES[k].key}</kbd>` : ''}</button>`;
+    }).join('');
+    this.wheelSet(null);
+  },
+  wheelSet(i) {
+    const pg = POSE_PAGES[this.wheelPage], k = i == null ? null : pg.list[i];
+    if (k === this.wheelHover) return;
+    this.wheelHover = k;
+    $$('#wheelRing .wopt').forEach((b) => b.classList.toggle('hot', b.dataset.pose === k));
+    $$('#wheelSvg .wseg').forEach((p) => p.classList.toggle('hot', +p.dataset.i === i));
+    const show = k || G.my?.pose || 'stand';
+    $('#wheelBig').className = 'pz pz-' + show;
+    $('#wheelName').textContent = POSES[show]?.label || '';
+    $('#wheelHint').textContent = k ? (POSES[k].emote ? 'Emote' : G.my?.stick ? 'Fits to the surface you are on' : 'Release to pick') : 'Point at a pose · click for next page';
+    if (k) Sound.hover?.();
+  },
+  wheelPoint(x, y) {
+    if (!this.wheelOpen) return;
+    const dx = x - innerWidth / 2, dy = y - innerHeight / 2, d = Math.hypot(dx, dy);
+    if (d < 70) { this.wheelSet(null); return; }
+    const n = POSE_PAGES[this.wheelPage].list.length;
+    let a = Math.atan2(dy, dx) + Math.PI / 2; if (a < 0) a += Math.PI * 2;
+    this.wheelSet(Math.round(a / (Math.PI * 2) * n) % n);
+  },
+  wheelTurn(dir) {
+    this.wheelPage = (this.wheelPage + dir + POSE_PAGES.length) % POSE_PAGES.length; this.wheelKeepPage = true;
+    Sound.click(); this.renderWheel(); this.wheelPoint(mouse.x, mouse.y);
+  },
+  wheelPick(k) {
+    this.wheel(false);
+    if (k) { if (POSES[k]?.emote) { if (G.my && !G.my.stick) G.my.setEmote(k); } else setPose(k); }
+    G.lock();
   },
   abilities() {
     const hunter = G.view === 'first' && !!G.myHunter, hider = !!G.my && G.view === 'third';
@@ -263,15 +315,17 @@ const UI = {
     if (key !== this.abKey) {
       this.abKey = key;
       const A = (id, icon, label, kb) => `<button class="ab" id="ab-${id}" data-ab="${id}"><span class="cd"></span><kbd>${kb}</kbd>${ico(icon)}<b>${label}</b><em class="cnt"></em></button>`;
-      $('#abilities').innerHTML = hunter ? A('paint', 'splat', 'Paint', 'RMB') + A('ping', 'ping', 'Ping', 'E') + A('bonk', 'hammer', 'Bonk', 'LMB')
-        : hider ? `<button class="ab ready" id="readyBtn"><b>Ready</b><kbd>Enter</kbd></button>` + A('pose', 'pose', 'Poses', 'G') + A('brush', 'brush', 'Paint', 'F') + A('clone', 'clone', 'Clone', 'Q') + A('taunt', 'note', 'Taunt', 'H') + A('decoy', 'decoy', 'Decoy', 'V') : '';
+      $('#abilities').innerHTML = hunter ? A('mark', 'mark', 'Mark', 'Q') + A('ping', 'ping', 'Sonar', 'E') + A('paint', 'splat', 'Paintball', 'RMB') + A('bonk', 'hammer', 'Tag', 'LMB')
+        : hider ? `<button class="ab ready" id="readyBtn"><b>Ready</b><kbd>Enter</kbd></button>` + A('pose', 'pose', 'Poses', 'R') + A('brush', 'brush', 'Paint', 'F') + A('clone', 'clone', 'Clone', 'Q') + A('taunt', 'note', 'Taunt', 'H') + A('decoy', 'decoy', 'Decoy', 'V') : '';
     }
     if (!key) return;
     const set = (id, frac, cnt, off) => { const el = $('#ab-' + id); if (!el) return; el.style.setProperty('--p', clamp(frac, 0, 1)); el.querySelector('.cnt').textContent = cnt ?? ''; el.classList.toggle('off', !!off); };
     if (hunter) {
       set('ping', G.ab.ping / AB.pingCD, G.ab.ping > 0 ? Math.ceil(G.ab.ping) : '', G.ab.ping > 0 || G.phase !== 'hunt');
       set('paint', G.ab.ammo < AB.ammo ? 1 - G.ab.ammoT / AB.ammoRecharge : 0, G.ab.ammo + '/' + AB.ammo, G.ab.ammo < 1 || G.phase !== 'hunt');
-      set('bonk', 0, '', G.phase !== 'hunt');
+      set('bonk', G.ab.tags < SEEK.tags ? 1 - G.ab.tagT / SEEK.tagRegen : 0, (G.ab.tags ?? SEEK.tags) + '/' + SEEK.tags, G.phase !== 'hunt' || G.ab.tags < 1);
+      set('mark', 0, '', G.phase !== 'hunt');
+      this.tagPips();
     } else {
       set('pose', 0, '');
       set('clone', 0, G.ab.clones, G.ab.clones <= 0);
@@ -290,6 +344,48 @@ const UI = {
     if (playing()) this.abilities();
   },
   crossHot(on) { $('#crosshair').classList.toggle('hot', on); },
+  /** Key prompts along the bottom, for whatever you can do right now. */
+  prompts() {
+    const P = G.my, K = (k, t) => `<span class="kp"><kbd>${k}</kbd>${t}</span>`;
+    let list = [];
+    if (G.paint || !playing() && G.phase !== 'end') list = [];
+    else if (G.view === 'third' && P && !P.caught) {
+      if (P.stick?.kind === 'ceil') list = [K('WASD', 'Crawl'), K('Z X', 'Turn'), K('R', 'Pose'), K('Shift', 'Drop')];
+      else if (P.stick) list = [K('W S', 'Up / down'), K('A D', 'Slide'), K('Z X', 'Rotate'), K('R', 'Pose'), K('Shift', 'Let go')];
+      else list = [K('Shift', 'Sprint'), K('C', 'Crouch'), K('Space', 'Jump · by a wall: stick'), K('R', 'Poses'), K('F', 'Paint'), K('Z X', 'Turn')];
+      if (G.online) list.push(K('T', 'Chat'));
+    } else if (G.view === 'first') {
+      list = G.phase === 'prep' ? [K('Shift', 'Sprint'), K('Tab', 'Scores')] : [K('LMB', 'Tag'), K('RMB', 'Paintball'), K('E', 'Sonar ping'), K('Q', 'Mark spot'), K('Shift', 'Sprint')];
+      if (G.online) list.push(K('T', 'Chat'));
+    } else if (G.view === 'spec') { const hs = G.hunters.filter((h) => !h.local); if (hs.length) list = [`<span class="kp plain">Spectating <b>${esc(hs[G.specIdx % hs.length].name)}</b></span>`, K('1-9', 'Switch hunter'), K('Tab', 'Scores')]; }
+    const html = list.join('');
+    if (html !== this._prompts) { this._prompts = html; $('#prompts').innerHTML = html; }
+  },
+  buried(f, on, moving) {
+    const el = $('#buriedWarn'); if (!el) return;
+    const show = f >= 0.1 || on;
+    el.classList.toggle('hidden', !show); el.classList.toggle('on', !!on);
+    $('#edgeFlash').classList.toggle('on', !!on);
+    if (show) {
+      $('#buriedBar').style.width = Math.min(100, f / 0.3 * 100).toFixed(0) + '%';
+      $('#buriedTxt').textContent = on ? 'You are flashing red. Hunters can see you. Move out a little.' : 'You are clipping into an object. Any deeper and you start flashing.';
+    }
+  },
+  pinged() {
+    const el = $('#pinged'); el.classList.remove('hidden'); el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+    clearTimeout(this.pingedT); this.pingedT = setTimeout(() => el.classList.add('hidden'), 2600);
+  },
+  hitMark(kind) {
+    const el = $('#hitmark'); if (!el) return;
+    el.className = 'hm ' + kind; void el.offsetWidth; el.classList.add('go');
+  },
+  tagPips() {
+    const el = $('#tagPips'), on = G.view === 'first' && G.phase === 'hunt';
+    el.classList.toggle('hidden', !on); if (!on) return;
+    const n = G.ab.tags ?? SEEK.tags, sig = n + '|' + Math.floor((G.ab.tagT || 0) * 4);
+    if (sig === this._pips) return; this._pips = sig;
+    el.innerHTML = Array.from({ length: SEEK.tags }, (_, i) => `<i class="${i < n ? 'on' : ''}"${i === n ? ` style="--p:${(G.ab.tagT / SEEK.tagRegen).toFixed(2)}"` : ''}></i>`).join('');
+  },
   status() {
     const real = G.realHiders();
     $('#status').innerHTML = `<div class="sthead"><span>Chameleons</span><span>${real.filter((c) => !c.caught).length}/${real.length}</span></div>` + real.map((c) => `<div class="plrow ${c.caught ? 'caught' : ''}" style="--c:${c.color}"><span class="nm">${esc(c.name)}${c === G.my ? '<em>you</em>' : ''}</span>${c.caught ? '<span class="x">found</span>' : ''}</div>`).join('');
@@ -304,10 +400,7 @@ const UI = {
     let phase = '', sub = '', hint = '';
     if (G.phase === 'prep') { phase = 'Hiding'; sub = G.view === 'first' ? 'Hunters wait for the gate' : G.party ? `${G.my?.name}: paint and pose` : 'Paint yourself and find a spot'; }
     else if (G.phase === 'hunt') { phase = 'Hunt'; sub = G.view === 'spec' ? 'Spectating' : MAP.name; }
-    if (G.view === 'third' && !G.paint) hint = G.my?.stick ? 'Stuck to the wall · Space up · C down · A/D slide · Shift let go' : 'Shift sprint · C crouch · F paint · G poses · Space twice by a wall to stick' + (G.online ? ' · T chat' : '') + ' · Tab scores';
-    else if (G.view === 'first') hint = 'Shift sprint · LMB bonk · RMB paintball · E ping · Listen for footsteps and chirps' + (G.online ? ' · T chat' : '');
-    else if (G.view === 'spec') { const hs = G.hunters.filter((h) => !h.local); hint = hs.length ? `Spectating ${hs[G.specIdx % hs.length].name} · 1-9 switch hunter · Tab scoreboard` : ''; }
-    $('#phase').textContent = phase; $('#sub').textContent = sub; $('#hint').textContent = hint;
+    $('#phase').textContent = phase; $('#sub').textContent = sub; this.prompts();
     if (G.phase === 'hunt' && G.my) {
       const s = clamp(G.playerSus || 0, 0, 1);
       $('#eyesBar').style.width = (s * 100) + '%';
@@ -611,6 +704,7 @@ function openSettings(back) {
   bind('#setSens', 'sens', (v) => (+v).toFixed(2)); bind('#setVol', 'vol', (v) => Math.round(v * 100) + '%'); bind('#setFov', 'fov', (v) => v + '°');
   seg('#setQuality', S.quality, (v) => { S.quality = v; saveSettings(); applyQuality(); });
   seg('#setInvert', S.invertY ? 'on' : 'off', (v) => { S.invertY = v === 'on'; saveSettings(); });
+  seg('#setCalm', S.calmFlash ? 'on' : 'off', (v) => { S.calmFlash = v === 'on'; saveSettings(); });
   $('#keyList').innerHTML = KEYS.map(([g, ks]) => `<h4>${g}</h4>` + ks.map(([a, k]) => `<div><span>${a}</span><kbd>${k}</kbd></div>`).join('')).join('');
 }
 function closeSettings() { $('#screen-settings').classList.add('hidden'); if (UI.settingsBack === 'pause') UI.pause(true); }
@@ -618,7 +712,7 @@ function closeSettings() { $('#screen-settings').classList.add('hidden'); if (UI
 /* ================= wiring ================= */
 function wire() {
   $$('[data-ico]').forEach((el) => el.insertAdjacentHTML('afterbegin', ico(el.dataset.ico)));
-  $('#navTabs').onclick = (e) => { const b = e.target.closest('button'); if (b) UI.go(b.dataset.page); };
+  $('#navTabs').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.page === 'editor') { Sound.click(); MapEditor.enter(UI.playlist?.map); } else UI.go(b.dataset.page); };
   $('#pchip').onclick = () => UI.go('career');
   $('#navSettings').onclick = () => openSettings('menu');
   $('#navQuit').onclick = () => (window.mcNative ? mcNative.quit() : window.close());
@@ -689,22 +783,25 @@ function wire() {
   $('#rotR').onclick = () => G.my?.setYaw(G.my.yaw - Math.PI / 12);
   $('#paintPoses').innerHTML = POSE_ORDER.map((k) => `<button data-pose="${k}">${POSES[k].label}</button>`).join('');
   $('#paintPoses').onclick = (e) => { const b = e.target.closest('[data-pose]'); if (b && G.my) { setPose(b.dataset.pose); G.my.rebake(); } };
-  $('#poseWheel').onmouseover = (e) => {
-    const b = e.target.closest('[data-pose],[data-emote]'); if (!b) return;
-    UI.wheelHover = b.dataset.pose || b.dataset.emote;
-    for (const o of $('#poseWheel').querySelectorAll('.hot')) o.classList.remove('hot'); b.classList.add('hot'); Sound.hover?.();
+  addEventListener('mousemove', (e) => { if (UI.wheelOpen) UI.wheelPoint(e.clientX, e.clientY); });
+  $('#poseWheel').onmousedown = (e) => {
+    e.preventDefault();
+    const tab = e.target.closest('[data-page]');
+    if (tab) { UI.wheelPage = +tab.dataset.page - 1; UI.wheelTurn(1); return; }
+    if (e.button === 2) { UI.wheelTurn(-1); return; }
+    if (e.button !== 0) return;
+    // tapped open (not holding the key): clicking a pose picks it, clicking the middle or outside turns the page
+    if (!UI.wheelHold && UI.wheelHover) { Sound.click(); UI.wheelPick(UI.wheelHover); return; }
+    UI.wheelTurn(1);
   };
-  $('#poseWheel').onclick = (e) => {
-    const b = e.target.closest('[data-pose],[data-emote]');
-    if (b) { Sound.click(); if (b.dataset.emote) G.my?.setEmote(b.dataset.emote); else setPose(b.dataset.pose); }
-    if (b || e.target === $('#poseWheel')) { UI.wheel(false); G.lock(); }
-  };
+  $('#poseWheel').oncontextmenu = (e) => e.preventDefault();
   $('#abilities').onclick = (e) => {
     const b = e.target.closest('.ab'); if (!b) return;
     if (b.id === 'readyBtn') { if (G.phase === 'prep') G.finishPrep(); return; }
     const a = b.dataset.ab;
     if (!controllable()) return;
     if (a === 'brush') togglePaint(); else if (a === 'clone') makeClone(); else if (a === 'taunt') taunt(); else if (a === 'decoy') decoy(); else if (a === 'pose') UI.wheel(true);
+    else if (a === 'ping') hunterPing(); else if (a === 'mark') hunterMark(); else if (a === 'paint') shootPaint(); else if (a === 'bonk') bonk();
   };
   // hub panel
   $('#hpStart').onclick = () => { UI.hubPanel(false); if (G.online) { if (Net.isHost) G.hostStartOnline(topVote() || G.lobby.settings.map); } else hubStart(); };
@@ -755,8 +852,10 @@ function makePoseThumbs() {
   const doll = new Cham({ name: 'thumb', parent: sc }); doll.mat.map = null; doll.mat.color.set('#eef1f6'); doll.mat.needsUpdate = true;
   const css = [], prevClear = renderer.getClearColor(new THREE.Color()), prevA = renderer.getClearAlpha();
   renderer.setClearColor(0x000000, 0);
-  for (const k of POSE_ORDER) {
-    doll.setPose(k, true); doll.setYaw(0.5); doll.root.updateMatrixWorld(true);
+  for (const k of [...POSE_ORDER, ...Object.keys(POSES).filter((p) => POSES[p].emote)]) {
+    if (POSES[k].emote) { doll.setPose('stand', true); const T = poseTargets(doll.rig.G, POSES.stand, emoteAnim(k, k === 'shrug' ? 0.8 : 0.32)); doll.rig.apply(T, 1); doll.rig.group.quaternion.copy(doll.rig.rootQ); }
+    else doll.setPose(k, true);
+    doll.setYaw(0.5); doll.root.updateMatrixWorld(true);
     const bb = new THREE.Box3().setFromObject(doll.mesh), ctr = bb.getCenter(new V3()), sz = bb.getSize(new V3());
     const dist = Math.max(sz.x, sz.y, sz.z) * 2.2 + 0.6;
     cam.position.set(ctr.x + dist * 0.3, ctr.y + dist * 0.35, ctr.z + dist * 0.9); cam.lookAt(ctr);
@@ -782,5 +881,6 @@ function makePoseThumbs() {
   G.phase = 'menu';
   UI.screen('menu');
   requestAnimationFrame(frame);
+  try { if (window.mcNative?.flags && (await mcNative.flags()).editor) MapEditor.enter(); } catch (e) { console.warn('editor flag', e); }
 })();
 window.__mc = { G, scene, camera, renderer, autoCamo, Cham, Hunter, findSpot, env, colliders, bonk, togglePaint, paintAt, UI, Net, loadMap, enterHub, shootPaint, hunterPing, decoy, quickMatch, step: (dt, n = 1) => { for (let i = 0; i < n; i++) step(dt); } };

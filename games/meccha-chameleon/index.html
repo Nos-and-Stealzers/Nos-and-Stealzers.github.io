@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>peperhide</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="hud.css">
+<link rel="stylesheet" href="editor.css">
 </head>
 <body class="in-menu">
 <div id="app"></div>
@@ -27,6 +29,7 @@
       <button data-page="servers">Servers</button>
       <button data-page="locker">Locker</button>
       <button data-page="career">Career</button>
+      <button data-page="editor" title="Edit the maps">Editor</button>
     </nav>
     <div class="right">
       <div class="pchip" id="pchip" title="Career">
@@ -43,8 +46,8 @@
     <div class="home-left">
       <div class="news glass">
         <span class="eyebrow">What's new</span>
-        <h3>New name. Smoother play.</h3>
-        <p>Welcome to peperhide. Auto graphics now fits your device, lighter lighting helps weaker GPUs, and slow frames no longer slow the game clock. Change Graphics quality in Settings any time.</p>
+        <h3>Your maps. Better camouflage.</h3>
+        <p>Updated Mansion, Sewer, Sugarland and Gallery maps. Paint across skin seams, move without slipping through thin walls, and outsmart seekers that search where they last saw you. Open Editor to make the maps your own.</p>
       </div>
       <div class="tip glass"><span class="eyebrow">Tip</span><p id="tipText"></p></div>
     </div>
@@ -56,7 +59,7 @@
       </button>
       <button class="playbtn" id="playBtn"><span>Play</span><kbd>Enter</kbd></button>
     </div>
-    <div class="version">v4.1.0 · paint, hide, hunt</div>
+    <div class="version">v4.2.0 · paint, hide, hunt</div>
   </section>
 
   <!-- MODE SELECT -->
@@ -135,6 +138,60 @@
 </div>
 
 <!-- ================= MODALS ================= -->
+<!-- ================= MAP EDITOR (editor.js) ================= -->
+<section id="editor" class="hidden">
+  <header class="ed-top">
+    <div class="ed-brand"><span class="b1">peper</span><span class="b2">hide</span><em>Map editor</em></div>
+    <select id="edMap" title="Map"></select>
+    <div class="ed-seg" id="edMode">
+      <button data-m="translate" data-edico="move" title="Move (W)">Move</button>
+      <button data-m="rotate" data-edico="rotate" title="Rotate (E)">Rotate</button>
+      <button data-m="scale" data-edico="scale" title="Scale (R)">Scale</button>
+    </div>
+    <button class="ed-btn" id="edSpace" data-edico="globe" title="World or local axes (X)">World</button>
+    <button class="ed-btn" id="edSnap" data-edico="magnet" title="Snap to 0.25 m / 15 degrees (hold Ctrl to flip)">Snap</button>
+    <button class="ed-btn on" id="edCeil" data-edico="roof" title="Hide ceilings so you can see into rooms from above">Ceilings off</button>
+    <div class="ed-seg">
+      <button id="edUndo" data-edico="undo" title="Undo (Ctrl+Z)"></button>
+      <button id="edRedo" data-edico="redo" title="Redo (Ctrl+Y)"></button>
+    </div>
+    <span class="grow"></span>
+    <span class="ed-status clean" id="edStatus">Original map</span>
+    <div class="ed-pop">
+      <button class="ed-btn" id="edTest" data-edico="play" title="Play this map with your unsaved changes">Play test</button>
+      <div class="ed-menu hidden" id="edTestMenu">
+        <button data-k="hide"><b>Hide</b><small>You hide, AI hunters search</small></button>
+        <button data-k="seek"><b>Seek</b><small>You hunt AI chameleons</small></button>
+      </div>
+    </div>
+    <button class="ed-primary" id="edSave" data-edico="save" title="Save (Ctrl+S)">Save</button>
+    <button class="ed-btn" id="edExit" data-edico="exit">Exit</button>
+  </header>
+  <aside class="ed-left">
+    <nav class="ed-tabs" id="edTabs"><button data-t="models" class="on">Models</button><button data-t="blocks">Blocks</button><button data-t="changes">Map file</button></nav>
+    <div id="ed-models" class="ed-pane">
+      <input id="edSearch" type="search" placeholder="Search models">
+      <div class="ed-chips" id="edCats"></div>
+      <div class="ed-grid" id="edGrid"></div>
+      <p class="ed-foot">Click to place in front of the camera, or drag onto the map.</p>
+    </div>
+    <div id="ed-blocks" class="ed-pane hidden">
+      <div class="ed-card">
+        <div class="ed-title"><b>Block</b><small>A solid box. Walls, platforms, cover, steps.</small></div>
+        <div class="ed-row three"><label>Size (m)</label><span class="ax x"><b>W</b><input id="edBlkW" type="number" value="1" step="0.1" min="0.05"></span><span class="ax y"><b>H</b><input id="edBlkH" type="number" value="1" step="0.1" min="0.05"></span><span class="ax z"><b>D</b><input id="edBlkD" type="number" value="1" step="0.1" min="0.05"></span></div>
+        <div class="ed-row"><label>Colour</label><input id="edBlkCol" type="color" value="#d9d4c7"></div>
+        <div class="ed-row"><label>Texture</label><select id="edBlkTex"></select></div>
+        <div class="ed-actions"><button class="ed-tile wide" id="edBlockTile" draggable="true" data-edico="cube">Drag onto map</button><button class="ed-primary" id="edAddBlock">Add block</button></div>
+      </div>
+      <p class="ed-foot">Tip: hiders paint themselves to match surfaces, so plain bright blocks are hard to hide on. Textured ones give them something to copy.</p>
+    </div>
+    <div id="ed-changes" class="ed-pane hidden"><div id="edChanges"></div></div>
+  </aside>
+  <aside class="ed-right"><div id="edInspector"></div></aside>
+  <div class="ed-hint"><kbd>RMB</kbd>+<kbd>WASD</kbd> fly <kbd>Q</kbd><kbd>E</kbd> down/up <kbd>Wheel</kbd> zoom <kbd>W</kbd><kbd>E</kbd><kbd>R</kbd> move/rotate/scale <kbd>F</kbd> focus <kbd>Del</kbd> delete <kbd>Ctrl+D</kbd> duplicate</div>
+  <div class="ed-modal hidden" id="edModal"></div>
+</section>
+
 <section id="screen-settings" class="modal hidden">
   <div class="settings glass">
     <aside class="settabs" id="setTabs">
@@ -147,6 +204,7 @@
     <div class="setbody">
       <div class="setpane" data-pane="gameplay">
         <div class="setrow"><div><b>Mouse sensitivity</b><small>Camera and aim speed</small></div><div class="ctl"><input id="setSens" type="range" min="0.2" max="3" step="0.05"><span id="setSensVal"></span></div></div>
+        <div class="setrow"><div><b>Calm buried warning</b><small>Pulse slowly instead of blinking when a hider is buried in an object</small></div><div class="ctl"><div class="seg" id="setCalm"><button data-v="off">Off</button><button data-v="on">On</button></div></div></div>
         <div class="setrow"><div><b>Invert Y axis</b><small>Flip vertical mouse look</small></div><div class="ctl"><div class="seg" id="setInvert"><button data-v="off">Off</button><button data-v="on">On</button></div></div></div>
         <div class="setrow"><div><b>Field of view</b><small>Wider shows more of the room</small></div><div class="ctl"><input id="setFov" type="range" min="55" max="100" step="1"><span id="setFovVal"></span></div></div>
       </div>
@@ -212,15 +270,23 @@
 <!-- ================= IN-ROUND HUD ================= -->
 <div id="hud" class="hidden">
   <div id="topcenter">
-    <div class="teams"><span class="team hiders" id="tHiders">0</span><div class="clock"><span id="phase">Hide</span><b id="timer">1:00</b></div><span class="team hunters" id="tHunters">0</span></div>
-    <div class="tbar"><i id="timerBar"></i></div>
+    <div class="matchbar">
+      <div class="side hiders"><i class="tico" data-ico="eye"></i><div><b id="tHiders">0</b><small>Hiding</small></div></div>
+      <div class="clock"><span id="phase">Hide</span><b id="timer">1:00</b><div class="tbar"><i id="timerBar"></i></div></div>
+      <div class="side hunters"><div><b id="tHunters">0</b><small>Hunters</small></div><i class="tico" data-ico="hammer"></i></div>
+    </div>
     <div id="sub"></div>
   </div>
+  <div id="edgeFlash"></div>
+  <div id="buriedWarn" class="hidden"><i class="wico">!</i><div><b>Your body is buried too much</b><span id="buriedTxt">Move out a little or hunters will see you flashing.</span></div><div class="bbar"><i id="buriedBar"></i></div></div>
+  <div id="pinged" class="hidden"><b>Pinged</b><span>A hunter's sonar made you chirp</span></div>
+  <div id="cues"></div>
   <div id="status"></div>
   <div id="feed"></div>
   <div id="eyes" class="hidden"><div class="eyeic" data-ico="eye"></div><div class="eyebody"><div class="eyes-label"><span>Hunter attention</span><b id="eyesTxt">Unseen</b></div><div class="bar"><i id="eyesBar"></i></div></div></div>
-  <div id="crosshair" class="hidden"></div>
-  <div id="hint"></div>
+  <div id="crosshair" class="hidden"><i class="hm" id="hitmark"></i></div>
+  <div id="tagPips" class="hidden"></div>
+  <div id="prompts"></div>
   <div id="stamina" class="hidden"><i></i></div>
   <div id="blind" class="hidden"><div><span class="eyebrow">Hunters wait</span><b>Eyes closed</b><span>The chameleons are hiding</span><em id="blindTime">60</em></div></div>
   <div id="abilities"></div>
@@ -252,10 +318,11 @@
 
 <!-- pose wheel -->
 <div id="poseWheel" class="hidden">
-  <div class="wheelcard glass">
-    <div class="whead"><h3>Poses</h3><span class="muted">Hold G, point at a pose and let go · or tap G and click · 1-0 quick poses</span></div>
-    <div id="wheelPoses" class="wheelgrid"></div>
-    <div id="wheelEmotes" class="emotes"><button data-emote="wave">Wave</button><button data-emote="dance">Dance</button><button data-emote="cheer">Cheer</button></div>
+  <div class="radial" id="radial">
+    <div class="rtabs" id="wheelTabs"></div>
+    <svg class="rsvg" id="wheelSvg" viewBox="-300 -300 600 600"></svg>
+    <div id="wheelRing"></div>
+    <div class="rcenter"><i class="pz" id="wheelBig"></i><b id="wheelName">Stand</b><small id="wheelHint">Point and release · click for next page</small></div>
   </div>
 </div>
 
@@ -316,6 +383,11 @@
 <script src="chars.js"></script>
 <script src="net.js"></script>
 <script src="game.js"></script>
+<script src="systems.js"></script>
+<script src="TransformControls.js"></script>
+<script src="mapedits.js"></script>
+<script src="editcore.js"></script>
+<script src="editor.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

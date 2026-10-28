@@ -71,7 +71,7 @@ function prop(key, x, z, o = {}) {
   const s = o.h ? o.h / size.y : (PACK_SCALE[P.pack] || 1) * (o.s || 1);
   obj.scale.setScalar(s); obj.rotation.y = ry;
   if (o.tint) obj.traverse((c) => { if (c.isMesh) { c.material = c.material.clone(); c.material.color.set(o.tint); c.userData.shared = false; } });
-  mapGroup.add(obj); obj.updateMatrixWorld(true);
+  mapGroup.add(obj); trackObj(obj); obj.updateMatrixWorld(true);
   const wb = new THREE.Box3().setFromObject(obj), wc = wb.getCenter(new V3());
   let px = x - wc.x, pz = z - wc.z;
   if (o.ax === 'min') px = x - wb.min.x; else if (o.ax === 'max') px = x - wb.max.x;
@@ -85,11 +85,13 @@ function prop(key, x, z, o = {}) {
   else if (col === 'table') {
     cbox = addCollider(wb.min.x, wb.max.y - (o.slab || Math.max(0.06, h * 0.12)), wb.min.z, wb.max.x, wb.max.y, wb.max.z);
     const zn = zoneAt((wb.min.x + wb.max.x) / 2, (wb.min.z + wb.max.z) / 2);
-    unders.push({ x: (wb.min.x + wb.max.x) / 2, z: (wb.min.z + wb.max.z) / 2, w: wb.max.x - wb.min.x, d: wb.max.z - wb.min.z, h: cbox.min.y, zone: zn ? zn.id : null });
+    const u = { x: (wb.min.x + wb.max.x) / 2, z: (wb.min.z + wb.max.z) / 2, w: wb.max.x - wb.min.x, d: wb.max.z - wb.min.z, h: cbox.min.y, zone: zn ? zn.id : null };
+    unders.push(u); physOf(obj).unders.push(u);
   }
   if (o.top ?? (col !== 'none' && h < 1.6)) addTop((wb.min.x + wb.max.x) / 2, (wb.min.z + wb.max.z) / 2, (wb.max.x - wb.min.x) * 0.8, (wb.max.z - wb.min.z) * 0.8, wb.max.y);
   if (!o.noShadow && h >= 0.12) _csList.push(obj);
   obj.userData.box = cbox; obj.userData.wb = wb;
+  obj.userData.key = key; obj.userData.col = col; obj.userData.slab = o.slab; obj.userData.noShadow = !!o.noShadow;
   return obj;
 }
 /** Row helper: place n copies along x or z. */
@@ -128,7 +130,7 @@ function fillShelves(obj, o = {}) {
    The sun shadow map spans the whole map, so it is too coarse to ground chair legs and crates on its own.
    The blobs are not in env, so paint/eyedropper/bonk raycasts and colliders ignore them. */
 const _csList = [];
-let _csMesh = null, _csMat = null;
+let _csMesh = null, _csMat = null, _csAll = [];
 function contactShadowTex() {
   const n = 64, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), img = g.createImageData(n, n);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
@@ -139,9 +141,11 @@ function contactShadowTex() {
   g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t;
 }
-function contactShadows() {
+/** again=true (map editor) re-fits the blobs of the current map after objects moved, were added or deleted. */
+function contactShadows(again) {
   if (_csMesh) { mapGroup.remove(_csMesh); _csMesh.geometry.dispose(); _csMesh = null; }
-  const list = _csList.splice(0), own = new Set(), rc = new THREE.Raycaster(), pos = [], uv = [], col = [], idx = [];
+  const list = (again ? _csAll : []).concat(_csList.splice(0)).filter((o) => o.parent === mapGroup), own = new Set(), rc = new THREE.Raycaster(), pos = [], uv = [], col = [], idx = [];
+  _csAll = list;
   if (!list.length) return 0;
   for (const o of list) o.traverse((c) => c.isMesh && own.add(c));
   const ground = env.filter((m) => !own.has(m));

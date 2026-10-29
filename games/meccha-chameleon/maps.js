@@ -617,7 +617,7 @@ MAPS.gallery = {
     { id: 'shop', name: 'Gift Shop & Café', x0: 17, z0: 22, x1: 34, z1: 34, pts: gridPts(17, 22, 34, 34, 2.6) },
   ],
   playerSpawn: [17, 10.6], hunterSpawns: [[27, 15], [31, 15], [27, 19], [31, 19]], gate: { x: 29, z: 11, a: 'h' },
-  light: { hemi: 0.72, sky: 0xffffff, ground: 0x8a8070, amb: 0.2, sun: 0.38, sunPos: [-5, 30, -6], bg: 0x161820 },
+  light: { hemi: 0.72, sky: 0xffffff, ground: 0x8a8070, amb: 0.2, sun: 0.15, exposure: 0.85, sunPos: [-5, 30, -6], bg: 0x161820 },
   build() {
     const rooms = [
       { id: 'west', x0: 0, z0: 0, x1: 10, z1: 11, wall: 'galleryWall', floor: 'woodLight' },
@@ -709,7 +709,7 @@ function buildGallerySouth() {
    frozen foods, toy corner, and a back-of-house ring (stockroom, staff room, garden centre, loading dock pen). */
 function martTextures() {
   if (TEX.martTile) return;
-  TEX.martTile = canvasTex(256, 256, (g, w, h) => { tiles(g, 0, 0, w, h, 64, ['#eceee9', '#e6e8e3', '#f1f2ee', '#e2e5df'], '#c3c8c0', 2); speckle(g, w, h, 0.35, 0.035); });
+  TEX.martTile = canvasTex(256, 256, (g, w, h) => { tiles(g, 0, 0, w, h, 64, ['#d8dbd5', '#d2d5cf', '#dddfd9', '#cfd2cb'], '#b0b6ad', 2); speckle(g, w, h, 0.35, 0.035); });
   TEX.martWall = canvasTex(256, 410, (g, w, h) => {
     g.fillStyle = '#f3f5f1'; g.fillRect(0, 0, w, h); speckle(g, w, h, 0.2, 0.025);
     g.fillStyle = '#2fa865'; g.fillRect(0, h * 0.56, w, 18); g.fillStyle = '#ffd23f'; g.fillRect(0, h * 0.56 + 18, w, 6);
@@ -772,7 +772,7 @@ MAPS.market = {
     { id: 'dock', name: 'Loading Dock', x0: 36, z0: 22, x1: 44, z1: 32, pts: [[40, 26], [40, 29]], hunters: true },
   ].map((z) => ({ ...z, pts: z.pts || gridPts(z.x0, z.z0, z.x1, z.z1, 2.2) })),
   playerSpawn: [12, 6.2], hunterSpawns: [[38.4, 25.4], [41.6, 25.4], [38.4, 28.8], [41.6, 28.8]], gate: { x: 40, z: 22, a: 'h' },
-  light: { hemi: 0.82, sky: 0xffffff, ground: 0x8a8c84, amb: 0.2, sun: 0.3, sunPos: [-6, 30, -8], bg: 0x141820 },
+  light: { hemi: 0.82, sky: 0xffffff, ground: 0x8a8c84, amb: 0.2, sun: 0.12, exposure: 0.85, sunPos: [-6, 30, -8], bg: 0x141820 },
   build() {
     martTextures(); setSeed(hashStr('market'));
     const T = (o) => (o ? o.userData.wb.max.y : 0);

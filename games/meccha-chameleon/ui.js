@@ -332,6 +332,7 @@ const UI = {
       set('taunt', G.ab.taunt / AB.tauntCD, G.ab.taunt > 0 ? Math.ceil(G.ab.taunt) : '', G.phase !== 'hunt' || G.ab.taunt > 0);
       set('decoy', 0, G.ab.decoys, G.phase !== 'hunt' || G.ab.decoys <= 0);
       $('#readyBtn')?.classList.toggle('hidden', !(G.phase === 'prep' && (!G.online || G.isHost)));
+      this.fitPrompts();
     }
   },
   refreshBars() {
@@ -360,6 +361,18 @@ const UI = {
     } else if (G.view === 'spec') { const hs = G.hunters.filter((h) => !h.local); if (hs.length) list = [`<span class="kp plain">Spectating <b>${esc(hs[G.specIdx % hs.length].name)}</b></span>`, K('1-9', 'Switch hunter'), K('Tab', 'Scores')]; }
     const html = list.join('');
     if (html !== this._prompts) { this._prompts = html; $('#prompts').innerHTML = html; }
+    this.fitPrompts();
+  },
+  /** Keeps the key prompts clear of the ability bar: centred while there is room, else left-aligned beside it. */
+  fitPrompts() {
+    const el = $('#prompts'), ab = $('#abilities');
+    const key = this._prompts + '|' + innerWidth + '|' + ab.childElementCount + '|' + !!$('#readyBtn:not(.hidden)');
+    if (key === this._fitKey) return;
+    this._fitKey = key;
+    const r = ab.getBoundingClientRect(), left = r.width ? r.left : innerWidth;
+    const centred = 2 * (left - innerWidth / 2) - 32;
+    if (centred >= 420) Object.assign(el.style, { left: '', transform: '', justifyContent: '', maxWidth: Math.min(860, centred) + 'px' });
+    else Object.assign(el.style, { left: '20px', transform: 'none', justifyContent: 'flex-start', maxWidth: Math.max(160, left - 44) + 'px' });
   },
   buried(f, on, moving) {
     const el = $('#buriedWarn'); if (!el) return;

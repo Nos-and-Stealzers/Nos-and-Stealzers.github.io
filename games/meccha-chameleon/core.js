@@ -481,7 +481,7 @@ TEX.gingerRoof = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#ffffff'; g.f
 /* --- gallery --- */
 TEX.galleryWall = canvasTex(256, 410, (g, w, h) => { g.fillStyle = '#f3f1ec'; g.fillRect(0, 0, w, h); speckle(g, w, h, 0.2, 0.02); g.fillStyle = '#d9d4ca'; g.fillRect(0, h - 16, w, 16); });
 TEX.darkWall = canvasTex(256, 410, (g, w, h) => { g.fillStyle = '#23262f'; g.fillRect(0, 0, w, h); speckle(g, w, h, 0.4, 0.03); g.fillStyle = '#15171c'; g.fillRect(0, h - 16, w, 16); });
-TEX.terrazzo = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#e7e2d8'; g.fillRect(0, 0, w, h); for (let i = 0; i < 220; i++) { g.fillStyle = spick(['#c9a27a', '#8a8f99', '#d46a5a', '#5c7d8a', '#ffffff', '#2d2d33']); g.beginPath(); g.ellipse(sr(0, w), sr(0, h), sr(1.5, 5), sr(1, 3.5), sr(0, 3), 0, 7); g.fill(); } });
+TEX.terrazzo = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#d3cdc1'; g.fillRect(0, 0, w, h); for (let i = 0; i < 220; i++) { g.fillStyle = spick(['#c9a27a', '#8a8f99', '#d46a5a', '#5c7d8a', '#ffffff', '#2d2d33']); g.beginPath(); g.ellipse(sr(0, w), sr(0, h), sr(1.5, 5), sr(1, 3.5), sr(0, 3), 0, 7); g.fill(); } });
 TEX.marble = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#f2f0ec'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(120,120,130,.35)'; for (let i = 0; i < 14; i++) { g.lineWidth = sr(0.5, 2.5); g.beginPath(); g.moveTo(sr(0, w), 0); g.bezierCurveTo(sr(0, w), sr(0, h), sr(0, w), sr(0, h), sr(0, w), h); g.stroke(); } });
 
 /* ---------- map helpers ---------- */
@@ -810,8 +810,10 @@ function loadMap(id, edits) {
   setSeed(hashStr(def.id));
   const L = def.light || {};
   hemi.color.set(L.sky ?? 0xfff3df); hemi.groundColor.set(L.ground ?? 0x6e5e4e); hemi.intensity = L.hemi ?? 0.6;
-  amb.intensity = L.amb ?? 0.16; amb.color.set(L.ambColor ?? 0xffffff);
-  sun.intensity = L.sun ?? 0.5; sun.color.set(L.sunColor ?? 0xfff0dc);
+  const ex = L.exposure ?? 1;
+  hemi.intensity *= ex;
+  amb.intensity = (L.amb ?? 0.16) * ex; amb.color.set(L.ambColor ?? 0xffffff);
+  sun.intensity = (L.sun ?? 0.5) * ex; sun.color.set(L.sunColor ?? 0xfff0dc);
   const B = def.bounds, cx = (B.x0 + B.x1) / 2, cz = (B.z0 + B.z1) / 2, ext = Math.max(B.x1 - B.x0, B.z1 - B.z0) / 2 + 4;
   const sp = L.sunPos || [-7, 30, -7];
   sun.position.set(cx + sp[0], sp[1], cz + sp[2]); sun.target.position.set(cx, 0, cz);
@@ -825,6 +827,7 @@ function loadMap(id, edits) {
   if (edits === undefined && typeof MapEdits !== 'undefined') edits = MapEdits.get(def.id);
   MAP.editsKey = editsKey(edits);
   MAP.editReport = applyMapEdits(edits);
+  if (ex !== 1) mapGroup.traverse((o) => { if (o.isPointLight || o.isSpotLight) o.intensity *= ex; });
   if (typeof contactShadows === 'function') contactShadows();
   if (def.gate) {
     const g = def.gate, w = g.w || 1.8, h = g.h || 2.3;

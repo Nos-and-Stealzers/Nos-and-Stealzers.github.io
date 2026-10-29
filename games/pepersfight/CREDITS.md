@@ -10,6 +10,7 @@ Started 2026-10-27 (3.7.25). Add a line whenever a third-party asset is added or
 
 ## Other Kenney folders
 - `Assets/ThirdParty/Kenney/Nature`, `Particles`, `Suburban`: Kenney asset packs, CC0 1.0.
+  - 3.7.31 muzzle flash (`Presentation/FX.cs`, `Presentation/MuzzleFlame.cs`): Kenney Particle Pack `muzzle_01` (flame tongue on three crossed planes), `star_06` (burst), `circle_05` (hot core), CC0 1.0. Flame mesh is generated in code.
 
 ## UI icons
 - 3.7.30 ability HUD icons `Assets/Pepers/Resources/AbilityIcons/*.png` (white silhouettes, tinted per ability in `UI/HUD.cs`): from **game-icons.net** (https://game-icons.net, repo https://github.com/game-icons/icons), licensed **CC BY 3.0** (https://creativecommons.org/licenses/by/3.0/; commercial use and redistribution allowed with attribution). Rasterised to 128 px PNG by `HermesBridge/gen_ability_icons.py`.

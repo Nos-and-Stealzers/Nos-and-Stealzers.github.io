@@ -760,8 +760,9 @@ function nearestNode(x, z) {
   }
   return best;
 }
-function route(fx, fz, tx, tz) {
-  if (segClear(fx, fz, tx, tz, 0.2, 0.7)) return [{ x: tx, z: tz }];
+/** r = clearance the walker will re-check the path with; the default keeps the old 0.2 m shortcut test. */
+function route(fx, fz, tx, tz, r = 0.2) {
+  if (segClear(fx, fz, tx, tz, r, 0.7)) return [{ x: tx, z: tz }];
   const s = nearestNode(fx, fz), g = nearestNode(tx, tz);
   if (!s || !g) return [];
   const dist = new Map([[s, 0]]), prev = new Map(), open = [s], done = new Set();
@@ -778,7 +779,7 @@ function route(fx, fz, tx, tz) {
   const path = []; let c = g;
   while (c) { path.unshift({ x: c.x, z: c.z }); c = prev.get(c); }
   path.push({ x: tx, z: tz });
-  while (path.length > 1 && segClear(fx, fz, path[1].x, path[1].z, 0.22, path.length === 2 ? 0.7 : 0)) path.shift();
+  while (path.length > 1 && segClear(fx, fz, path[1].x, path[1].z, Math.max(0.22, r), path.length === 2 ? 0.7 : 0)) path.shift();
   return path;
 }
 

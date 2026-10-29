@@ -344,22 +344,26 @@ class Hunter {
     this.sync();
   }
   goTo(x, z) {
-    const path = route(this.pos.x, this.pos.z, x, z);
+    // Plan and verify with the same clearance the nav graph edges were built with (0.26 m). Verifying a 0.2 m
+    // shortcut at the 0.3 m body radius rejected routes that were fine and left hunters frozen mid-chase.
+    const r = Math.min(this.body?.r || 0.3, 0.26), path = route(this.pos.x, this.pos.z, x, z, r);
     let p = this.pos;
     for (let i = 0; i < path.length; i++) {
       const n = path[i];
       // The shared graph may contain editor-created/disconnected fallback edges.
-      if (!segClear(p.x, p.z, n.x, n.z, this.body?.r || 0.3, i === path.length - 1 ? 0.35 : 0)) { this.path = []; return; }
+      if (!segClear(p.x, p.z, n.x, n.z, r, i === path.length - 1 ? 0.7 : 0)) { this.path = []; return; }
       p = n;
     }
     this.path = path;
   }
   /** Walk next to a spot that may be unstandable (a hider lying on a table, shelf or freezer top): try the closest
-      free points within tag reach until one has a clear route. Plain goTo() there finds no path and freezes the hunter. */
+      free points within tag reach until one has a clear route. Plain goTo() there finds no path and freezes the hunter.
+      Benches and display nooks leave no free point closer than ~1.35 m, so the chase tag reach grows to 1.95 m once the
+      route is used up (players bonk with a 3.3 m camera ray, so this stays below player reach). */
   goNear(x, z) {
     if (freeAt(x, z, 0.3, 1.6)) return this.goTo(x, z);
     const c = [];
-    for (const r of [0.6, 0.85, 1.1]) for (let k = 0; k < 16; k++) {
+    for (const r of [0.6, 0.85, 1.1, 1.35, 1.6]) for (let k = 0; k < 16; k++) {
       const a = k / 16 * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
       if (freeAt(px, pz, 0.3, 1.6)) c.push({ x: px, z: pz, d: Math.hypot(px - this.pos.x, pz - this.pos.z) + r });
     }
@@ -452,7 +456,7 @@ class Hunter {
       this.follow(dt, D.huntSpeed * 1.35 * (G.overtime ? 1.2 : 1));
       const fpz = this.focus.root.position, d = Math.hypot(fpz.x - this.pos.x, fpz.z - this.pos.z);
       this.faceTo(this.lastSeen.clone().setY(this.lastSeen.y + 0.3), dt);
-      if (d < 1.35 && lost < 0.3 && Math.abs(fpz.y - this.pos.y) < 2.2 && this.swing <= 0 && this.clearSight(this.focus)) { this.doSwing(); G.hostTag(this.focus.id, this.id); this.sus.delete(this.focus); this.focus = null; this.state = 'scan'; this.scanT = 1.5; this.checks = []; }
+      if (d < (this.path.length ? 1.35 : 1.95) && lost < 0.3 && Math.abs(fpz.y - this.pos.y) < 2.2 && this.swing <= 0 && this.clearSight(this.focus)) { this.doSwing(); G.hostTag(this.focus.id, this.id); this.sus.delete(this.focus); this.focus = null; this.state = 'scan'; this.scanT = 1.5; this.checks = []; }
       else if (lost > 0.6 && Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z) < 0.7) { this.state = 'search'; this.scanT = 4; this.checks = searchAround(this.lastSeen); this.focus = null; this.path = []; }
     } else if (this.state === 'investigate') {
       const tp = this.lastSeen, c = tp.clone().setY(tp.y + 0.3), d = Math.hypot(tp.x - this.pos.x, tp.z - this.pos.z);

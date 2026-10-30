@@ -35,7 +35,7 @@
   #ad-slot.on { display: flex; }
   #ad-label { font-size: 10px; letter-spacing: 1px; opacity: .45; text-align: center; margin-bottom: 4px; }
 </style>
-<script src="ads-config.js?v=3.7.31"></script>
+<script src="ads-config.js?v=3.7.32"></script>
 <script>
   // Ads: Google AdSense H5 game ads (adBreak) + one display slot on the loading screen.
   // Nothing loads unless ads-config.js has a publisher id, so the game works the same without ads.
@@ -106,10 +106,10 @@
   </div>
   <div>
     <div id="ad-slot"><div><div id="ad-label">ADVERTISEMENT</div></div></div>
-    <div class="foot"><span>Free to play in your browser · Windows download available</span><span>v3.7.31</span></div>
+    <div class="foot"><span>Free to play in your browser · Windows download available</span><span>v3.7.32</span></div>
   </div>
 </div>
-<script src="network-ui.js?v=3.7.31"></script>
+<script src="network-ui.js?v=3.7.32"></script>
 <script>
   var canvas = document.getElementById("unity-canvas");
   var fill = document.getElementById("fill"), pct = document.getElementById("pct"), statusEl = document.getElementById("status");
@@ -142,13 +142,13 @@
     }
   };
   var config = {
-    dataUrl: "Build/WebGL.data.unityweb?v=3.7.31",
-    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=3.7.31",
-    codeUrl: "Build/WebGL.wasm.unityweb?v=3.7.31",
+    dataUrl: "Build/WebGL.data.unityweb?v=3.7.32",
+    frameworkUrl: "Build/WebGL.framework.js.unityweb?v=3.7.32",
+    codeUrl: "Build/WebGL.wasm.unityweb?v=3.7.32",
     streamingAssetsUrl: "StreamingAssets",
     companyName: "Pepers",
     productName: "Pepersfight",
-    productVersion: "3.7.31",
+    productVersion: "3.7.32",
     // Big/retina screens render at a capped resolution; the game scales it further when the frame rate dips.
     // Integrated/mobile GPUs (most Chromebooks and school laptops) render at 1x.
     devicePixelRatio: (function () {
@@ -165,7 +165,7 @@
     showBanner: function (msg, type) { if (type === "error") console.warn(msg); }
   };
   var s = document.createElement("script");
-  s.src = "Build/WebGL.loader.js?v=3.7.31";
+  s.src = "Build/WebGL.loader.js?v=3.7.32";
   s.onload = function () {
     createUnityInstance(canvas, config, function (p) {
       setProgress(p * 0.7, p < 0.9 ? "Downloading the game…" : "Starting the engine…");

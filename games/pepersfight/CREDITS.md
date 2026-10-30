@@ -10,6 +10,7 @@ Started 2026-10-27 (3.7.25). Add a line whenever a third-party asset is added or
 
 ## Other Kenney folders
 - `Assets/ThirdParty/Kenney/Nature`, `Particles`, `Suburban`: Kenney asset packs, CC0 1.0.
+  - 3.7.32 nature palette (`Gen/NaturePalette.cs`): the Nature Kit trees, bushes and grass are recoloured at load (leafsGreen/leafsDark/grass to greens, woodBark/woodBarkDark to browns). Models unchanged; the recolour is our modification of the CC0 originals.
   - 3.7.31 muzzle flash (`Presentation/FX.cs`, `Presentation/MuzzleFlame.cs`): Kenney Particle Pack `muzzle_01` (flame tongue on three crossed planes), `star_06` (burst), `circle_05` (hot core), CC0 1.0. Flame mesh is generated in code.
 
 ## UI icons

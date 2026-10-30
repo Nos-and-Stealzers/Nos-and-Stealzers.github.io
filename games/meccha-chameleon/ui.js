@@ -242,6 +242,7 @@ const UI = {
       this.refreshInk(); this.refreshBars();
     }
   },
+  setBrush(v) { v = clamp(Math.round(v), 2, 48); this.brush = v; $('#brushSize').value = v; $('#sizeVal').textContent = v; },
   tool(t) { this.curTool = t; $$('[data-tool]').forEach((b) => b.classList.toggle('on', b.dataset.tool === t)); },
   setColor(hex, addRecent) { this.color = hex; $('#color').value = hex; $('#colorHex').textContent = hex; if (addRecent) { this.recent = [hex, ...this.recent.filter((c) => c !== hex)].slice(0, 16); $('#swatches').innerHTML = this.recent.map((c) => `<i style="background:${c}" data-c="${c}" title="${c}"></i>`).join(''); } },
   setRough(r) { if (!G.my) return; G.my.mat.roughness = r; $('#rough').value = Math.round(r * 100); $('#roughVal').textContent = r.toFixed(2); },
@@ -718,6 +719,8 @@ function openSettings(back) {
   seg('#setQuality', S.quality, (v) => { S.quality = v; saveSettings(); applyQuality(); });
   seg('#setInvert', S.invertY ? 'on' : 'off', (v) => { S.invertY = v === 'on'; saveSettings(); });
   seg('#setCalm', S.calmFlash ? 'on' : 'off', (v) => { S.calmFlash = v === 'on'; saveSettings(); });
+  seg('#setRaw', S.rawMouse === false ? 'off' : 'on', (v) => { S.rawMouse = v === 'on'; saveSettings(); });
+  seg('#setFps', S.fpsCap == null ? 'auto' : String(S.fpsCap), (v) => { S.fpsCap = v === 'auto' ? 'auto' : +v; saveSettings(); });
   $('#keyList').innerHTML = KEYS.map(([g, ks]) => `<h4>${g}</h4>` + ks.map(([a, k]) => `<div><span>${a}</span><kbd>${k}</kbd></div>`).join('')).join('');
 }
 function closeSettings() { $('#screen-settings').classList.add('hidden'); if (UI.settingsBack === 'pause') UI.pause(true); }
@@ -792,8 +795,8 @@ function wire() {
   $('#clearBtn').onclick = () => { if (!G.my) return; pushUndo(); G.my.blank(); };
   $('#shapeSeg').onclick = (e) => { const b = e.target.closest('button'); if (b && G.my) { G.my.setShape(b.dataset.v); UI.refreshBars(); } };
   $('#sizeSeg').onclick = (e) => { const b = e.target.closest('button'); if (b && G.my) { G.my.setSize(b.dataset.v); UI.refreshBars(); } };
-  $('#rotL').onclick = () => G.my?.setYaw(G.my.yaw + Math.PI / 12);
-  $('#rotR').onclick = () => G.my?.setYaw(G.my.yaw - Math.PI / 12);
+  $('#rotL').onclick = () => turnStep(G.my, 1);
+  $('#rotR').onclick = () => turnStep(G.my, -1);
   $('#paintPoses').innerHTML = POSE_ORDER.map((k) => `<button data-pose="${k}">${POSES[k].label}</button>`).join('');
   $('#paintPoses').onclick = (e) => { const b = e.target.closest('[data-pose]'); if (b && G.my) { setPose(b.dataset.pose); G.my.rebake(); } };
   addEventListener('mousemove', (e) => { if (UI.wheelOpen) UI.wheelPoint(e.clientX, e.clientY); });

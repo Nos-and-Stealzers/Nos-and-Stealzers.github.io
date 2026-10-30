@@ -140,7 +140,7 @@ const UVPASS = (() => {
 })();
 function autoCamo(ch, skillKey) {
   const S = SKILLS[skillKey] || SKILLS.medium;
-  ch.root.updateMatrixWorld(true);
+  ch.rebake(); ch.root.updateMatrixWorld(true);
   const bb = new THREE.Box3().setFromObject(ch.mesh), c = bb.getCenter(new V3());
   const near = envNear(c, 10);
   let acc = [0, 0, 0], n = 0, rough = 0.85;
@@ -149,10 +149,10 @@ function autoCamo(ch, skillKey) {
     const a = i / 16 * Math.PI * 2, d = new V3(Math.sin(a), 0, Math.cos(a));
     const h = envHit(c, d, 14), free = h ? h.distance : 14;
     dirs.push({ d, free, a });
-    if (h && h.distance < 2.5) { const col = surfaceColor(h); acc = acc.map((v, k) => v + col[k]); n++; }
+    if (h && h.distance < 2.5) { const col = surfaceColor(h), w = Math.min(8, 1 / Math.max(0.12, h.distance) ** 1.5); acc = acc.map((v, k) => v + col[k] * w); n += w; }
   }
   const down = envHit(c, new V3(0, -1, 0), 5);
-  if (down) { const col = surfaceColor(down); acc = acc.map((v, k) => v + col[k] * 3); n += 3; }
+  if (down) { const col = surfaceColor(down), w = Math.min(8, 1 / Math.max(0.12, down.distance) ** 1.5); acc = acc.map((v, k) => v + col[k] * w); n += w; }
   if (n) ch.fill(`rgb(${acc[0] / n | 0},${acc[1] / n | 0},${acc[2] / n | 0})`);
   dirs.sort((p, q) => q.free - p.free);
   const chosen = [];
@@ -215,33 +215,74 @@ function snapToWall(P, maxDist = 1.4) {
   return true;
 }
 const FLOOR_POSES = ['lie', 'prone', 'side', 'curl', 'crouch', 'kneel', 'curl'];
+/** Judge several LEGAL spots by cover and traffic, never by the hunters' private vision state. */
+function hidingScore(s, taken) {
+  let score = POSES[s.pose]?.wall ? 2.8 : (s.y || 0) > 0.3 ? 1.2 : 0;
+  const under = unders.find((u) => Math.abs(s.x - u.x) < u.w * 0.43 && Math.abs(s.z - u.z) < u.d * 0.43);
+  if (under) score += 4.5;
+  const p = new V3(s.x, (s.y || 0) + 0.25, s.z);
+  let close = 0, open = 0;
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4, h = envHit(p, new V3(Math.sin(a), 0, Math.cos(a)), 4.5);
+    if (h && h.distance < 1.25) close++;
+    if (!h || h.distance > 3.5) open++;
+  }
+  score += close * 0.7 - open * 0.55;
+  if (!under && !POSES[s.pose]?.wall && !(s.y > 0.3)) score -= 3.0; // no more random open-floor crouching
+  // Shelves and table tops need a low silhouette, not a conspicuous upright "thinker".
+  if (s.y > 0.3 && ['sit', 'thinker'].includes(s.pose)) score -= 2;
+  const nearest = taken.length ? Math.min(...taken.map((t) => Math.hypot(t.x - s.x, t.z - s.z))) : 12;
+  score += Math.min(9, nearest) * 0.22;
+  // Doorways/corridors and hunter-release paths are public map information.
+  for (const [hx, hz] of MAP.hunterSpawns) score += Math.min(15, Math.hypot(hx - s.x, hz - s.z)) * 0.035;
+  if (gateBox) {
+    const g = gateBox.getCenter(new V3()), d = Math.hypot(g.x - s.x, g.z - s.z);
+    if (d < 7 && segClear(g.x, g.z, s.x, s.z, 0.1, 0.2)) score -= (7 - d) * 0.4;
+  }
+  return score;
+}
 function findSpot(ch, taken) {
+  const keep = { p: ch.root.position.clone(), yaw: ch.yaw, pose: ch.pose };
+  let best = null, bs = -Infinity;
+  for (let i = 0; i < 12; i++) {
+    const s = findSpotCandidate(ch, taken);
+    if (!s) continue;
+    const score = hidingScore(s, taken) + Math.random() * 1.6;
+    if (score <= bs) continue;
+    ch.root.position.set(s.x, s.y || 0, s.z); ch.setYaw(s.yaw); ch.setPose(s.pose, true);
+    if (Buried.check(ch) >= 0.08) continue;
+    best = s; bs = score;
+  }
+  ch.root.position.copy(keep.p); ch.setYaw(keep.yaw); ch.setPose(keep.pose, true);
+  return best || findSpotCandidate(ch, taken);
+}
+function findSpotCandidate(ch, taken) {
   const zones = ZONES.filter((z) => !z.hunters), hs = MAP.hunterSpawns;
-  for (let tries = 0; tries < 500; tries++) {
+  for (let tries = 0; tries < 180; tries++) {
     const zn = pick(zones), roll = Math.random();
     let s = null;
     if (roll < 0.5) {
       const x = rand(zn.x0 + 0.5, zn.x1 - 0.5), z = rand(zn.z0 + 0.5, zn.z1 - 0.5);
       if (!freeAt(x, z, 0.22, 0.9)) continue;
-      const pose = Math.random() < 0.3 ? 'star' : 'flat';
+      const pose = Math.random() < 0.13 ? 'star' : 'flat';
       ch.root.position.set(x, 0, z); ch.setPose(pose, true);
       if (!snapToWall(ch, 2.5)) continue;
       s = { x: ch.root.position.x, y: 0, z: ch.root.position.z, yaw: ch.yaw, pose };
       if (!freeAt(s.x, s.z, 0.1, 0.85)) continue;
       if (pose === 'star') { const sd = new V3(Math.cos(s.yaw), 0, -Math.sin(s.yaw)); if (!freeAt(s.x + sd.x * 0.3, s.z + sd.z * 0.3, 0.08, 0.8) || !freeAt(s.x - sd.x * 0.3, s.z - sd.z * 0.3, 0.08, 0.8)) continue; }
-    } else if (roll < 0.78) {
+    } else if (roll < 0.73) {
       const ts = tops.filter((t) => t.zone === zn.id && t.w > 0.7 && t.d > 0.5);
       if (!ts.length) continue;
       const t = pick(ts), long = Math.max(t.w, t.d) > 1.6;
-      s = { x: t.x + rand(-1, 1) * Math.max(0, t.w / 2 - (long && t.w > t.d ? 0.8 : 0.4)), y: t.y, z: t.z + rand(-1, 1) * Math.max(0, t.d / 2 - (long && t.d >= t.w ? 0.8 : 0.35)), yaw: long ? (t.w > t.d ? Math.PI / 2 : 0) + (Math.random() < 0.5 ? Math.PI : 0) : rand(0, 6.28), pose: long ? pick(['lie', 'prone', 'side']) : pick(['curl', 'sit', 'thinker', 'curl']) };
+      s = { x: t.x + rand(-1, 1) * Math.max(0, t.w / 2 - (long && t.w > t.d ? 0.8 : 0.4)), y: t.y, z: t.z + rand(-1, 1) * Math.max(0, t.d / 2 - (long && t.d >= t.w ? 0.8 : 0.35)), yaw: long ? (t.w > t.d ? Math.PI / 2 : 0) + (Math.random() < 0.5 ? Math.PI : 0) : rand(0, 6.28), pose: long ? pick(['lie', 'prone', 'side']) : pick(['curl', 'curl', 'crouch']) };
       if (!freeAt(s.x, s.z, 0.22, 0.6, t.y + 0.01)) continue;
-    } else if (roll < 0.86) {
+    } else if (roll < 0.93) {
       const us = unders.filter((u) => u.zone === zn.id && u.h > 0.45);
       if (!us.length) continue;
       const u = pick(us);
       s = { x: u.x + rand(-0.25, 0.25) * u.w, y: 0, z: u.z + rand(-0.25, 0.25) * u.d, yaw: rand(0, 6.28), pose: u.h > 0.62 ? pick(['curl', 'sit', 'crouch']) : pick(['curl', 'lie']) };
       if (!freeAt(s.x, s.z, 0.2, 0.4)) continue;
-    } else if (roll < 0.95) {
+    } else if (roll < 0.96) {
       s = { x: rand(zn.x0 + 0.9, zn.x1 - 0.9), y: 0, z: rand(zn.z0 + 0.9, zn.z1 - 0.9), yaw: rand(0, 6.28), pose: pick(FLOOR_POSES) };
       if (!freeAt(s.x, s.z, 0.45, 0.8)) continue;
     } else {
@@ -255,7 +296,9 @@ function findSpot(ch, taken) {
     return s;
   }
   const [px, pz] = MAP.playerSpawn;
-  return { x: px + rand(-3, 3), y: 0, z: pz + rand(-3, 3), yaw: 0, pose: 'curl' };
+  const free = NODES.filter((n) => freeAt(n.x, n.z, 0.2, 0.5) && !zoneAt(n.x, n.z)?.hunters && !taken.some((t) => Math.hypot(t.x - n.x, t.z - n.z) < 2));
+  const n = free.length ? pick(free) : { x: px, z: pz };
+  return { x: n.x, y: 0, z: n.z, yaw: 0, pose: 'curl' };
 }
 
 /* ================= hunters ================= */
@@ -268,7 +311,7 @@ const visCam = new THREE.PerspectiveCamera(78, VW / VH, 0.1, 30);
 const bufA = new Uint8Array(VW * VH * 4), bufB = new Uint8Array(VW * VH * 4), bufPair = new Uint8Array(VW * 2 * VH * 4);
 
 /* ---------- hunter team brain ---------- */
-function teamMem() { if (!G.tm || G.tm.P !== G.P) G.tm = { P: G.P, seen: {}, claim: {} }; return G.tm; }
+function teamMem() { if (!G.tm || G.tm.P !== G.P) G.tm = { P: G.P, seen: {}, claim: {}, lease: {}, checks: {} }; return G.tm; }
 /** Points worth a look in a room: under tables, table tops, specials and wall spots at mixed heights. */
 function hidingChecks(zn) {
   const out = [];
@@ -289,7 +332,12 @@ function searchAround(p) {
 /** A walkable nav point inside the room with a clear view of the check spot. */
 function overlookPoint(c, zn) {
   let best = null, bd = 1e9;
-  for (const p of zn.pts) { const d = Math.abs(Math.hypot(p[0] - c.x, p[1] - c.z) - 2.2); if (d < bd) { bd = d; best = p; } }
+  for (const p of zn.pts) {
+    const from = new V3(p[0], 1.55, p[1]), delta = new V3(c.x, c.y, c.z).sub(from), len = delta.length();
+    const hit = envHit(from, delta.divideScalar(Math.max(0.001, len)), len);
+    if (hit && hit.distance < len - 0.12) continue;
+    const d = Math.abs(Math.hypot(p[0] - c.x, p[1] - c.z) - 2.2); if (d < bd) { bd = d; best = p; }
+  }
   return best || zn.pts[0];
 }
 function aiShoot(h, at) {
@@ -379,20 +427,22 @@ class Hunter {
     for (const z of zones) {
       const since = G.t - (tm.seen[z.id] ?? -60), cx = (z.x0 + z.x1) / 2, cz = (z.z0 + z.z1) / 2;
       const dist = Math.hypot(cx - this.pos.x, cz - this.pos.z);
-      const claimed = Object.entries(tm.claim).some(([hid, zid]) => hid !== this.id && zid === z.id);
+      const claimed = Object.entries(tm.claim).some(([hid, zid]) => hid !== this.id && zid === z.id && G.t - (tm.lease?.[hid] ?? 0) < 35 && G.hunters.some((h) => h.id === hid && ['patrol', 'scan'].includes(h.state)));
       const area = (z.x1 - z.x0) * (z.z1 - z.z0);
       const s = Math.min(since, 70) - dist * 0.9 - (claimed ? 40 : 0) + Math.min(area, 120) * 0.05 + rand(0, 14);
       ranked.push({ zn: z, score: s });
     }
     ranked.sort((a, b) => b.score - a.score);
     for (const { zn } of ranked) {
-      const checks = hidingChecks(zn), preferred = checks.length ? overlookPoint(checks[0], zn) : zn.pts[0];
+      const checks = hidingChecks(zn).sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z)).slice(0, 6);
+      const preferred = checks.length ? overlookPoint(checks[0], zn) : zn.pts[0];
       for (const p of [preferred, ...zn.pts]) {
         if (!p || Math.hypot(p[0] - this.pos.x, p[1] - this.pos.z) < 0.5) continue;
         this.goTo(p[0], p[1]);
         if (!this.path.length) continue;
-        tm.claim[this.id] = zn.id; tm.seen[zn.id] = G.t; this.visited[zn.id] = G.t;
-        this.checks = checks; this.state = 'patrol'; return;
+        tm.claim[this.id] = zn.id; (tm.lease || (tm.lease = {}))[this.id] = G.t; this.roomGoal = zn.id;
+        this.visited[zn.id] = G.t;
+        this.checks = checks; this.sweepI = 0; this.sweepT = 0; this.sweepPlanned = false; this.state = 'patrol'; return;
       }
     }
     delete tm.claim[this.id]; this.path = []; this.checks = []; this.state = 'scan'; this.scanT = 2;
@@ -413,7 +463,8 @@ class Hunter {
   }
   hear(p, spread = 2.5) {
     if (this.state === 'chase' || this.state === 'wait') return;
-    this.goTo(p.x + rand(-spread, spread), p.z + rand(-spread, spread));
+    this.goNear(p.x + rand(-spread, spread), p.z + rand(-spread, spread));
+    this.roomGoal = null;
     this.state = 'patrol'; this.markT = 1.2;
     const zn = zoneAt(p.x, p.z); this.checks = zn ? hidingChecks(zn).filter((c) => Math.hypot(c.x - p.x, c.z - p.z) < 5) : [];
   }
@@ -472,13 +523,14 @@ class Hunter {
       this.scanT -= this.path.length ? 0 : dt;
       if (this.scanT <= 0) this.pickGoal();
     } else if (this.state === 'patrol') {
-      if (!this.path.length) { this.state = 'scan'; this.scanT = (this.checks?.length ? Math.min(6, 1.2 + this.checks.length * 0.7) : rand(1.6, 3.2)) * (G.overtime ? 0.6 : 1); this.checkI = 0; this.checkT = 0; } else this.follow(dt, D.huntSpeed * (G.overtime ? 1.25 : 1));
+      if (!this.path.length) { this.state = 'scan'; this.scanT = this.roomGoal && this.checks?.length ? 22 : rand(1.6, 3.2); this.checkI = 0; this.checkT = 0; } else this.follow(dt, D.huntSpeed * (G.overtime ? 1.25 : 1));
       this.look = this.yaw + Math.sin(this.t * 1.3 + this.id.length) * 0.6; this.pitch = -0.18 + Math.sin(this.t * 0.8) * 0.12;
     } else if (this.state === 'scan') {
       this.scanT -= dt;
-      if (this.checks?.length) this.lookChecks(dt); else { this.look = this.yaw + Math.sin(this.t * 1.7) * 1.2; this.pitch = -0.25 + Math.sin(this.t * 1.1) * 0.35; }
+      if (this.roomGoal && this.checks?.length) this.sweepRoom(dt);
+      else if (this.checks?.length) this.lookChecks(dt); else { this.look = this.yaw + Math.sin(this.t * 1.7) * 1.2; this.pitch = -0.25 + Math.sin(this.t * 1.1) * 0.35; }
       if (this.pingCD <= 0 && G.phase === 'hunt') { this.pingCD = rand(26, 40); G.emit({ e: 'ping', id: this.id, x: this.pos.x, y: this.pos.y, z: this.pos.z }); }
-      if (this.scanT <= 0) this.pickGoal();
+      if (this.scanT <= 0) { this.path = []; this.roomGoal = null; this.pickGoal(); }
     }
     if (this.state === 'patrol' || this.state === 'chase' || (this.state === 'investigate' && this.lastSeen && this.pos.distanceTo(this.lastSeen) > 2.5) || (this.state === 'search' && this.path.length)) {
       this.stuckT = this.pos.distanceTo(this.lastP || this.pos) < 0.6 * dt ? this.stuckT + dt : 0;
@@ -490,6 +542,39 @@ class Hunter {
       }
     }
     this.sync();
+  }
+  /** Search public geometry systematically, not the hider list: physically move to see behind/under furniture. */
+  sweepRoom(dt) {
+    const checks = this.checks || [], c = checks[this.sweepI || 0], tm = teamMem();
+    if (!c) {
+      tm.seen[this.roomGoal] = G.t; delete tm.claim[this.id]; this.roomGoal = null; this.path = []; this.scanT = 0; return;
+    }
+    const key = this.roomGoal + ':' + Math.round(c.x * 2) + ',' + Math.round(c.y * 2) + ',' + Math.round(c.z * 2);
+    if (tm.checks?.[key] != null && G.t - tm.checks[key] < 28) { this.sweepI++; this.sweepPlanned = false; return; }
+    if (!this.sweepPlanned) {
+      this.sweepPlanned = true; this.sweepT = 0; this.sweepWalk = 0;
+      const p = new V3(c.x, c.y, c.z), at = this.eye(), delta = p.clone().sub(at), len = delta.length();
+      const hit = envHit(at, delta.divideScalar(Math.max(len, 0.001)), len);
+      if ((hit && hit.distance < len - 0.12) || len > 4) {
+        // Nav points are static shared knowledge; choose a reachable view with genuine LOS, never a live target position.
+        const pts = NODES.filter((n) => {
+          const d = Math.hypot(n.x - c.x, n.z - c.z); return d > 1.3 && d < 4.5 && freeAt(n.x, n.z, 0.28, 1.7);
+        }).sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z));
+        for (const n of pts.slice(0, 14)) {
+          const eye = new V3(n.x, 1.55, n.z), d = p.clone().sub(eye), l = d.length(), h = envHit(eye, d.divideScalar(Math.max(l, 0.001)), l);
+          if (h && h.distance < l - 0.12) continue;
+          this.goTo(n.x, n.z); if (this.path.length) break;
+        }
+      }
+    }
+    if (this.path.length && (this.sweepWalk || 0) < 3.5) { this.sweepWalk = (this.sweepWalk || 0) + dt; this.follow(dt, G.D.huntSpeed * 0.8); }
+    else this.sweepT += dt;
+    this.faceTo(new V3(c.x, c.y, c.z), dt);
+    if (this.sweepT >= 0.9) {
+      const eye = this.eye(), d = new V3(c.x, c.y, c.z).sub(eye), len = d.length(), hit = envHit(eye, d.divideScalar(Math.max(0.001, len)), len);
+      if (!hit || hit.distance >= len - 0.12) (tm.checks || (tm.checks = {}))[key] = G.t;
+      this.sweepI++; this.sweepPlanned = false; this.path = [];
+    }
   }
   /** Turn the head from one likely hiding place to the next (under tables, shelf tops, walls up high). */
   lookChecks(dt) {
@@ -528,6 +613,7 @@ class Hunter {
     if (cand.length) {
       const hiddenH = []; for (const h of G.hunters) if (h.group.visible) { h.group.visible = false; hiddenH.push(h); }
       const fxHidden = []; for (const s of G.fxHide) if (s.visible) { s.visible = false; fxHidden.push(s); }
+      const brushVisible = BrushPreview.group.visible; BrushPreview.group.visible = false;
       const oldTarget = renderer.getRenderTarget(), oldViewport = renderer.getViewport(new THREE.Vector4()), oldScissor = renderer.getScissor(new THREE.Vector4()), oldTest = renderer.getScissorTest();
       const hid = [];
       try {
@@ -541,6 +627,7 @@ class Hunter {
         PeperPerf.splitVision(bufPair, VW, VH, bufA, bufB);
       } finally {
         for (const c of hid) c.root.visible = true; for (const h of hiddenH) h.group.visible = true; for (const s of fxHidden) s.visible = true;
+        BrushPreview.group.visible = brushVisible;
         renderer.setRenderTarget(oldTarget); renderer.setViewport(oldViewport); renderer.setScissor(oldScissor); renderer.setScissorTest(oldTest);
       }
       const D = G.D;
@@ -598,6 +685,7 @@ const G = {
   realHiders() { return this.hiders.filter((c) => !c.isClone); },
 
   clearRound() {
+    CAM.ok = false; CAM.dist = null; BrushPreview.hide();
     clearHub();
     for (const c of this.hiders) c.dispose();
     for (const h of this.hunters) h.dispose();
@@ -1010,7 +1098,13 @@ const G = {
     camera.lookAt(p);
     if (R.t > 3.6) { R.i++; R.t = 0; if (R.i >= R.list.length) { this.reveal = null; for (const x of R.list) if (x.caught) x.root.visible = false; UI.screen('end'); } }
   },
-  lock() { if (this.paint || this.phase === 'handoff' || UI.wheelOpen || UI.panelOpen) return; try { const p = renderer.domElement.requestPointerLock?.(); p?.catch?.(() => { }); } catch (e) { /* needs a user gesture */ } },
+  lock() {
+    if (this.paint || this.phase === 'handoff' || UI.wheelOpen || UI.panelOpen) return;
+    const el = renderer.domElement, plain = () => { try { el.requestPointerLock?.()?.catch?.(() => { }); } catch (e) { /* needs a user gesture */ } };
+    // Raw input: no Windows pointer acceleration, so a flick turns as far as a slow drag of the same distance.
+    if (SETTINGS.rawMouse === false) return plain();
+    try { const p = el.requestPointerLock?.({ unadjustedMovement: true }); if (p?.catch) p.catch((e) => { if (e?.name === 'NotSupportedError') plain(); }); } catch (e) { plain(); }
+  },
   toMenu() {
     if (this.fromEditor && !this.online) { MapEditor.resume(); return; }
     if (this.online) { Net.close(); this.online = false; if (window.mcNative) mcNative.hostStop(); }
@@ -1409,7 +1503,9 @@ let toolVM = new THREE.Group(); camera.add(toolVM); toolVM.visible = false;
 function setToolVM(kind) {
   camera.remove(toolVM);
   toolVM = buildTool(kind || 'hammer');
-  toolVM.position.set(0.34, -0.5, -0.6); toolVM.rotation.set(0.4, 0, -0.3);
+  // Leave the centre clear for spotting tiny camouflaged bodies; the old full-size tool was almost in the near plane.
+  toolVM.scale.setScalar(0.72);
+  toolVM.position.set(0.34, -0.5, -0.75); toolVM.rotation.set(0.4, 0, -0.3);
   toolVM.traverse((o) => { if (o.material) { o.material = o.material.clone(); o.material.depthTest = false; o.renderOrder = 20; } o.castShadow = false; });
   camera.add(toolVM); toolVM.visible = true;
 }
@@ -1449,6 +1545,8 @@ function onKey(e) {
     if (e.code === 'KeyB') UI.tool('brush'); if (e.code === 'KeyM') UI.tool('mimic'); if (e.code === 'KeyI') UI.tool('picker'); if (e.code === 'KeyN') UI.tool('fill');
     if (e.code === 'Space') { pickColor({ clientX: mouse.x, clientY: mouse.y }); e.preventDefault(); return; }
     if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { undo(); e.preventDefault(); return; }
+    if (e.code === 'KeyZ' || e.code === 'KeyX') { turnStep(P, e.code === 'KeyZ' ? 1 : -1); return; }
+    if (e.code === 'BracketLeft' || e.code === 'BracketRight') { UI.setBrush(UI.brush + (e.code === 'BracketLeft' ? -2 : 2)); return; }
     if (e.code === 'Escape') togglePaint();
   }
   if (G.view === 'first' && G.phase === 'hunt' && e.code === 'KeyE') { hunterPing(); return; }
@@ -1466,12 +1564,24 @@ function onKey(e) {
   }
   const pk = POSE_ORDER.find((k) => POSES[k].key && 'Digit' + POSES[k].key === e.code);
   if (pk) setPose(pk);
-  if (e.code === 'KeyZ' && !e.ctrlKey) P.setYaw(P.yaw + Math.PI / 12);
-  if (e.code === 'KeyX') P.setYaw(P.yaw - Math.PI / 12);
+  if (e.code === 'KeyZ' && !e.ctrlKey) turnStep(P, 1);
+  if (e.code === 'KeyX') turnStep(P, -1);
   if (G.phase === 'hub') return;
   if (e.code === 'KeyQ') makeClone();
   if (e.code === 'KeyH') taunt();
   if (e.code === 'KeyV') decoy();
+}
+/* Turning in place (Z / X): a tap eases 15 degrees, holding keeps turning smoothly. The old version jumped the body
+   15 degrees per key press (and didn't work at all in paint mode, although the paint panel advertised it). */
+const TURN = { step: Math.PI / 12, rate: 2.6, hold: 0.22 };
+function turnStep(P, dir) { if (!P) return; if (P.stick) { Stick.rollBy(P, dir * TURN.step); return; } P.turnGoal = (P.turnGoal ?? P.yaw) + dir * TURN.step; P.turnHeld = 0; P.turnDir = dir; }
+function updateTurn(P, dt) {
+  if (P.turnGoal == null) return;
+  const dir = keys.KeyZ && !keys.ControlLeft && !keys.ControlRight ? 1 : keys.KeyX ? -1 : 0;
+  if (dir && dir === P.turnDir && !UI.chatOpen) { P.turnHeld += dt; if (P.turnHeld > TURN.hold) P.turnGoal = P.yaw + angDiff(P.yaw, P.turnGoal) + dir * TURN.rate * dt; }
+  const d = angDiff(P.yaw, P.turnGoal);
+  if (Math.abs(d) < 0.002 && !dir) { P.setYaw(P.turnGoal); P.turnGoal = null; P.rebake(); return; }
+  P.setYaw(P.yaw + d * Math.min(1, dt * 16));
 }
 function setPose(p) {
   const P = G.my; if (!P || !POSES[p]) return;
@@ -1549,12 +1659,27 @@ document.addEventListener('pointerlockchange', () => {
   if (!locked && active() && !G.paint && !UI.chatOpen && !UI.wheelOpen && !UI.panelOpen) { G.paused = !G.online && G.phase !== 'hub'; UI.pause(true); }
   if (locked) { G.paused = false; UI.pause(false); }
 });
+/** Chromium on Windows sometimes reports one huge movementX/Y right after pointer lock or on a non-raw device
+    (the cursor "teleports" back to centre). A lone jump far bigger than the recent motion is dropped, so the view
+    never snaps half a turn; sustained fast flicks still pass because the previous delta is large too. */
+const lookFilter = { last: 0, t: 0 };
+function lookDelta(mx, my, now = performance.now()) {
+  const m = Math.max(Math.abs(mx), Math.abs(my)), recent = now - lookFilter.t < 80 ? lookFilter.last : 0;
+  lookFilter.t = now;
+  if (m > 260 && m > recent * 6 + 120) { lookFilter.last = 0; return null; }
+  lookFilter.last = m; return [mx, my];
+}
+function applyLook(mx, my) {
+  const s = 0.0022 * SETTINGS.sens, iy = SETTINGS.invertY ? -1 : 1;
+  if (G.view === 'first' && G.fp) { G.fp.yaw -= mx * s; G.fp.pitch = clamp(G.fp.pitch - my * s * iy, -1.5, 1.5); }
+  else { G.ctrl.yaw -= mx * s; G.ctrl.pitch = clamp(G.ctrl.pitch + my * s * iy, -0.45, 1.25); }
+}
+document.addEventListener('pointerlockchange', () => { lookFilter.last = 0; lookFilter.t = 0; });
 addEventListener('mousemove', (e) => {
-  mouse.x = e.clientX; mouse.y = e.clientY;
+  mouse.x = e.clientX; mouse.y = e.clientY; mouse.onCanvas = e.target === renderer.domElement;
   if (document.pointerLockElement) {
-    const s = 0.0022 * SETTINGS.sens, iy = SETTINGS.invertY ? -1 : 1;
-    if (G.view === 'first' && G.fp) { G.fp.yaw -= e.movementX * s; G.fp.pitch = clamp(G.fp.pitch - e.movementY * s * iy, -1.5, 1.5); }
-    else { G.ctrl.yaw -= e.movementX * s; G.ctrl.pitch = clamp(G.ctrl.pitch + e.movementY * s * iy, -0.45, 1.25); }
+    const d = lookDelta(e.movementX, e.movementY);
+    if (d) applyLook(d[0], d[1]);
     return;
   }
   if (G.paint) {
@@ -1577,6 +1702,66 @@ renderer.domElement.addEventListener('wheel', (e) => {
   if (G.paint) G.paintCam.dist = clamp(G.paintCam.dist + Math.sign(e.deltaY) * 0.18, 0.8, 5);
   else if (G.view === 'third' || G.view === 'spec') G.ctrl.dist = clamp(G.ctrl.dist + Math.sign(e.deltaY) * 0.25, 1.0, 6);
 }, { passive: true });
+
+/* Paint feedback is local-only. The footprint hugs the picked surface and is deliberately absent from env,
+   colliders and hunter vision; the screen cursor lives directly under body, not either of the two HUD ancestors. */
+const BrushPreview = (() => {
+  const group = new THREE.Group(); scene.add(group); group.visible = false;
+  const mat = (color, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false, depthTest: false });
+  const outline = new THREE.Mesh(new THREE.RingGeometry(0.91, 1.11, 64), mat(0x071017, 0.9));
+  const white = new THREE.Mesh(new THREE.RingGeometry(0.96, 1.04, 64), mat(0xffffff));
+  const color = new THREE.Mesh(new THREE.RingGeometry(0.86, 0.94, 64), mat(0xffffff, 0.95));
+  const wash = new THREE.Mesh(new THREE.CircleGeometry(0.85, 64), mat(0xffffff, 0.09));
+  for (const m of [wash, outline, white, color]) { m.renderOrder = 990; m.raycast = () => {}; group.add(m); }
+  const cursor = document.createElement('div'); cursor.id = 'paintCursor'; cursor.hidden = true;
+  cursor.innerHTML = '<i></i><b></b><span></span>'; document.body.appendChild(cursor);
+  const normal = new V3(), zaxis = new V3(0, 0, 1), normalMatrix = new THREE.Matrix3(), instanceMatrix = new THREE.Matrix4(), worldMatrix = new THREE.Matrix4();
+  let mode = '', lastColor = '', lastLabel = '';
+  const hide = () => { group.visible = false; cursor.hidden = true; document.body.classList.remove('paint-aim'); };
+  function update() {
+    const P = G.my;
+    if (!G.paint || !P || P.caught || !active() || G.paused || mouse.right || !mouse.onCanvas || UI.wheelOpen || UI.panelOpen) { hide(); return; }
+    const tool = UI.curTool;
+    const element = document.elementFromPoint(mouse.x, mouse.y);
+    if (element !== renderer.domElement) { hide(); return; }
+    cursor.hidden = false; document.body.classList.add('paint-aim');
+    cursor.style.left = mouse.x + 'px'; cursor.style.top = mouse.y + 'px';
+    if (lastColor !== UI.color) { lastColor = UI.color; cursor.style.setProperty('--paint-color', UI.color); color.material.color.set(UI.color); wash.material.color.set(UI.color); }
+    P.rebake(); P.root.updateMatrixWorld(true);
+    rcPaint.setFromCamera(evNdc(mouse.x, mouse.y), camera);
+    const body = rcPaint.intersectObject(P.mesh, false)[0];
+    const world = rcPaint.intersectObjects(env, false)[0];
+    // Don't preview skin through a foreground wall/table. Sampling always refers to world albedo, not the body.
+    const hit = tool === 'picker' ? world : body && (!world || body.distance <= world.distance + 0.015) ? body : world;
+    const onSkin = hit && hit.object === P.mesh;
+    const blocked = tool === 'mimic' && G.phase !== 'hub' && G.ink <= 0;
+    const nextMode = tool + (onSkin ? ' skin' : ' surface') + (blocked ? ' empty' : '');
+    if (nextMode !== mode) { mode = nextMode; cursor.className = nextMode; }
+    let px = tool === 'mimic' ? 6 + UI.brush * 1.4 : 10;
+    group.visible = !!hit && !blocked && tool !== 'fill';
+    if (hit && group.visible) {
+      const dist = camera.position.distanceTo(hit.point);
+      const radius = tool === 'mimic' ? px * 2 * Math.tan(camera.fov * Math.PI / 360) * dist / innerHeight : Math.max(0.002, UI.brush / 118);
+      let hitMatrix = hit.object.matrixWorld;
+      if (hit.object.isInstancedMesh && hit.instanceId != null) { hit.object.getMatrixAt(hit.instanceId, instanceMatrix); hitMatrix = worldMatrix.multiplyMatrices(hit.object.matrixWorld, instanceMatrix); }
+      normal.copy(hit.face.normal).applyNormalMatrix(normalMatrix.getNormalMatrix(hitMatrix));
+      if (normal.dot(rcPaint.ray.direction) > 0) normal.negate();
+      group.position.copy(hit.point).addScaledVector(normal, 0.003);
+      group.quaternion.setFromUnitVectors(zaxis, normal);
+      group.scale.setScalar(radius);
+      if (tool !== 'mimic') px = clamp(radius * innerHeight / (2 * Math.tan(camera.fov * Math.PI / 360) * dist), 5, 150);
+      // Gray dashed world preview means "sample this surface", not that the room itself will be painted.
+      color.material.opacity = onSkin ? 1 : 0.5; wash.material.opacity = onSkin ? 0.11 : 0.025;
+    }
+    cursor.style.setProperty('--paint-radius', px + 'px');
+    const label = blocked ? 'NO MIMIC INK' : tool === 'picker' ? 'SAMPLE SURFACE' : tool === 'fill' ? 'FILL BODY' : tool === 'mimic' ? 'MIMIC · ' + UI.brush : onSkin ? 'BRUSH · ' + UI.brush : 'AIM AT YOUR BODY';
+    if (label !== lastLabel) { lastLabel = label; cursor.lastElementChild.textContent = label; }
+  }
+  return { update, hide, group, cursor };
+})();
+renderer.domElement.addEventListener('pointerleave', () => { mouse.onCanvas = false; BrushPreview.hide(); });
+renderer.domElement.addEventListener('pointerenter', (e) => { mouse.onCanvas = true; mouse.x = e.clientX; mouse.y = e.clientY; });
+addEventListener('blur', () => { mouse.down = mouse.right = false; mouse.lastPaint = null; mouse.onCanvas = false; BrushPreview.hide(); });
 
 /* ---------- painting ---------- */
 const rcPaint = new THREE.Raycaster(), ndcV = new THREE.Vector2();
@@ -1603,6 +1788,7 @@ function pickColor(e) {
 }
 function paintAt(e, first) {
   const P = G.my; if (!P) return;
+  if (!first && e.target && e.target !== renderer.domElement) { mouse.lastPaint = null; return; }
   if (UI.curTool !== 'brush' && UI.curTool !== 'mimic') { mouse.lastPaint = null; return; }
   // Breathing/pose blending changes the visible skin after the last pose bake.
   P.rebake(); P.root.updateMatrixWorld(true);
@@ -1615,6 +1801,8 @@ function paintAt(e, first) {
       const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * rpx;
       rcPaint.setFromCamera(evNdc(e.clientX + Math.cos(a) * r, e.clientY + Math.sin(a) * r), camera);
       const h1 = rcPaint.intersectObject(P.mesh, false)[0]; if (!h1) continue;
+      const front = envHit(rcPaint.ray.origin, rcPaint.ray.direction, h1.distance);
+      if (front && front.distance < h1.distance - 0.015) continue;
       const h2 = envHit(h1.point.clone().addScaledVector(rcPaint.ray.direction, 0.01), rcPaint.ray.direction, 40); if (!h2) continue;
       P.paintDot(h1.uv, surfaceColor(h2), 2.4 + size * 0.12, h1);
       if (G.phase !== 'hub') G.ink = Math.max(0, G.ink - 0.012);
@@ -1629,7 +1817,8 @@ function paintAt(e, first) {
   for (let i = 1; i <= steps; i++) {
     rcPaint.setFromCamera(evNdc(e.clientX - dx * (1 - i / steps), e.clientY - dy * (1 - i / steps)), camera);
     const h = rcPaint.intersectObject(P.mesh, false)[0];
-    if (h) P.paintDot(h.uv, UI.color, size, h);
+    const front = h && envHit(rcPaint.ray.origin, rcPaint.ray.direction, h.distance);
+    if (h && (!front || front.distance >= h.distance - 0.015)) P.paintDot(h.uv, UI.color, size, h);
   }
   mouse.lastPaint = { x: e.clientX, y: e.clientY };
   P.flush();
@@ -1641,7 +1830,7 @@ function togglePaint() {
   if (G.paint) { G.my.setPose(G.my.pose === 'stand' || POSES[G.my.pose].move ? G.my.pose : G.my.pose); G.my.emote = null; G.my.rebake(); }
   UI.paintPanel(G.paint); UI.wheel(false);
   if (G.paint) { G.paintCam.yaw = G.ctrl.yaw; G.paintCam.pitch = 0.15; G.paintCam.dist = 1.7; if (document.pointerLockElement) document.exitPointerLock(); }
-  else G.lock();
+  else { G.ctrl.yaw = G.paintCam.yaw; G.ctrl.pitch = clamp(G.paintCam.pitch, -0.45, 1.25); CAM.ok = false; G.lock(); }
 }
 
 /* ---------- hunter bonk ---------- */
@@ -1693,10 +1882,12 @@ function updateMyCham(dt) {
       const sp = 3.4 * (sprint ? 1.65 : 1) * (POSES[P.pose].speed || 1) * (P.size === 'petite' ? 0.85 : 1);
       stepNoise(P, dt, sprint, P.root.position);
       moveBody(P.body, vx * sp * dt, vz * sp * dt);
+      P.turnGoal = null;
       P.setYaw(P.yaw + angDiff(P.yaw, Math.atan2(vx, vz)) * Math.min(1, dt * 12));
     }
     if (keys.Space && P.body.onGround && POSES[P.pose].move) { P.body.vy = 6.1; P.body.onGround = false; Sound.jump(); }
   }
+  if (!moving) updateTurn(P, dt);
   const wasMoving = P.wasMoving; P.wasMoving = moving;
   if (wasMoving && !moving) P.rebake();
   if (!moving) P.sprinting = false;
@@ -1752,19 +1943,31 @@ function updateFP(dt) {
   if (swingT > 0) swingT -= dt;
   const s = swingT > 0 ? Math.sin((1 - swingT / 0.32) * Math.PI) : 0;
   const bob = (mx || mz) && f.onGround ? Math.sin(G.t * 10) * 0.015 : 0;
-  toolVM.rotation.set(0.4 - s * 1.5, 0, -0.3); toolVM.position.set(0.34, -0.5 + bob, -0.6 - s * 0.1);
+  toolVM.rotation.set(0.4 - s * 1.5, 0, -0.3); toolVM.position.set(0.34, -0.5 + bob, -0.75 - s * 0.1);
   if (G.myHunter) { G.myHunter.pos.copy(f.pos); G.myHunter.yaw = f.yaw + Math.PI; G.myHunter.sync(); }
   rcBonk.setFromCamera(new THREE.Vector2(0, 0), camera); rcBonk.far = 3.3;
   UI.crossHot(!!rcBonk.intersectObjects([...env, ...G.targets().map((c) => c.mesh)], false)[0]);
 }
 const camTarget = new V3();
+/* Follow camera. The old version lerped the camera POSITION toward the orbit point, so every mouse turn lagged ~70 ms
+   and cut a chord through the orbit (camera swung in toward the body while turning). Now the orbit angle follows the
+   mouse exactly; only the pivot (body motion) and the wall-collision distance are smoothed. */
+const CAM = { pivot: new V3(), ok: false, dist: null, dir: new V3() };
+function camWallDist(h, dist) {
+  if (!h) return dist;
+  const margin = lerp(0.12, 0.25, clamp((h.distance - 0.4) / 0.6, 0, 1));
+  return Math.max(0.08, Math.min(dist, h.distance - margin));
+}
 function thirdCam(target, yaw, pitch, dist, dt, snap) {
-  const dir = new V3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-  const h = envHit(target, dir, dist + 0.3);
-  const d = h ? (h.distance < 0.7 ? Math.max(0.08, h.distance - 0.12) : Math.max(0.4, h.distance - 0.25)) : dist;
-  const want = target.clone().addScaledVector(dir, d);
-  if (snap) camera.position.copy(want); else camera.position.lerp(want, Math.min(1, dt * 14));
-  camera.lookAt(target);
+  const pv = CAM.pivot;
+  if (snap || !CAM.ok || pv.distanceToSquared(target) > 9) pv.copy(target); else pv.lerp(target, 1 - Math.exp(-dt * 20));
+  CAM.ok = true;
+  const dir = CAM.dir.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+  const want = camWallDist(envHit(pv, dir, dist + 0.3), dist);
+  // A wall cutting in pulls the camera in at once (never look through it); opening space eases back out.
+  CAM.dist = snap || CAM.dist == null || want < CAM.dist ? want : CAM.dist + (want - CAM.dist) * (1 - Math.exp(-dt * 7));
+  camera.position.copy(pv).addScaledVector(dir, CAM.dist);
+  camera.lookAt(pv);
 }
 function updateCamera(dt) {
   if (G.view === 'first') return;
@@ -1827,7 +2030,15 @@ function startBolt(c, threat = null) {
   const path = route(keep.x, keep.z, spot.x, spot.z);
   if (!path.length) return;
   let from = keep;
-  for (const n of path) { if (!segClear(from.x, from.z, n.x, n.z, walkR, 0)) return; from = n; }
+  for (const n of path) {
+    if (!segClear(from.x, from.z, n.x, n.z, walkR, 0)) return;
+    if (threat) {
+      const dx = n.x - from.x, dz = n.z - from.z, l2 = dx * dx + dz * dz;
+      const u = l2 > 0 ? clamp(((threat.x - from.x) * dx + (threat.z - from.z) * dz) / l2, 0, 1) : 0;
+      if (Math.hypot(from.x + dx * u - threat.x, from.z + dz * u - threat.z) < Math.min(3, Math.hypot(keep.x - threat.x, keep.z - threat.z) - 0.6)) return;
+    }
+    from = n;
+  }
   c.setPose('stand'); c.root.position.y = 0; c.body.vy = 0; c.sprinting = true;
   c.bolt = { path, spot, t: 0 };
 }
@@ -1923,12 +2134,23 @@ function step(dt) {
   advanceSimulation(dt);
   for (const c of G.hiders) c.flush();
   Sound.listener(camera);
+  BrushPreview.update();
   if (renderer.shadowMap.enabled) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
   QUALITY.rendered = (QUALITY.rendered || 0) + 1;
 }
 let last = performance.now();
-function frame(now) { const dt = Math.max(0, (now - last) / 1000); if (dt < 1 / 60 - 0.001) { requestAnimationFrame(frame); return; } last = now; if (G.phase !== 'boot' && G.phase !== 'loading') adaptQuality(dt); step(dt); requestAnimationFrame(frame); }
+/** Frame limiter. The old fixed 60 fps gate skipped vsync frames unevenly on high-refresh screens (240 Hz rendered
+    16.7/20.8 ms frames alternately), which made mouse turning judder. Default is now every display frame; an optional
+    cap keeps a 2 ms margin so vsync jitter never drops a frame that was due. */
+function frameDue(elapsedMs, cap) { return !(cap > 0) || elapsedMs >= 1000 / cap - 2; }
+/** 'auto' (default): every display frame, except 60 fps on GPUs the quality probe rates low (saves weak laptops). */
+function fpsCap() {
+  const v = SETTINGS.fpsCap;
+  if (v == null || v === 'auto') return SETTINGS.quality === 'low' || (SETTINGS.quality === 'auto' && QUALITY.autoLevel === 'low') ? 60 : 0;
+  return +v || 0;
+}
+function frame(now) { const ms = Math.max(0, now - last); if (!frameDue(ms, fpsCap())) { requestAnimationFrame(frame); return; } const dt = ms / 1000; last = now; if (G.phase !== 'boot' && G.phase !== 'loading') adaptQuality(dt); step(dt); requestAnimationFrame(frame); }
 /* When the window is minimised or covered the browser stops animation frames. Keep the game and its networking
    ticking at 10 Hz without rendering so a host who alt-tabs doesn't freeze everyone else's round. */
 setInterval(() => {

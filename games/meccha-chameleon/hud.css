@@ -1,4 +1,18 @@
-/* ================= in-round HUD (v4.2) ================= */
+/* Paint cursor + world-space brush footprint, shared by practice and round HUDs. */
+body.paint-aim canvas { cursor:none; }
+#paintCursor { position:fixed; z-index:10000; pointer-events:none; width:0; height:0; --paint-radius:12px; --paint-color:#fff; }
+#paintCursor[hidden] { display:none; }
+#paintCursor i { position:absolute; left:calc(-1 * var(--paint-radius)); top:calc(-1 * var(--paint-radius)); width:calc(var(--paint-radius) * 2); height:calc(var(--paint-radius) * 2); border:1.5px solid #fff; border-radius:50%; box-shadow:0 0 0 1px #09131cbb, inset 0 0 0 1px #09131c77; }
+#paintCursor b { position:absolute; left:-3px; top:-3px; width:6px; height:6px; border:1px solid #fff; border-radius:50%; background:var(--paint-color); box-shadow:0 1px 3px #000; }
+#paintCursor span { position:absolute; left:16px; top:calc(var(--paint-radius) + 9px); padding:4px 7px; white-space:nowrap; background:#101a26e6; border:1px solid #ffffff30; border-radius:4px; font:600 9px/1.2 var(--font, 'Segoe UI', sans-serif); letter-spacing:.1em; color:#fff; box-shadow:0 2px 8px #0004; }
+#paintCursor.skin i { border-color:var(--paint-color); box-shadow:0 0 0 1px #fff, 0 0 0 2px #09131caa; }
+#paintCursor.surface i { border-style:dashed; opacity:.7; }
+#paintCursor.picker i { width:18px; height:18px; left:-9px; top:-9px; border-radius:4px; transform:rotate(45deg); }
+#paintCursor.fill i { width:22px; height:22px; left:-11px; top:-11px; border-radius:5px; }
+#paintCursor.empty i { border-color:#ff6b80; }
+#paintCursor.empty span { color:#ff9eac; }
+
+/* ================= in-round HUD (v4.4) ================= */
 /* Layout: match bar top-centre, player list top-left, feed top-right, key prompts bottom-centre,
    abilities bottom-right, crosshair + tag charges centre, sound direction arcs round the centre. */
 

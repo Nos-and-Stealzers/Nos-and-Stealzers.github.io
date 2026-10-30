@@ -36,7 +36,7 @@
   "id": "flash-bleach-vs-naruto",
   "title": "Bleach vs Naruto",
   "category": "fighting",
-  "description": "The classic anime fighting game — Bleach vs Naruto. Pick your favorite ninja or soul reaper and brawl it out. Runs right here through Ruffle, self-hosted so it always works.",
+  "description": "The classic anime fighting game — Bleach vs Naruto v2.2 by 5DPLAY. Pick your ninja or soul reaper and brawl. Self-hosted with the complete fighter, assist and music assets; WASD to move and J to select/attack.",
   "gradient": "linear-gradient(135deg, #f97316, #7f1d1d)",
   "source": "games/flash.html?swf=/games/swf/bleach-vs-naruto.swf",
   "direct": "games/flash.html?swf=/games/swf/bleach-vs-naruto.swf",
@@ -48,9 +48,9 @@
  },
  {
   "id": "flash-super-smash-flash-2",
-  "title": "Super Smash Flash 2",
+  "title": "Super Smash Flash 2 (Demo v0.4a)",
   "category": "fighting",
-  "description": "The legendary Smash Bros-style flash brawler with Mario, Sonic, Naruto and dozens more. Knock your rivals off the stage. Self-hosted and playable through Ruffle.",
+  "description": "The standalone Super Smash Flash 2 Demo v0.4a by McLeodGaming. Six fighters, local multiplayer and CPU opponents. Drag player tokens onto portraits, click GO, then choose a stage.",
   "gradient": "linear-gradient(135deg, #2563eb, #0b1e40)",
   "source": "games/flash.html?swf=/games/swf/super-smash-flash-2.swf",
   "direct": "games/flash.html?swf=/games/swf/super-smash-flash-2.swf",
@@ -58,7 +58,8 @@
   "embed": "allowed",
   "schoolRisk": "low",
   "icon": "",
-  "dateAdded": "2026-09-17"
+  "dateAdded": "2026-09-17",
+  "notice": "This is the playable standalone v0.4a demo, not the full beta. The previous beta loader required missing external data files and could not start matches."
  },
  {
   "id": "flash-mario-combat",

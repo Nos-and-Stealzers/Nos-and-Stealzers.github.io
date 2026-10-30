@@ -62,7 +62,6 @@
      enable it exclusively for same-origin targets. */
   var sameOrigin = (function () {
     try {
-      if (!/^https?:\/\//i.test(swf)) return true;   // relative/root-relative = same origin
       return new URL(swf, location.href).origin === location.origin;
     } catch (e) { return false; }
   })();
@@ -92,6 +91,10 @@
          context menu leaking our internals, letterbox so nothing is cropped. */
       player.load({
         url: swf,
+        /* Flash resolves loadMovie/loadSound relative to its embedding page.
+           Our shared player is elsewhere: use the SWF directory so fighter/,
+           music/ and data/ requests stay with their game's assets. */
+        base: new URL(".", new URL(swf, location.href)).href,
         autoplay: "on",
         unmuteOverlay: "visible",
         letterbox: "on",

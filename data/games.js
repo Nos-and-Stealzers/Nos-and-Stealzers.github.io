@@ -2231,48 +2231,6 @@ window.GAME_CATALOG = [
     "host": "games-huge"
   },
   {
-    "id": "eaglercraft-1-8-8",
-    "title": "Eaglercraft 1.8.8",
-    "category": "sandbox",
-    "description": "Minecraft 1.8.8 in the browser. The classic PvP version — worlds, servers and all.",
-    "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
-    "host": "eaglercraft",
-    "source": "1.8.8/index.html",
-    "direct": "1.8.8/index.html",
-    "platform": "local",
-    "embed": "allowed",
-    "schoolRisk": "low",
-    "notice": "Worlds are saved per version and do not carry over. A world made in 1.8.8 will not open in 1.12.2 or 26.1.2 — the world formats differ. Pick a version and stay on it, or back up before switching."
-  },
-  {
-    "id": "eaglercraft-1-12-2",
-    "title": "EaglercraftX 1.12.2",
-    "category": "sandbox",
-    "description": "Minecraft 1.12.2 in the browser, WASM build. Newer blocks, mobs and world generation.",
-    "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
-    "host": "eaglercraft",
-    "source": "1.12.2/index.html",
-    "direct": "1.12.2/index.html",
-    "platform": "local",
-    "embed": "allowed",
-    "schoolRisk": "low",
-    "notice": "Worlds are saved per version and do not carry over. A world made in 1.8.8 will not open in 1.12.2 or 26.1.2 — the world formats differ. Pick a version and stay on it, or back up before switching."
-  },
-  {
-    "id": "eaglercraft-26-1-2",
-    "title": "Eaglercraft 26.1.2",
-    "category": "sandbox",
-    "description": "The newest Eaglercraft build. Latest features, and the least battle-tested of the three.",
-    "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
-    "host": "eaglercraft",
-    "source": "26.1.2/index.html",
-    "direct": "26.1.2/index.html",
-    "platform": "local",
-    "embed": "allowed",
-    "schoolRisk": "low",
-    "notice": "Worlds are saved per version and do not carry over. A world made in 1.8.8 will not open in 1.12.2 or 26.1.2 — the world formats differ. Pick a version and stay on it, or back up before switching."
-  },
-  {
     "id": "waterboy-firegirl",
     "title": "Fireboy and Watergirl",
     "category": "puzzle",

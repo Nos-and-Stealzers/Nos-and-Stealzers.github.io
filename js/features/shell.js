@@ -106,6 +106,7 @@
       { href: "browse.html?sort=played", icon: "◔", label: "Most played" },
       { href: "feedback.html", icon: "✎", label: "Send feedback" },
       { href: "support.html", icon: "?", label: "Help & support" },
+      { href: "patentsmp.html", icon: "⛏", label: "Minecraft server" },
       { href: "about.html", icon: "ⓘ", label: "About the arcade" }
     ].forEach(function (item) {
       if (item.href === here) extras.open = true;

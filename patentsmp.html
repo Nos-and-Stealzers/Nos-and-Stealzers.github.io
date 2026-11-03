@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="noir" data-lite="off">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PatentSMP Minecraft Server — Arcade Campus Hub</title>
+  <meta name="description" content="Join the PatentSMP Minecraft Java server: address and step-by-step join guide.">
+  <meta name="theme-color" content="#0c0d10">
+  <meta name="robots" content="index,follow">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/core/access-gate.js"></script>
+  <script src="js/core/theme-boot.js"></script>
+  <script src="js/core/consent-gate.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div data-shell="chrome"></div>
+
+  <main class="main" id="main">
+
+    <header class="page-head">
+      <span class="label">Minecraft</span>
+      <h1>PatentSMP</h1>
+      <p>Our Java survival server: recipe patents, a player economy, ranks, auctions and custom
+         powers. Join it with the normal Java Edition client.</p>
+    </header>
+
+    <section class="block">
+      <div class="block-head"><h2>Server address</h2><span class="fill"></span></div>
+      <div class="panel">
+        <p style="margin:0 0 0.6rem"><code id="addr">practically-homer.tun.ply.gg</code></p>
+        <div class="btn-row">
+          <button class="btn btn-cta" type="button" id="copy-addr">⧉ Copy address</button>
+        </div>
+        <p class="dim" id="copy-status" role="status" style="margin:0.6rem 0 0"></p>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>How to join</h2><span class="fill"></span></div>
+      <div class="panel">
+        <ol style="margin:0;padding-left:1.2rem;line-height:1.7">
+          <li>Open Minecraft Java Edition (any launcher) on version <strong>1.8.8 up to the latest</strong>.</li>
+          <li>Go to Multiplayer, then Add Server, and paste the address above.</li>
+          <li>Join. You land in a locked lobby until you sign in.</li>
+          <li>First time: type <code>/register &lt;password&gt; &lt;password&gt;</code>. Every visit after that: <code>/login &lt;password&gt;</code>.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Good to know</h2><span class="fill"></span></div>
+      <div class="panel">
+        <ul style="margin:0;padding-left:1.2rem;line-height:1.7">
+          <li>Cracked launchers are allowed. The password protects your name, so pick one you do not use elsewhere.</li>
+          <li>1.8 clients cannot see the custom models and some effects, and they use the newer combat timing. Use a recent version for the full experience.</li>
+          <li>The server is hosted on a home PC, so it is sometimes offline. If you cannot connect, try again later.</li>
+          <li>Browser Eaglercraft is not supported. It was removed from the hub after a takedown.</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/core/config.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/features/catalog-overlay.js"></script>
+  <script src="js/features/catalog.js"></script>
+  <script src="js/features/art.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/api-supabase.js"></script>
+  <script src="js/core/session.js"></script>
+  <script src="js/core/realtime.js"></script>
+  <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
+  <script src="js/features/chat-core.js"></script>
+  <script src="js/features/chat-dock.js"></script>
+  <script src="js/features/call.js"></script>
+  <script src="js/features/game-saves.js"></script>
+  <script src="js/features/shell.js"></script>
+  <script src="js/features/motion-fx.js"></script>
+  <script src="js/features/context-menu.js"></script>
+  <script src="js/pages/page-patentsmp.js"></script>
+</body>
+</html>

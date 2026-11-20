@@ -17,7 +17,8 @@ const REPOS = [
   ["arcadecampushub", "games-huge"],
   ["arcadecampushub", "flashgames"],
   ["arcadecampushub", "hd_fnaf"],
-  ["arcadecampushub", "eaglercraft"]
+  ["arcadecampushub", "eaglercraft"],
+  ["arcadecampushub", "Minecraft"]
 ];
 
 const TOK = execSync("git credential fill", {

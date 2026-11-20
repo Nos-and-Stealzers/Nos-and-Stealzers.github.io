@@ -553,7 +553,7 @@
   ],
   "redirects": [
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -564,7 +564,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -575,7 +575,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -586,7 +586,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -597,7 +597,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -608,7 +608,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -619,7 +619,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -630,7 +630,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -641,7 +641,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -652,7 +652,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -663,7 +663,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -674,7 +674,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -685,7 +685,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -696,7 +696,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -707,7 +707,7 @@
       "permanent": false
     },
     {
-      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
+      "source": "/((?!(?:_mods|sonic-hedgehog-game|games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
@@ -870,7 +870,7 @@
       "destination": "/js/features/game-cheats.js"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -880,7 +880,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -890,7 +890,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -900,7 +900,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -910,7 +910,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -920,7 +920,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -930,7 +930,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -940,7 +940,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -950,7 +950,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -960,7 +960,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -970,7 +970,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -980,7 +980,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -990,7 +990,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -1000,7 +1000,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -1010,7 +1010,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -1020,7 +1020,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/:path"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1030,7 +1030,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1040,7 +1040,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1050,7 +1050,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1060,7 +1060,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1070,7 +1070,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1080,7 +1080,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1090,7 +1090,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1100,7 +1100,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1110,7 +1110,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1120,7 +1120,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1130,7 +1130,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1140,7 +1140,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1150,7 +1150,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",
@@ -1160,7 +1160,7 @@
       "destination": "https://arcadecampushub.github.io/:repo/"
     },
     {
-      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
+      "source": "/:repo(games-huge|flashgames|hd_fnaf|eaglercraft|Minecraft|RetroBow|Waterboy-Firegirl|extgames|polytrack)",
       "has": [
         {
           "type": "host",

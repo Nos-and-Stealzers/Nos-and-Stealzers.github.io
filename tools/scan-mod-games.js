@@ -59,7 +59,7 @@ const SPECIAL = {
   "original-idle-miner": "idleminer",
   "original-cookie-empire": "cookieempire"
 };
-const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft" };
+const SPECIAL_HOST = { hd_fnaf: "clickteam", eaglercraft: "minecraft", minecraft: "minecraft" };
 
 /* Checked in a browser: these look like a supported engine from their page
    but expose nothing the menu can use (Construct 3 in worker mode, Phaser

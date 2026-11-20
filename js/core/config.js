@@ -20,7 +20,7 @@
       "games-huge": "https://arcadecampushub.github.io/games-huge",
       "flashgames": "https://arcadecampushub.github.io/flashgames",
       "hd_fnaf":    "https://arcadecampushub.github.io/hd_fnaf",
-      "eaglercraft": "https://arcadecampushub.github.io/eaglercraft",
+      "minecraft": "https://arcadecampushub.github.io/Minecraft",
       "retrobowl":  "https://arcadecampushub.github.io/RetroBow",
       "waterboy-firegirl": "https://arcadecampushub.github.io/Waterboy-Firegirl",
       "extgames": "https://arcadecampushub.github.io/extgames",

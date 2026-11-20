@@ -9,6 +9,7 @@ window.MOD_GAMES = {
   "burning-man-2": "unity",
   "chromaincident": "values",
   "dino": "dino",
+  "eaglercraft-1-8-8": "minecraft",
   "ext-2048-gd4ark": "values",
   "ext-elematter": "values",
   "ext-js-tetris": "values",

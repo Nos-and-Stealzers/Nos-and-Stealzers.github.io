@@ -1717,11 +1717,19 @@
         .then(function () { return { ok: true }; });
     },
 
-    /* Site-wide banner, admin+ only. One row is live at a time. */
-    adminSetAnnouncement: function (body, severity, ttlHours) {
+    /* Site-wide announcement card, admin+ only. One row is live at a time.
+       ann: { title?, body, variant?, linkUrl?, linkLabel?, startsAt?, endsAt? }
+       — dates are ISO strings; endsAt null means "until cleared". */
+    adminSetAnnouncement: function (ann) {
+      ann = ann || {};
       return rpc("admin_set_announcement", {
-        body_text: body, severity_level: severity || "info",
-        ttl_hours: ttlHours || null
+        p_title: ann.title || null,
+        p_body: ann.body,
+        p_variant: ann.variant || "info",
+        p_link_url: ann.linkUrl || null,
+        p_link_label: ann.linkLabel || null,
+        p_starts_at: ann.startsAt || null,
+        p_ends_at: ann.endsAt || null
       });
     },
     adminClearAnnouncement: function () {

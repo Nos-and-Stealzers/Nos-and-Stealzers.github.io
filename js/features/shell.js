@@ -802,7 +802,21 @@
   /* One global banner an admin/owner can post from the admin panel. Checked
      once per page load; not polled, so it can lag behind a same-session
      post until the next navigation — acceptable for something meant to be
-     read, not real-time. */
+     read, not real-time. Rendered as a card: optional title, a style chip
+     (info / event / maintenance / win — old banners keep their severity
+     colors) and an optional link button. Colours come from the skin tokens,
+     so the card matches whatever theme is active. */
+  var ANN_VARIANTS = {
+    info:        { label: "Info",        chip: "var(--accent)",   ink: "var(--accent-ink)" },
+    event:       { label: "Event",       chip: "var(--good)",     ink: "var(--paper)" },
+    maintenance: { label: "Maintenance", chip: "var(--warn)",     ink: "var(--paper)" },
+    win:         { label: "Win",         chip: "var(--accent-2)", ink: "var(--accent-ink)" },
+    /* Pre-redesign severities, kept so banners posted before the update
+       still read correctly until they expire or are replaced. */
+    warning:     { label: "Warning",     chip: "var(--warn)",     ink: "var(--paper)" },
+    critical:    { label: "Critical",    chip: "var(--bad)",      ink: "#fff" }
+  };
+
   function buildAnnouncementBanner() {
     if (!window.API || !window.API.currentAnnouncement) return;
     window.API.currentAnnouncement().then(function (a) {
@@ -812,10 +826,53 @@
       var key = "ach:announce-dismissed";
       var sig = String(a.id || "") + ":" + String(a.body).length + ":" + String(a.body).slice(0, 40);
       try { if (window.localStorage.getItem(key) === sig) return; } catch (e) { /* private mode */ }
-      var bar = el("div", "site-announce site-announce-" + (a.severity || "info"));
+
+      var v = ANN_VARIANTS[String(a.variant || "").toLowerCase()] ||
+              ANN_VARIANTS[String(a.severity || "").toLowerCase()] || ANN_VARIANTS.info;
+
+      /* .site-announce still owns placement (sticky/fixed, rail offset);
+         everything visual is a token-variable override so it looks like a
+         card in every skin instead of a full-width colour bar. */
+      var bar = el("div", "site-announce");
       bar.setAttribute("role", "status");
-      var text = el("span", null, a.body);
+      bar.style.cssText =
+        "background:var(--surface);color:var(--ink);border:1px solid var(--line);" +
+        "border-radius:var(--r);box-shadow:0 12px 32px rgba(0,0,0,0.28);" +
+        "margin:0.6rem 1rem 0 calc(var(--rail) + 1rem);padding:0.75rem 1rem;" +
+        "max-width:680px;font-size:0.85rem;line-height:1.45";
+      /* Phones: .site-announce switches to position:fixed across the width —
+         drop the rail margin there and let the media query breathe. */
+      if (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) {
+        bar.style.margin = "0.5rem 0.75rem 0";
+        bar.style.maxWidth = "none";
+      }
+
+      var chip = el("span", "ann-chip", v.label);
+      chip.style.cssText = "flex:none;background:" + v.chip + ";color:" + v.ink +
+        ";font-size:0.66rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;" +
+        "padding:0.24rem 0.6rem;border-radius:999px;white-space:nowrap;align-self:center";
+      bar.appendChild(chip);
+
+      var text = el("span", "ann-text");
+      text.style.cssText = "flex:1;min-width:0";
+      if (a.title) {
+        var t = el("strong", null, String(a.title));
+        t.style.display = "block";
+        t.style.marginBottom = "0.12rem";
+        text.appendChild(t);
+      }
+      text.appendChild(document.createTextNode(a.body));
       bar.appendChild(text);
+
+      if (a.linkUrl && /^https?:\/\//i.test(String(a.linkUrl))) {
+        var link = el("a", "btn btn-sm btn-cta", String(a.linkLabel || "Open"));
+        link.href = String(a.linkUrl);
+        link.rel = "noopener";
+        link.style.flex = "none";
+        link.style.alignSelf = "center";
+        bar.appendChild(link);
+      }
+
       var close = el("button", "site-announce-close", "×");
       close.type = "button";
       close.setAttribute("aria-label", "Dismiss");

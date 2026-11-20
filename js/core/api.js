@@ -242,8 +242,11 @@
     },
     adminListNotes: function (id) { return request("GET", "/admin/users/" + id + "/notes"); },
     adminDeleteNote: function (noteId) { return request("DELETE", "/admin/notes/" + noteId); },
-    adminSetAnnouncement: function (body, severity, ttlHours) {
-      return request("POST", "/admin/announcement", { body: body, severity: severity, ttlHours: ttlHours });
+    /* Legacy node transport (unused while backend === "supabase"). Kept in
+       step with the Supabase client: the whole announcement object, so the
+       shape matches whatever the server implements. */
+    adminSetAnnouncement: function (ann) {
+      return request("POST", "/admin/announcement", ann || {});
     },
     adminClearAnnouncement: function () { return request("DELETE", "/admin/announcement"); },
     currentAnnouncement: function () { return request("GET", "/announcement"); },

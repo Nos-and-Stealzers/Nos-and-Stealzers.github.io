@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Manual — Arcade Campus Hub</title>
-  <meta name="description" content="How the hub works, what the compatibility flags mean, what stays on your device, and how to add a title to the catalog.">
+  <title>About — Arcade Campus Hub</title>
+  <meta name="description" content="Arcade Campus Hub is a free browser arcade: hundreds of games, Minecraft in your browser, the PatentSMP server, and optional accounts with cloud saves. No downloads, no installs.">
   <meta name="theme-color" content="#0c0d10">
   <meta name="robots" content="index,follow">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
@@ -22,209 +22,100 @@
   <main class="main" id="main">
 
     <header class="page-head">
-      <span class="label">Manual</span>
-      <h1>How this thing works</h1>
+      <span class="label">About</span>
+      <h1>A free arcade that runs in your browser</h1>
       <div class="readout">
         <span>titles <b id="n-games">—</b></span>
         <span>categories <b id="n-cats">—</b></span>
-        <span>backend <b>Supabase</b></span>
+        <span>accounts <b>optional</b></span>
         <span>trackers <b>none</b></span>
       </div>
     </header>
 
     <div class="prose">
 
-      <h2>The build</h2>
+      <h2>What is this place?</h2>
       <p>
-        Static HTML, CSS and plain JavaScript on the front. No framework, no bundler. The catalog
-        lives in <code>data/games.json</code> — mirrored as <code>data/games.js</code> so it also
-        works straight off a filesystem — and every page reads from that one list.
+        Arcade Campus Hub is a collection of games you can play straight in your browser.
+        No downloads, no installs, no launcher — you click a game and it plays. Everything
+        runs on ordinary websites, so it works on laptops, Chromebooks and most school or
+        work networks where game sites usually don't.
       </p>
       <p>
-        Accounts, friends, messages and cloud saves run on Supabase (hosted Postgres + Auth),
-        talked to straight from the browser. Signed out, everything still works and stays in
-        this browser.
-      </p>
-      <p>
-        Cover art is real where a game ships its own icon, and generated from the title's id
-        where it doesn't — a deterministic geometric plate, so no two entries look alike and
-        there are no placeholder images to ship.
-      </p>
-      <p>
-        There are no webfonts either. Everything uses the fonts already on your machine, which
-        means nothing breaks when a network blocks font CDNs.
+        It's made to be simple: browse the index, pick something that looks fun, play.
+        Your favourites, recent games and playtime are remembered on your device automatically.
       </p>
 
-      <h2>Compatibility flags</h2>
+      <h2>What's on offer</h2>
       <ul>
-        <li><span class="flag flag-good">Stable</span> — tested, loads reliably on a typical restricted network.</li>
-        <li><span class="flag flag-warn">Patchy</span> — works, but some filters interfere.</li>
-        <li><span class="flag flag-bad">Blocked often</span> — expect trouble.</li>
-        <li><span class="flag">Untested</span> — no data yet.</li>
-      </ul>
-      <p>
-        Separately, each title says whether it <b>plays in page</b> or <b>opens a new tab</b>.
-        Some games refuse to be framed; those get a one-click launch instead, and the player tells
-        you which you're getting before you click.
-      </p>
-      <p class="dimmer tiny">
-        Flags describe reliability, not permission. Follow whatever rules apply where you are.
-      </p>
-
-      <h2>Accounts (optional)</h2>
-      <p>
-        You never need one. Browsing, playing, pinning and playtime all work signed out, exactly
-        as they always have. An account adds three things: your save follows you to other devices,
-        you get friends, and you get direct messages.
-      </p>
-      <ul>
-        <li>Signing up <b>adopts whatever you already played here</b> — nothing is lost.</li>
-        <li>Two devices merge rather than overwrite: the higher playtime and the union of your
-            pins always win, so signing in somewhere new can't wipe your progress.</li>
-        <li>A real email is required to sign up, used only to confirm your account and
-            for password recovery — <b>never shown to other users</b>.</li>
-        <li>The first account created on a fresh install becomes the administrator.</li>
-        <li>Passwords are stored as salted scrypt hashes, never in plain text.</li>
-        <li>If the hub's server isn't running, account features simply disappear and the
-            arcade carries on.</li>
+        <li><b>A big games index</b> — arcade, action, racing, puzzle, sports and more, sorted
+            into categories with a search box and a random-pick button.</li>
+        <li><b>Minecraft in your browser</b> — three versions, no account or download needed:
+            a light 1.8.8 build that runs on anything, a newer 26.1.2 build with modern blocks
+            (bigger first download, cached after that), and Minecraft Classic.</li>
+        <li><b>PatentSMP</b> — our own Minecraft server. In the browser versions it's already
+            in the multiplayer list, so joining is one click. Playing from real Minecraft
+            (Java Edition, 1.8.8 to latest) works too — the address is on the
+            <a href="minecraft.html">Minecraft page</a>.</li>
+        <li><b>Optional accounts</b> — sign up to keep your progress in the cloud, add friends,
+            chat, and voice or video call while you play.</li>
       </ul>
 
-      <h2>What's stored</h2>
+      <h2>Who it's for</h2>
       <p>
-        There are no analytics and no ad trackers. Pins, history, ratings, playtime and your skin
-        choice sit in this browser's <code>localStorage</code> under the <code>ach:</code> prefix.
-        Signed in, everything except your skin also syncs to the hub's own server — nowhere else.
+        Anyone who wants a quick game without installing anything — students on a locked-down
+        laptop, people on a break at work, or anyone who just likes browser games. Some games
+        run better than others depending on your network; the index marks each title with a
+        small reliability flag so you know what to expect before you click.
       </p>
+
+      <h2>Getting started</h2>
       <ul>
-        <li>Signed out: clearing site data, private browsing, or a different device resets it all.</li>
-        <li>Signed in: one session cookie, <code>HttpOnly</code> and <code>SameSite=Lax</code>.
-            It identifies your session and nothing more.</li>
-        <li><b>Settings → Export</b> writes a JSON backup; <b>Import</b> restores it elsewhere.</li>
-        <li><b>Account settings → Delete</b> erases your profile, friendships, messages and
-            synced save for good.</li>
-        <li>Individual games load their own assets; what they do is up to them.</li>
+        <li><b>1.</b> Open the <a href="browse.html">index</a> and pick a game — that's really it.
+            Most titles launch instantly.</li>
+        <li><b>2.</b> Want your progress to follow you? Create a free account. Signing up
+            adopts everything you've already played on that device, so nothing resets.</li>
+        <li><b>3.</b> Playing Minecraft? Head to the <a href="minecraft.html">Minecraft page</a>
+            and pick a version — PatentSMP is already wired in.</li>
       </ul>
 
-      <h2>Friends and messages</h2>
+      <h2>Accounts and saves</h2>
+      <p>
+        You never need an account to play. But if you move between devices — or a friend
+        borrows a different computer — an account keeps your game progress safe in the cloud
+        and brings it back wherever you sign in. Two devices always merge instead of
+        overwriting, so signing in somewhere new can't wipe your progress.
+      </p>
+      <p>
+        Your email is only used to confirm your account and recover your password — it's
+        never shown to other players. You can export your data as a file, or delete your
+        account entirely, any time from Settings.
+      </p>
+
+      <h2>FAQ</h2>
       <ul>
-        <li>Add people by <b>@username</b> or by <b>friend code</b> — a six-character handle like
-            <code>ABC-123</code> you can share without giving out your username. One box takes
-            either. Rotate it any time from the Friends page and the old one stops working.</li>
-        <li>Friend requests go one way until accepted; either side can remove the link later.</li>
-        <li><b>Groups</b> hold up to 25 people and are friends-only, so they can't be used to get
-            around someone's message settings. The owner can rename, add and remove; anyone can
-            leave, and ownership passes on rather than leaving a group headless.</li>
-        <li>The <b>chat dock</b> sits bottom-right on every page, including while a game is
-            running, so you can reply without leaving what you're doing.</li>
-        <li>Blocking hides you from that person's search and profile view, and stops their messages.</li>
-        <li>You can restrict messages to friends only in <b>Settings → Privacy</b>.</li>
-        <li>Activity on your profile is opt-out and only ever visible to friends.</li>
-        <li>Report anything from a profile or conversation; it lands in the moderation queue.</li>
-        <li>Messages are stored in plain text on the hub's server. Moderators can remove them.
-            Treat it as a school notice board, not a private channel.</li>
+        <li><b>Is it free?</b> — Yes. Every game on the index is free to play, and accounts
+            cost nothing too.</li>
+        <li><b>Do I need to install anything?</b> — No. Everything runs in the browser,
+            including Minecraft.</li>
+        <li><b>Will my progress survive?</b> — On your device, always. In the cloud, if you
+            make an account. Progress from before you signed up is adopted, not lost.</li>
+        <li><b>Is Minecraft really playable here?</b> — Yes, three versions run in the
+            browser, and they can all join our PatentSMP server with one click.</li>
+        <li><b>Does it work on a Chromebook?</b> — Yes, that's half the point. On weaker
+            machines pick the light 1.8.8 Minecraft build.</li>
+        <li><b>Something's broken or unfair — who do I tell?</b> — Every profile and
+            conversation has a report button, and there's a feedback form in the sidebar.
+            Reports are read by a person, not a bot.</li>
+        <li><b>Do you track me?</b> — No analytics, no ad trackers, no third-party cookies.
+            Your settings live in this browser; your game saves live with your account.</li>
       </ul>
 
-      <h2>Images in chat</h2>
-      <p>
-        You can share a <b>screenshot</b>, take a <b>photo</b> with your camera, or attach an
-        image from disk. Everything is downscaled and re-encoded in your browser before it is
-        sent, so a huge PNG becomes a reasonable JPEG rather than being rejected.
-      </p>
-      <ul>
-        <li>Images are private to the conversation they were posted in — the server checks
-            membership on every fetch, so a link alone is not enough.</li>
-        <li>Deleting the message destroys the image with it.</li>
-        <li>Screenshots go through the browser's own screen-share picker. A page cannot silently
-            screenshot itself, and a game running in a frame from another site can never be read
-            into a canvas — so you choose what to share, every time.</li>
-        <li>The camera needs HTTPS and your explicit permission. Nothing is captured until you
-            press the shutter, and the stream is stopped the moment the dialog closes.</li>
-      </ul>
-
-      <h2>Calling</h2>
-      <p>
-        You can ring a friend for <b>voice</b>, <b>video</b> or a <b>shared screen</b> from their
-        profile, or from the chat dock while a game is running. The audio and video go straight
-        from one browser to the other; the hub's server only passes the few setup messages needed
-        to introduce you. Nothing is recorded and nothing is relayed through us.
-      </p>
-      <ul>
-        <li>One-to-one calls are friends-only. Calling a <b>group</b> rings everyone in that
-            conversation — being in the group is the permission there, so it works even between
-            people who haven't added each other.</li>
-        <li>Group calls fit your whole conversation — up to <b>25 people</b>. Everyone connects
-            to everyone else, so each extra person costs all the others another upload stream;
-            large groups work best when most people are on audio or a good connection, since the
-            site has no relay/forwarding server.</li>
-        <li>Screen sharing goes through the browser's own picker, exactly like screenshots. You
-            choose the window or tab, every time, and the browser shows its own "stop sharing"
-            control that always works.</li>
-        <li>A call belongs to the page that started it, so <b>navigating away ends it</b>.
-            Playing a game doesn't — the game runs in a frame inside the same page, which is the
-            case that matters.</li>
-        <li>Some networks block direct browser-to-browser connections outright. Where that
-            happens the tile says it can't connect rather than sitting there silently.</li>
-      </ul>
-
-      <h2>Support</h2>
-      <p>
-        <b>Feedback</b> is a one-way note — send it and someone reads it. A <b>support ticket</b>
-        is a conversation that stays open until it's sorted, which is what you want for a lost
-        save or a problem with another person. Tickets need an account so there's somewhere to
-        reply to; you can have five open at once, and you can close your own any time.
-      </p>
-
-      <h2>Keys</h2>
-      <ul>
-        <li><kbd>/</kbd> jump to the search box</li>
-        <li><kbd>K</kbd> open the finder</li>
-        <li><kbd>R</kbd> random title</li>
-        <li><kbd>P</kbd> play / reload, on a game page</li>
-        <li><kbd>F</kbd> pin the title you're on</li>
-        <li><kbd>?</kbd> settings</li>
-        <li><kbd>Esc</kbd> close anything open</li>
-        <li><kbd>Ctrl</kbd>+<kbd>L</kbd> the admin console, for staff — a modifier
-            combo so it still reaches you mid-game, where the single-key
-            shortcuts deliberately stand down. Admins can change the letter in
-            Settings; the sidebar always works too.</li>
-      </ul>
-
-      <h2>Adding a title</h2>
-      <p>
-        The owner can add one from the browser: <b>Admin → Games</b> takes a title, a host and a
-        path, and it is live for everyone on their next page load. That layers over the shipped
-        list rather than editing it, so it also lets you repoint a game whose host moved, or hide
-        one, without touching a file. The same screen puts a hidden title back.
-      </p>
-      <p>
-        For a bulk change, or anything you want in version control, append an object to
-        <code>data/games.json</code> and regenerate the derived files:
-      </p>
-      <pre><code>{
-  "id": "my-game",
-  "title": "My Game",
-  "category": "arcade",
-  "description": "One line about it.",
-  "gradient": "linear-gradient(135deg, #ff5c33, #7c2d12)",
-  "source": "/games/my-game/index.html",
-  "direct": "/games/my-game/index.html",
-  "platform": "local",
-  "embed": "allowed",
-  "schoolRisk": "low"
-}</code></pre>
-      <p class="tiny dimmer">
-        <code>embed</code> is <code>"allowed"</code>/<code>true</code> for in-page play or
-        <code>false</code> to force a new tab. <code>preferDirect: true</code> skips the player even
-        when framing works. <code>schoolRisk</code> is <code>low</code> | <code>medium</code> |
-        <code>high</code>. <code>gradient</code> seeds the generated cover. Unknown categories fall
-        back to <b>Other</b>. Where the game files are served from is set once in
-        <code>js/config.js</code> via <code>gameBase</code>.
-      </p>
-
-      <h2>Disclaimer</h2>
+      <h2>The short version</h2>
       <p class="dim">
-        Hobby build. Games are third-party works owned by their creators and are provided as-is;
-        how and where you use this is on you.
+        Free browser games, Minecraft included, with a server of our own on the side.
+        Make an account if you want your progress everywhere — or don't, and just play.
+        Games are third-party works owned by their creators and provided as-is.
       </p>
 
       <p style="margin-top:2rem">

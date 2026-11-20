@@ -364,16 +364,39 @@
             host.appendChild(UI.el("p", "tiny dimmer", "Nothing live right now."));
             return;
           }
+          var VARIANTS = {
+            info: "Info", event: "Event", maintenance: "Maintenance", win: "Win",
+            warning: "Warning", critical: "Critical"
+          };
           var row = UI.el("div", "row");
           row.style.display = "block";
           row.style.padding = "0.5rem 0.6rem";
-          var tag = UI.el("span", "tiny dimmer",
-            a.severity.toUpperCase() + " · " + UI.formatWhen(new Date(a.createdAt).getTime()));
+          var bits = [VARIANTS[String(a.variant || a.severity || "info").toLowerCase()] || "Info"];
+          if (a.startsAt && new Date(a.startsAt).getTime() > Date.now()) {
+            bits.push("starts " + UI.formatWhen(new Date(a.startsAt).getTime()));
+          }
+          if (a.expiresAt) {
+            bits.push("ends " + UI.formatWhen(new Date(a.expiresAt).getTime()));
+          }
+          bits.push("posted " + UI.formatWhen(new Date(a.createdAt).getTime()));
+          var tag = UI.el("span", "tiny dimmer", bits.join(" · "));
           row.appendChild(tag);
+          if (a.title) {
+            var head = UI.el("p");
+            head.style.margin = "0.2rem 0 0";
+            head.style.fontWeight = "700";
+            head.textContent = a.title;
+            row.appendChild(head);
+          }
           var text = UI.el("p");
           text.style.margin = "0.2rem 0 0";
           text.textContent = a.body;
           row.appendChild(text);
+          if (a.linkUrl) {
+            var linkTag = UI.el("p", "tiny dimmer", "Links to: " + a.linkUrl);
+            linkTag.style.margin = "0.2rem 0 0";
+            row.appendChild(linkTag);
+          }
           host.appendChild(row);
         }).catch(function (err) {
           host.textContent = "Could not check the current announcement.";
@@ -386,14 +409,51 @@
         annPost.addEventListener("click", function () {
           var body = document.getElementById("ann-body").value.trim();
           if (!body) { UI.toast("Write something first"); return; }
-          var severity = document.getElementById("ann-severity").value;
-          var ttl = document.getElementById("ann-ttl").value;
-          busy(annPost, API.adminSetAnnouncement(body, severity, ttl ? Number(ttl) : null)
-            .then(function () {
-              UI.toast("Announcement posted");
-              document.getElementById("ann-body").value = "";
-              return loadAnnouncement();
-            }));
+
+          /* datetime-local gives wall-clock in the browser's zone; send ISO
+             with the zone attached so the database stores one true instant. */
+          function toIso(value) {
+            if (!value) return null;
+            var d = new Date(value);
+            return isNaN(d.getTime()) ? null : d.toISOString();
+          }
+
+          var startsAt = toIso(document.getElementById("ann-start").value);
+          var endHours = Number(document.getElementById("ann-end").value) || null;
+          var endsAt = null;
+          if (endHours) {
+            var base = startsAt ? new Date(startsAt) : new Date();
+            endsAt = new Date(base.getTime() + endHours * 3600000).toISOString();
+          }
+          if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+            UI.toast("The end time has to come after the start");
+            return;
+          }
+
+          var linkUrl = document.getElementById("ann-link-url").value.trim();
+          if (linkUrl && !/^https?:\/\//i.test(linkUrl)) {
+            UI.toast("The link has to start with https://");
+            return;
+          }
+
+          busy(annPost, API.adminSetAnnouncement({
+            title: document.getElementById("ann-title").value.trim() || null,
+            body: body,
+            variant: document.getElementById("ann-variant").value,
+            linkUrl: linkUrl || null,
+            linkLabel: document.getElementById("ann-link-label").value.trim() || null,
+            startsAt: startsAt,
+            endsAt: endsAt
+          }).then(function () {
+            UI.toast("Announcement posted");
+            document.getElementById("ann-body").value = "";
+            document.getElementById("ann-title").value = "";
+            document.getElementById("ann-link-url").value = "";
+            document.getElementById("ann-link-label").value = "";
+            document.getElementById("ann-start").value = "";
+            document.getElementById("ann-end").value = "";
+            return loadAnnouncement();
+          }));
         });
       }
       var annClear = document.getElementById("ann-clear");

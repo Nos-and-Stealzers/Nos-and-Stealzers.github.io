@@ -63,7 +63,12 @@
       /* Real cover art, where a title ships one — `icon` is harvested from the
          game's own page by tools/harvest-icons.js. Resolved through the same
          base as the game itself; the generated plate takes over if it 404s. */
-      art: resolveUrl(entry.icon || entry.pfp || entry.image || "", entry.host),
+      /* `logo` is a locally-stored copy (assets/logos/, fetched and verified
+         by the W2 logo pipeline), always served from the hub itself so a
+         game host going down never blanks the card. */
+      art: entry.logo
+        ? "/" + entry.logo
+        : resolveUrl(entry.icon || entry.pfp || entry.image || "", entry.host),
       host: entry.host || "",
       /* Free-text warning shown before play — used where something about a
          title would otherwise surprise you, like Eaglercraft worlds not

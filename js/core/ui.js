@@ -197,6 +197,10 @@
     var art = el("div", "tile-art");
     coverInto(art, game);
     if (opts.no) art.appendChild(el("span", "tile-no", pad(opts.no)));
+    /* Hover affordance: appears over the art only while the card is hovered
+       or focused. Purely visual (the hit link underneath handles the click)
+       and animated with opacity/transform only, so it never reflows. */
+    if (!game.unavailable) art.appendChild(el("span", "tile-play", "▶ Play"));
     /* Self-hosted originals (served from this origin, no external repo) are the
        ones guaranteed to load — mark them so they stand apart from the CDN
        catalog. Flat corner label, not a chip, per the site's plain look. */

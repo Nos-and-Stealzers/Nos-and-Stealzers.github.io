@@ -139,7 +139,8 @@
       tower:      { label: "Tower Defense", icon: "♜" },
       escape:     { label: "Escape",     icon: "⚿" },
       multiplayer:{ label: "Multiplayer",icon: "⚭" },
-      retro:      { label: "Retro",      icon: "▤" },
+      retro:      { label: "Retro",      icon: "◧" },
+      minecraft:  { label: "Minecraft",  icon: "⛏" },
       other:      { label: "Other",      icon: "◇" }
     },
 

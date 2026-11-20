@@ -34,6 +34,8 @@
     if (meta && game.description) meta.setAttribute("content", game.description);
 
     details();
+    dressLoading();
+    warmUp();
     actions();
     if (window.ModMenu && $("a-aspect")) {
       mods = window.ModMenu.attach({
@@ -366,6 +368,9 @@
     showLoading(true);
     frame.addEventListener("load", function () {
       loaded = true;
+      /* Fade the frame in now that it reports loaded, instead of letting it
+         pop in as a blank rectangle. */
+      frame.classList.add("is-live");
       showLoading(false);
       window.setTimeout(function () { try { frame.focus(); } catch (e) {} }, 60);
     });
@@ -526,6 +531,50 @@
     var box = $("stage-loading");
     if (!box) return;
     box.hidden = !on;
+  }
+
+  /* Fill the loading card once: this game's real logo (or its generated
+     plate) and its title, so the wait reads as loading THIS game. */
+  function dressLoading() {
+    var art = $("load-art");
+    var title = $("load-title");
+    if (!art || !title) return;
+    title.textContent = "Loading " + game.title;
+    if (art.childNodes.length) return;
+    if (game.art) {
+      var img = document.createElement("img");
+      img.src = game.art;
+      img.alt = "";
+      img.decoding = "async";
+      img.addEventListener("error", function () {
+        img.remove();
+        art.appendChild(window.Art.cover(game, { plain: false }));
+      });
+      art.appendChild(img);
+    } else {
+      art.appendChild(window.Art.cover(game, { plain: false }));
+    }
+  }
+
+  /* Start pulling the game's first bytes while the play page itself is still
+     showing. A no-cors low-priority fetch warms the HTTP cache and the
+     connection without needing CORS cooperation; the opaque response is
+     never read, and any failure is harmless. */
+  function warmUp() {
+    if (game.unavailable) return;
+    var url = game.sourceUrl || game.directUrl;
+    if (!url) return;
+    try {
+      var origin = new URL(url, location.href).origin;
+      if (origin !== location.origin) {
+        var link = document.createElement("link");
+        link.rel = "preconnect";
+        link.href = origin;
+        link.crossOrigin = "anonymous";
+        document.head.appendChild(link);
+      }
+    } catch (e) {}
+    try { fetch(url, { mode: "no-cors", priority: "low" }).catch(function () {}); } catch (e) {}
   }
 
   /* If a framed game never loads at all, offer the new-tab route. */

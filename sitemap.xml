@@ -103,6 +103,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://arcadecampushub.online/browse.html?category=minecraft</loc>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://arcadecampushub.online/browse.html?category=multiplayer</loc>
     <lastmod>2026-11-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -139,6 +145,12 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://arcadecampushub.online/browse.html?category=retro</loc>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://arcadecampushub.online/browse.html?category=rpg</loc>
     <lastmod>2026-11-19</lastmod>
     <changefreq>weekly</changefreq>
@@ -170,6 +182,12 @@
   </url>
   <url>
     <loc>https://arcadecampushub.online/browse.html?category=strategy</loc>
+    <lastmod>2026-11-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://arcadecampushub.online/browse.html?category=tower</loc>
     <lastmod>2026-11-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>

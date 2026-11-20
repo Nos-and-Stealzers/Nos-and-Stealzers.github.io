@@ -59,6 +59,23 @@
     window.requestAnimationFrame(step);
   }
 
+  /* A one-click resume chip for the last game you had open. Sits between the
+     shortcuts and the readout, so returning players can pick up where they
+     left off without scrolling. */
+  function continueChip() {
+    var Catalog = window.Catalog, UI = window.UI;
+    var chip = document.getElementById("home-continue");
+    if (!chip) return;
+    var last = Catalog.recentGames(1)[0];
+    if (!last) { chip.hidden = true; chip.innerHTML = ""; return; }
+    chip.hidden = false;
+    chip.href = UI.playHref(last);
+    chip.innerHTML = "";
+    chip.appendChild(UI.el("span", "home-continue-go", "▶"));
+    chip.appendChild(UI.el("span", "home-continue-label", "Continue playing"));
+    chip.appendChild(UI.el("strong", null, last.title));
+  }
+
   function init() {
     var Catalog = window.Catalog;
     var Store = window.Store;
@@ -74,6 +91,7 @@
       new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
     marquee(Catalog.daily(1)[0]);
+    continueChip();
 
     var recents = Catalog.recentGames(10);
     if (recents.length) {
@@ -93,9 +111,6 @@
       UI.render(document.getElementById("s-new"), arrivals, { desc: false });
     }
 
-    document.getElementById("sug-why").textContent = Store.totalPlays()
-      ? "based on what you play"
-      : "A few games to get you started";
     UI.render(document.getElementById("g-suggested"), Catalog.forYou(8), { numbered: false });
 
     var cats = document.getElementById("g-cats");
@@ -115,6 +130,7 @@
   function refreshMine() {
     var UI = window.UI, Catalog = window.Catalog;
     document.getElementById("r-time").textContent = UI.formatDuration(window.Store.totalSeconds());
+    continueChip();
     var recents = Catalog.recentGames(10);
     document.getElementById("b-resume").hidden = !recents.length;
     if (recents.length) UI.render(document.getElementById("s-resume"), recents, { desc: false });

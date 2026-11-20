@@ -416,7 +416,7 @@ window.GAME_CATALOG = [
     {
         "id": "original-hangman",
         "title": "Hangman",
-        "category": "trivia",
+        "category": "puzzle",
         "description": "Guess the hidden word one letter at a time across five topic packs. Six misses ends it. Build the longest solving streak you can.",
         "gradient": "linear-gradient(135deg,#e5484d,#4a0d16)",
         "source": "games/originals/hangman.html",
@@ -766,7 +766,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-1v1lol",
         "title": "1v1.LOL",
-        "category": "action",
+        "category": "multiplayer",
         "description": "1v1.LOL — build structures and outshoot opponents in this construction-battle game.",
         "gradient": "linear-gradient(135deg, #2563eb, #1e3a8a)",
         "source": "1v1lol/index.html",
@@ -780,7 +780,7 @@ window.GAME_CATALOG = [
     {
         "id": "1v1space",
         "title": "1v1.Space",
-        "category": "action",
+        "category": "multiplayer",
         "description": "Intense 1v1 dogfighting in space — upgrade your ship and outmaneuver opponents.",
         "gradient": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
         "source": "1v1space/index.html",
@@ -1930,7 +1930,7 @@ window.GAME_CATALOG = [
     {
         "id": "btts",
         "title": "Bloons TD Battles",
-        "category": "strategy",
+        "category": "tower",
         "description": "Bloons Tower Defense: Battles — PvP tower defense, send bloons to defeat opponents.",
         "gradient": "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
         "source": "btts/index.html",
@@ -1973,7 +1973,7 @@ window.GAME_CATALOG = [
     {
         "id": "tower-defense-2",
         "title": "Tower Defense 2",
-        "category": "strategy",
+        "category": "tower",
         "description": "Sequel-style tower defense with longer maps, harder waves, and deeper upgrade choices.",
         "gradient": "linear-gradient(135deg, #1f9d8a, #1c4f66)",
         "source": "games/mini/tower-defense-2/build/xp_webtech_krf_index.html",
@@ -1985,6 +1985,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-push-your-luck",
+        "logo": "assets/logos/huge-push-your-luck.webp",
         "title": "push-your-luck",
         "category": "arcade",
         "description": "Play push-your-luck",
@@ -2011,6 +2012,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-puzzle-ball",
+        "logo": "assets/logos/huge-puzzle-ball.webp",
         "title": "puzzle-ball",
         "category": "arcade",
         "description": "Play puzzle-ball",
@@ -2076,6 +2078,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-rolling-forests",
+        "logo": "assets/logos/huge-rolling-forests.webp",
         "title": "rolling-forests",
         "category": "arcade",
         "description": "Play rolling-forests",
@@ -2089,6 +2092,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-rolly-vortex",
+        "logo": "assets/logos/huge-rolly-vortex.webp",
         "title": "rolly-vortex",
         "category": "arcade",
         "description": "Play rolly-vortex",
@@ -2115,6 +2119,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-sandboxels",
+        "logo": "assets/logos/huge-sandboxels.webp",
         "title": "sandboxels",
         "category": "arcade",
         "description": "Play sandboxels",
@@ -2128,6 +2133,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-shuttledeck",
+        "logo": "assets/logos/huge-shuttledeck.webp",
         "title": "shuttledeck",
         "category": "arcade",
         "description": "Play shuttledeck",
@@ -2141,6 +2147,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-skyblock",
+        "logo": "assets/logos/huge-skyblock.webp",
         "title": "skyblock",
         "category": "arcade",
         "description": "Play skyblock",
@@ -2154,6 +2161,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-sleepingbeauty",
+        "logo": "assets/logos/huge-sleepingbeauty.webp",
         "title": "sleepingbeauty",
         "category": "arcade",
         "description": "Play sleepingbeauty",
@@ -2193,6 +2201,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-slope-ball",
+        "logo": "assets/logos/huge-slope-ball.webp",
         "title": "slope-ball",
         "category": "arcade",
         "description": "Play slope-ball",
@@ -2206,6 +2215,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-smashkarts",
+        "logo": "assets/logos/huge-smashkarts.webp",
         "title": "smashkarts",
         "category": "arcade",
         "description": "Play smashkarts",
@@ -2233,7 +2243,7 @@ window.GAME_CATALOG = [
     {
         "id": "eaglercraft-1-8-8",
         "title": "Eaglercraft 1.8.8",
-        "category": "sandbox",
+        "category": "minecraft",
         "description": "Minecraft 1.8.8 in the browser. The classic PvP version — worlds, servers and all.",
         "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
         "host": "minecraft",
@@ -2248,7 +2258,7 @@ window.GAME_CATALOG = [
     {
         "id": "eaglercraft-26-1-2",
         "title": "Eaglercraft 26.1.2",
-        "category": "sandbox",
+        "category": "minecraft",
         "description": "Minecraft 26.1.2 in the browser — the newest build, modern blocks, and a PatentSMP entry baked into the server list.",
         "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
         "host": "minecraft",
@@ -2275,6 +2285,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-isocity",
+        "logo": "assets/logos/ext2-isocity.webp",
         "title": "IsoCity",
         "category": "sandbox",
         "description": "Build and manage an isometric pixel-art city from scratch.",
@@ -2288,6 +2299,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-invaderz",
+        "logo": "assets/logos/ext2-invaderz.webp",
         "title": "Invaderz",
         "category": "action",
         "description": "Space invaders where the alien horde evolves via genetic algorithm.",
@@ -2301,8 +2313,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-tower-defense",
+        "logo": "assets/logos/ext2-tower-defense.webp",
         "title": "Tower Defense",
-        "category": "strategy",
+        "category": "tower",
         "description": "Defend your base against waves of enemies in this vanilla-JS tower defense.",
         "gradient": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
         "source": "gh-victorqribeiro-towerdefense/index.html",
@@ -2327,6 +2340,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-genius",
+        "logo": "assets/logos/ext2-genius.webp",
         "title": "Genius",
         "category": "puzzle",
         "description": "Classic memory sequence game with a radial menu twist.",
@@ -2340,6 +2354,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-scramble",
+        "logo": "assets/logos/ext2-scramble.webp",
         "title": "Scramble",
         "category": "puzzle",
         "description": "A word-scramble puzzle game in vanilla JavaScript.",
@@ -2353,6 +2368,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-googol",
+        "logo": "assets/logos/ext2-googol.webp",
         "title": "Googol",
         "category": "other",
         "description": "A push-your-luck number game about knowing when to quit.",
@@ -2379,6 +2395,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-car-game",
+        "logo": "assets/logos/ext2-car-game.webp",
         "title": "Car Game",
         "category": "racing",
         "description": "A simple top-down JavaScript driving game.",
@@ -2392,6 +2409,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-aim-and-shoot",
+        "logo": "assets/logos/ext2-aim-and-shoot.webp",
         "title": "Aim and Shoot",
         "category": "shooter",
         "description": "A neuroevolution shooting game where AI learns to aim.",
@@ -2418,6 +2436,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-bangbang-ml",
+        "logo": "assets/logos/ext2-bangbang-ml.webp",
         "title": "BangBang ML",
         "category": "shooter",
         "description": "Watch (or play against) a neural network that learns to shoot a target.",
@@ -2431,6 +2450,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-jokenpo",
+        "logo": "assets/logos/ext2-jokenpo.webp",
         "title": "Jokenpo",
         "category": "other",
         "description": "Rock-paper-scissors against a neural network that predicts your next move.",
@@ -2444,6 +2464,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-car-game-perceptron",
+        "logo": "assets/logos/ext2-car-game-perceptron.webp",
         "title": "Car Game Perceptron",
         "category": "racing",
         "description": "A driving game where a neural-network perceptron learns to steer.",
@@ -2457,6 +2478,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-pac-man-html5",
+        "logo": "assets/logos/ext2-pac-man-html5.webp",
         "title": "Pac-Man HTML5",
         "category": "arcade",
         "description": "A classic Pac-Man clone built with HTML5 canvas.",
@@ -2496,6 +2518,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-star-battle",
+        "logo": "assets/logos/ext2-star-battle.webp",
         "title": "Star Battle",
         "category": "action",
         "description": "A spaceship shooting game built with ES6 and Canvas.",
@@ -2522,6 +2545,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-taptaptap",
+        "logo": "assets/logos/ext2-taptaptap.webp",
         "title": "TapTapTap",
         "category": "arcade",
         "description": "An open-source browser tap-timing arcade game.",
@@ -2535,6 +2559,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-yet-another-idle-rpg",
+        "logo": "assets/logos/ext2-yet-another-idle-rpg.webp",
         "title": "Yet Another Idle RPG",
         "category": "idle",
         "description": "A simple idle RPG with character progression and combat.",
@@ -2548,6 +2573,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-wordpluck",
+        "logo": "assets/logos/ext2-wordpluck.webp",
         "title": "WordPluck",
         "category": "action",
         "description": "A browser-based typing game — pluck falling words before they land.",
@@ -2574,6 +2600,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-tether",
+        "logo": "assets/logos/ext2-tether.webp",
         "title": "Tether",
         "category": "action",
         "description": "A game of pure physics-based destruction.",
@@ -2652,6 +2679,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-tower-of-hanoi",
+        "logo": "assets/logos/ext2-tower-of-hanoi.webp",
         "title": "Tower of Hanoi",
         "category": "puzzle",
         "description": "The classic Tower of Hanoi puzzle built with Phaser.js.",
@@ -2769,6 +2797,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-devlife",
+        "logo": "assets/logos/ext2-devlife.webp",
         "title": "DevLife",
         "category": "idle",
         "description": "A browser incremental game about growing a developer's career.",
@@ -2783,7 +2812,7 @@ window.GAME_CATALOG = [
     {
         "id": "ext2-canvas-td",
         "title": "Canvas TD",
-        "category": "strategy",
+        "category": "tower",
         "description": "A fully-featured tower defense game built with HTML5 canvas.",
         "gradient": "linear-gradient(135deg, #14b8a6, #134e4a)",
         "source": "gh-tddyco-canvas-td/index.html",
@@ -2873,6 +2902,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-connect-four-deluxe",
+        "logo": "assets/logos/ext2-connect-four-deluxe.webp",
         "title": "Connect Four Deluxe",
         "category": "strategy",
         "description": "Connect Four with an AI player and online multiplayer, built with Mithril.",
@@ -2925,6 +2955,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-asteroids-3kh0",
+        "logo": "assets/logos/ext2-asteroids-3kh0.webp",
         "title": "Asteroids (3kh0)",
         "category": "arcade",
         "description": "Play the classic Asteroids arcade shooter right in your browser.",
@@ -2938,6 +2969,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext2-stampadia",
+        "logo": "assets/logos/ext2-stampadia.webp",
         "title": "Stampadia",
         "category": "adventure",
         "description": "A daily print-and-play style roguelike adventure playable offline.",
@@ -3003,6 +3035,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-dial",
+        "logo": "assets/logos/ext-dial.webp",
         "title": "Dial",
         "category": "puzzle",
         "description": "A rotary dial-style menu/number input experiment turned mini game.",
@@ -3042,6 +3075,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-js-snakes",
+        "logo": "assets/logos/ext-js-snakes.webp",
         "title": "JavaScript Snakes",
         "category": "arcade",
         "description": "An HTML5 canvas Snake game with smooth grid-based movement.",
@@ -3081,6 +3115,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-js-gauntlet",
+        "logo": "assets/logos/ext-js-gauntlet.webp",
         "title": "JS Gauntlet",
         "category": "action",
         "description": "An HTML5 Gauntlet-style dungeon crawler shooter.",
@@ -3107,6 +3142,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-js-racer",
+        "logo": "assets/logos/ext-js-racer.webp",
         "title": "JS Racer",
         "category": "racing",
         "description": "A pseudo-3D outrun-style racing game built with HTML5 canvas.",
@@ -3341,6 +3377,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-crazy-racing",
+        "logo": "assets/logos/ext-crazy-racing.webp",
         "title": "Crazy Racing",
         "category": "racing",
         "description": "An HTML5 car-racing game with obstacle dodging.",
@@ -3368,7 +3405,7 @@ window.GAME_CATALOG = [
     {
         "id": "ext-elematter",
         "title": "Elematter",
-        "category": "strategy",
+        "category": "tower",
         "description": "A tower defense game based on the four classical elements, made for js13k.",
         "gradient": "linear-gradient(135deg, #2563eb, #1e3a8a)",
         "source": "gh-jackrugile-elematter-js13k/build/index.html",
@@ -3393,6 +3430,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-quickclick",
+        "logo": "assets/logos/ext-quickclick.webp",
         "title": "QuickClick",
         "category": "clicker",
         "description": "A simple clicker game featuring ASCII art rewards.",
@@ -3406,6 +3444,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-grind",
+        "logo": "assets/logos/ext-grind.webp",
         "title": "Grind",
         "category": "idle",
         "description": "A quirky idle/incremental game about brewing and drinking coffee.",
@@ -3445,6 +3484,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-flappybird-r3nanp",
+        "logo": "assets/logos/ext-flappybird-r3nanp.webp",
         "title": "Flappy Bird Clone",
         "category": "arcade",
         "description": "A faithful clone of Flappy Bird built with JavaScript and the Canvas API.",
@@ -3484,6 +3524,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext-2048-hamdola",
+        "logo": "assets/logos/ext-2048-hamdola.webp",
         "title": "HamDola 2048",
         "category": "puzzle",
         "description": "Another implementation of the classic sliding-tile 2048 puzzle.",
@@ -3614,6 +3655,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-enmeshed",
+        "logo": "assets/logos/ext3-enmeshed.webp",
         "title": "Enmeshed",
         "category": "puzzle",
         "description": "Hack nodes and connections across a spreading network in this js13k puzzle game.",
@@ -3653,6 +3695,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-pacman-tribute",
+        "logo": "assets/logos/ext3-pacman-tribute.webp",
         "title": "Pac-Man Tribute",
         "category": "arcade",
         "description": "A faithful historical tribute recreation of the original Pac-Man arcade game.",
@@ -3679,6 +3722,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-dao-2048",
+        "logo": "assets/logos/ext3-dao-2048.webp",
         "title": "Dao 2048",
         "category": "puzzle",
         "description": "Polished 2048 number-sliding puzzle game clone.",
@@ -3718,6 +3762,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-drunken-viking",
+        "logo": "assets/logos/ext3-drunken-viking.webp",
         "title": "Drunken Viking",
         "category": "puzzle",
         "description": "Top-down puzzle game about a viking stumbling home drunk.",
@@ -3770,6 +3815,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-cosmodial",
+        "logo": "assets/logos/ext3-cosmodial.webp",
         "title": "Cosmodial",
         "category": "other",
         "description": "Explore the night sky and identify constellations from your browser.",
@@ -3835,6 +3881,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext3-burgomaster",
+        "logo": "assets/logos/ext3-burgomaster.webp",
         "title": "1255 Burgomaster",
         "category": "strategy",
         "description": "Manage a medieval town with RPG mechanics in this travian-style strategy game.",
@@ -3965,6 +4012,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "ext4-blackjack-saganaki",
+        "logo": "assets/logos/ext4-blackjack-saganaki.webp",
         "title": "Blackjack (Saganaki22)",
         "category": "cards",
         "description": "Sleek responsive Blackjack card game with animated dealing, chip betting and touch-optimized controls (no real-money gambling).",
@@ -4005,7 +4053,7 @@ window.GAME_CATALOG = [
     {
         "id": "ext4-pixel-defense",
         "title": "Pixel Defense",
-        "category": "strategy",
+        "category": "tower",
         "description": "HTML5 tower defense game built with the MelonJS engine featuring pixel-art enemy waves and upgrade towers.",
         "gradient": "linear-gradient(135deg, #0e7490, #083344)",
         "source": "gh-blocknetworks-pixeldefense/src/index.html",
@@ -4369,7 +4417,7 @@ window.GAME_CATALOG = [
     {
         "id": "ext4-ghostwars",
         "title": "Ghost Wars",
-        "category": "action",
+        "category": "multiplayer",
         "description": "A cute Halloween-themed multiplayer game where players battle each other as ghosts.",
         "gradient": "linear-gradient(135deg, #64748b, #0f172a)",
         "source": "gh-codenerve-ghostwars/public/index.html",
@@ -4525,6 +4573,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-2048",
+        "logo": "assets/logos/huge-2048.webp",
         "title": "2048",
         "category": "puzzle",
         "description": "Slide numbered tiles on a grid, merging matching values to reach the 2048 tile.",
@@ -4540,6 +4589,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-2048-multitask",
+        "logo": "assets/logos/huge-2048-multitask.webp",
         "title": "2048 Multitask",
         "category": "puzzle",
         "description": "A busywork-disguise twist on 2048 styled to look like a spreadsheet or document.",
@@ -4555,6 +4605,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-doge-miner",
+        "logo": "assets/logos/huge-doge-miner.webp",
         "title": "Doge Miner",
         "category": "idle",
         "description": "Click to mine dogecoin, hire helper dogs, and upgrade your mining operation.",
@@ -4570,6 +4621,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-hexgl",
+        "logo": "assets/logos/huge-hexgl.webp",
         "title": "HexGL",
         "category": "racing",
         "description": "A fast futuristic anti-gravity racer built with WebGL, inspired by F-Zero and Wipeout.",
@@ -4600,6 +4652,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-stickman-survival",
+        "logo": "assets/logos/huge-stickman-survival.webp",
         "title": "Stickman Survival",
         "category": "action",
         "description": "Fight off waves of stickman enemies using melee and ranged weapons.",
@@ -4615,8 +4668,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-anti-terrorist-rush",
+        "logo": "assets/logos/huge-anti-terrorist-rush.webp",
         "title": "Anti-Terrorist Rush",
-        "category": "action",
+        "category": "shooter",
         "description": "A top-down shooter where you clear rooms of enemies as a tactical operator.",
         "gradient": "linear-gradient(135deg, #b91c1c, #1c1917)",
         "source": "anti-terrorist-rush/index.html",
@@ -4631,7 +4685,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-ascii-space",
         "title": "ASCII Space",
-        "category": "arcade",
+        "category": "shooter",
         "description": "A retro space shooter rendered entirely in ASCII text characters.",
         "gradient": "linear-gradient(135deg, #22c55e, #052e16)",
         "source": "asciispace/index.html",
@@ -4645,6 +4699,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-aspiring-artist",
+        "logo": "assets/logos/huge-aspiring-artist.webp",
         "title": "Aspiring Artist",
         "category": "puzzle",
         "description": "A drawing and guessing party game where players sketch prompts for others to identify.",
@@ -4660,6 +4715,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-backflip-dive-3d",
+        "logo": "assets/logos/huge-backflip-dive-3d.webp",
         "title": "Backflip Dive 3D",
         "category": "sports",
         "description": "Time your flips and twists to score points diving off platforms into a pool.",
@@ -4675,6 +4731,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-basketball-legends-2020",
+        "logo": "assets/logos/huge-basketball-legends-2020.webp",
         "title": "Basketball Legends 2020",
         "category": "sports",
         "description": "One-on-one basketball with exaggerated dunks and special moves as famous players.",
@@ -4720,6 +4777,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-blocky-snakes",
+        "logo": "assets/logos/huge-blocky-snakes.webp",
         "title": "Blocky Snakes",
         "category": "arcade",
         "description": "A blocky-styled take on classic Snake — grow longer by eating without hitting yourself.",
@@ -4750,6 +4808,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-chill-radio",
+        "logo": "assets/logos/huge-chill-radio.webp",
         "title": "Chill Radio",
         "category": "music",
         "description": "A lo-fi streaming radio player for background music while browsing or working.",
@@ -4765,6 +4824,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-color-switch-2-challenges",
+        "logo": "assets/logos/huge-color-switch-2-challenges.webp",
         "title": "Color Switch 2 Challenges",
         "category": "arcade",
         "description": "Bounce a ball through color-matching gates in this reflex-driven arcade challenge.",
@@ -4780,6 +4840,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-connect-3",
+        "logo": "assets/logos/huge-connect-3.webp",
         "title": "Connect 3",
         "category": "puzzle",
         "description": "A match-three puzzle game where you connect rows of identical tiles to clear them.",
@@ -4795,6 +4856,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-cookie-clicker",
+        "logo": "assets/logos/huge-cookie-clicker.webp",
         "title": "Cookie Clicker",
         "category": "clicker",
         "description": "Click a giant cookie and buy upgrades to bake infinite cookies automatically.",
@@ -4825,6 +4887,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-creativekillchamber",
+        "logo": "assets/logos/huge-creativekillchamber.webp",
         "title": "Creative Kill Chamber",
         "category": "action",
         "description": "Design and test deadly traps in a physics-based Rube Goldberg-style chamber.",
@@ -4855,6 +4918,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ctr-tr",
+        "logo": "assets/logos/huge-ctr-tr.webp",
         "title": "CTR TR",
         "category": "racing",
         "description": "A kart-racing game with power-ups, drifting, and looping tracks.",
@@ -4870,6 +4934,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-cupcake2048",
+        "logo": "assets/logos/huge-cupcake2048.webp",
         "title": "Cupcake 2048",
         "category": "puzzle",
         "description": "A cupcake-themed skin on the classic 2048 sliding-merge puzzle.",
@@ -4915,6 +4980,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-dante",
+        "logo": "assets/logos/huge-dante.webp",
         "title": "Dante",
         "category": "action",
         "description": "A hack-and-slash action game inspired by Dante's Inferno-style demon combat.",
@@ -4945,6 +5011,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-death-soul",
+        "logo": "assets/logos/huge-death-soul.webp",
         "title": "Death Soul",
         "category": "action",
         "description": "A side-scrolling action game featuring melee combat against undead enemies.",
@@ -4960,6 +5027,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-deathrun",
+        "logo": "assets/logos/huge-deathrun.webp",
         "title": "Deathrun",
         "category": "platformer",
         "description": "Race through a trap-filled obstacle course, avoiding hazards designed to kill you.",
@@ -4975,8 +5043,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-defend-the-tank",
+        "logo": "assets/logos/huge-defend-the-tank.webp",
         "title": "Defend the Tank",
-        "category": "strategy",
+        "category": "tower",
         "description": "A tower-defense game where you protect an advancing tank from waves of enemies.",
         "gradient": "linear-gradient(135deg, #65a30d, #1a2e05)",
         "source": "defend-the-tank/index.html",
@@ -5020,6 +5089,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-doge-mining-simulator",
+        "logo": "assets/logos/huge-doge-mining-simulator.webp",
         "title": "Doge Mining Simulator",
         "category": "simulation",
         "description": "An idle simulator where you mine and trade dogecoin while upgrading your mining rig.",
@@ -5035,6 +5105,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-doublewires",
+        "logo": "assets/logos/huge-doublewires.webp",
         "title": "Double Wires",
         "category": "puzzle",
         "description": "A reflex puzzle game where you navigate two connected wires through tight obstacles.",
@@ -5065,6 +5136,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-dragon-vs-bricks",
+        "logo": "assets/logos/huge-dragon-vs-bricks.webp",
         "title": "Dragon vs Bricks",
         "category": "arcade",
         "description": "A breakout-style game where a dragon shoots fire to smash through brick walls.",
@@ -5080,6 +5152,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-draw-the-hill",
+        "logo": "assets/logos/huge-draw-the-hill.webp",
         "title": "Draw the Hill",
         "category": "puzzle",
         "description": "Sketch a ramp with your mouse to launch a vehicle as far as possible.",
@@ -5125,6 +5198,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-duck-life-2",
+        "logo": "assets/logos/huge-duck-life-2.webp",
         "title": "Duck Life 2",
         "category": "simulation",
         "description": "Continue training your duck across new courses and tougher racing competitions.",
@@ -5140,6 +5214,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-duck-life-3",
+        "logo": "assets/logos/huge-duck-life-3.webp",
         "title": "Duck Life 3: Evolution",
         "category": "simulation",
         "description": "Train and evolve your duck through increasingly challenging events.",
@@ -5155,6 +5230,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-duck-life-4",
+        "logo": "assets/logos/huge-duck-life-4.webp",
         "title": "Duck Life 4",
         "category": "simulation",
         "description": "Explore new islands training your duck to compete in the fourth Duck Life game.",
@@ -5170,6 +5246,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-duke-dashington-remastered",
+        "logo": "assets/logos/huge-duke-dashington-remastered.webp",
         "title": "Duke Dashington Remastered",
         "category": "platformer",
         "description": "A precision speedrunning platformer with tight timing-based obstacle courses.",
@@ -5185,6 +5262,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-dungeon-craft",
+        "logo": "assets/logos/huge-dungeon-craft.webp",
         "title": "Dungeon Craft",
         "category": "rpg",
         "description": "Explore procedurally generated dungeons, fighting monsters and collecting loot.",
@@ -5200,6 +5278,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-edge-surf",
+        "logo": "assets/logos/huge-edge-surf.webp",
         "title": "Edge Surf",
         "category": "arcade",
         "description": "Microsoft Edge's surfing runner — dodge obstacles while riding an endless wave.",
@@ -5215,6 +5294,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-elasticman",
+        "logo": "assets/logos/huge-elasticman.webp",
         "title": "Elastic Man",
         "category": "other",
         "description": "Stretch a rubbery 3D face with your cursor — a purely physical, goal-free toy.",
@@ -5230,6 +5310,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-endless-war-3",
+        "logo": "assets/logos/huge-endless-war-3.webp",
         "title": "Endless War 3",
         "category": "strategy",
         "description": "Command troops and vehicles across battlefields in this turn-based military strategy game.",
@@ -5245,6 +5326,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-escaping-the-prison",
+        "logo": "assets/logos/huge-escaping-the-prison.webp",
         "title": "Escaping the Prison",
         "category": "puzzle",
         "description": "Solve room-escape puzzles to break out of a locked-down prison level by level.",
@@ -5260,6 +5342,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-evil-glitch",
+        "logo": "assets/logos/huge-evil-glitch.webp",
         "title": "Evil Glitch",
         "category": "platformer",
         "description": "Navigate a corrupted, glitch-styled platformer full of shifting hazards.",
@@ -5275,6 +5358,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-evolution",
+        "logo": "assets/logos/huge-evolution.webp",
         "title": "Evolution",
         "category": "strategy",
         "description": "Guide a species through generations of adaptation in a card-driven evolution strategy game.",
@@ -5290,6 +5374,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-factory-balls-forever",
+        "logo": "assets/logos/huge-factory-balls-forever.webp",
         "title": "Factory Balls Forever",
         "category": "puzzle",
         "description": "Work out which tools and dips will paint a plain ball to match the target design.",
@@ -5305,6 +5390,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-fake-virus",
+        "logo": "assets/logos/huge-fake-virus.webp",
         "title": "Fake Virus",
         "category": "other",
         "description": "A harmless prank screen that mimics a computer virus warning for a laugh.",
@@ -5335,6 +5421,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-finns-fantastic-food-machine",
+        "logo": "assets/logos/huge-finns-fantastic-food-machine.webp",
         "title": "Finn's Fantastic Food Machine",
         "category": "puzzle",
         "description": "Build Rube Goldberg-style contraptions to prepare and deliver quirky food orders.",
@@ -5350,6 +5437,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-fireboy-watergirl-forest-temple",
+        "logo": "assets/logos/huge-fireboy-watergirl-forest-temple.webp",
         "title": "Fireboy and Watergirl: Forest Temple",
         "category": "puzzle",
         "description": "Guide two characters together through elemental hazards in a co-op temple puzzle.",
@@ -5380,6 +5468,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-firewater",
+        "logo": "assets/logos/huge-firewater.webp",
         "title": "Firewater",
         "category": "puzzle",
         "description": "A quirky physics platformer where two opposite elements must work together.",
@@ -5395,6 +5484,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-flappy-2048",
+        "logo": "assets/logos/huge-flappy-2048.webp",
         "title": "Flappy 2048",
         "category": "puzzle",
         "description": "A mashup of Flappy Bird's flying controls with 2048's tile-merging goal.",
@@ -5425,8 +5515,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-flappy-defense",
+        "logo": "assets/logos/huge-flappy-defense.webp",
         "title": "Flappy Defense",
-        "category": "strategy",
+        "category": "tower",
         "description": "A tower-defense spin on Flappy Bird's flap-to-navigate mechanic.",
         "gradient": "linear-gradient(135deg, #22c55e, #14532d)",
         "source": "flappy-defense/index.html",
@@ -5455,6 +5546,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-flashtetris",
+        "logo": "assets/logos/huge-flashtetris.webp",
         "title": "Flash Tetris",
         "category": "puzzle",
         "description": "A classic Tetris port — stack and clear falling blocks before the stack tops out.",
@@ -5470,6 +5562,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-flippy-fish",
+        "logo": "assets/logos/huge-flippy-fish.webp",
         "title": "Flippy Fish",
         "category": "arcade",
         "description": "Flip a fish through hazards and obstacles in a colorful side-scrolling arcade game.",
@@ -5500,6 +5593,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-friday-night-funkin",
+        "logo": "assets/logos/huge-friday-night-funkin.webp",
         "title": "Friday Night Funkin'",
         "category": "music",
         "description": "A rhythm game where you battle rivals in freestyle rap contests by hitting notes on beat.",
@@ -5516,7 +5610,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-friendly-fire",
         "title": "Friendly Fire",
-        "category": "action",
+        "category": "multiplayer",
         "description": "A two-player local versus shooter where friends battle it out on shared screens.",
         "gradient": "linear-gradient(135deg, #dc2626, #1c1917)",
         "source": "friendlyfire/index.html",
@@ -5530,6 +5624,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-froggys-battle",
+        "logo": "assets/logos/huge-froggys-battle.webp",
         "title": "Froggy's Battle",
         "category": "action",
         "description": "Control a frog fighting through enemy-filled levels with jump-based combat.",
@@ -5560,6 +5655,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-frying-nemo",
+        "logo": "assets/logos/huge-frying-nemo.webp",
         "title": "Frying Nemo",
         "category": "arcade",
         "description": "A quirky cooking-themed arcade game about catching and frying fish.",
@@ -5590,6 +5686,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-generic-fishing-game",
+        "logo": "assets/logos/huge-generic-fishing-game.webp",
         "title": "Generic Fishing Game",
         "category": "simulation",
         "description": "Cast a line and reel in fish across relaxed, low-pressure fishing levels.",
@@ -5605,6 +5702,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-geodash",
+        "logo": "assets/logos/huge-geodash.webp",
         "title": "Geometry Dash Lite",
         "category": "platformer",
         "description": "A rhythm-based platformer where you jump and fly a cube through spike-filled levels.",
@@ -5620,6 +5718,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-geometry-jump-sketchy",
+        "logo": "assets/logos/huge-geometry-jump-sketchy.webp",
         "title": "Geometry Jump Sketchy",
         "category": "platformer",
         "description": "A hand-drawn styled auto-runner where you jump over sketch-style obstacles.",
@@ -5650,6 +5749,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-george-and-the-printer",
+        "logo": "assets/logos/huge-george-and-the-printer.webp",
         "title": "George and the Printer",
         "category": "puzzle",
         "description": "A short comedic puzzle-adventure about fighting a stubborn office printer.",
@@ -5665,6 +5765,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-getaway-shootout",
+        "logo": "assets/logos/huge-getaway-shootout.webp",
         "title": "Getaway Shootout",
         "category": "action",
         "description": "A ragdoll physics brawler where players race and fight to reach the getaway vehicle first.",
@@ -5695,6 +5796,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-gimme-the-airpod",
+        "logo": "assets/logos/huge-gimme-the-airpod.webp",
         "title": "Gimme the AirPod",
         "category": "arcade",
         "description": "A quick reflex game about grabbing an AirPod before someone else snatches it.",
@@ -5740,6 +5842,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-golf",
+        "logo": "assets/logos/huge-golf.webp",
         "title": "Golf",
         "category": "sports",
         "description": "Putt a ball across simple physics-based golf courses aiming for the lowest score.",
@@ -5800,6 +5903,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-gravity-soccer",
+        "logo": "assets/logos/huge-gravity-soccer.webp",
         "title": "Gravity Soccer",
         "category": "sports",
         "description": "A low-gravity soccer game where physics sends the ball bouncing unpredictably.",
@@ -5830,6 +5934,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-gun-mayhem",
+        "logo": "assets/logos/huge-gun-mayhem.webp",
         "title": "Gun Mayhem",
         "category": "shooter",
         "description": "A platform brawler shooter where you knock opponents off the stage to win.",
@@ -5845,6 +5950,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-gun-mayhem-2",
+        "logo": "assets/logos/huge-gun-mayhem-2.webp",
         "title": "Gun Mayhem 2",
         "category": "shooter",
         "description": "The sequel platform-shooter brawler with new stages, weapons, and modes.",
@@ -5890,6 +5996,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-hackertype",
+        "logo": "assets/logos/huge-hackertype.webp",
         "title": "Hackertype",
         "category": "other",
         "description": "A typing toy that makes any keystroke look like fast hacker-movie code scrolling by.",
@@ -5905,6 +6012,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-happy-hop",
+        "logo": "assets/logos/huge-happy-hop.webp",
         "title": "Happy Hop",
         "category": "arcade",
         "description": "Bounce a character upward through platforms, aiming for the highest score.",
@@ -5935,6 +6043,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-helicopter",
+        "logo": "assets/logos/huge-helicopter.webp",
         "title": "Helicopter Game",
         "category": "arcade",
         "description": "Guide a helicopter through a cave by tapping to rise, releasing to fall.",
@@ -5965,6 +6074,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-hexempire",
+        "logo": "assets/logos/huge-hexempire.webp",
         "title": "Hex Empire",
         "category": "strategy",
         "description": "Conquer a hex-tiled map by moving armies and capturing enemy territory turn by turn.",
@@ -5980,6 +6090,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-hextris",
+        "logo": "assets/logos/huge-hextris.webp",
         "title": "Hextris",
         "category": "puzzle",
         "description": "Rotate a hexagonal core to sort falling blocks and clear matching color lines.",
@@ -5995,6 +6106,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-house-of-hazards",
+        "logo": "assets/logos/huge-house-of-hazards.webp",
         "title": "House of Hazards",
         "category": "action",
         "description": "A cartoon party game where players trigger traps to knock each other out.",
@@ -6010,6 +6122,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-icys-purple-head",
+        "logo": "assets/logos/huge-icys-purple-head.webp",
         "title": "Icy Purple Head",
         "category": "puzzle",
         "description": "Guide an ice character carefully so it doesn't melt before reaching the goal.",
@@ -6025,6 +6138,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-idle-breakout",
+        "logo": "assets/logos/huge-idle-breakout.webp",
         "title": "Idle Breakout",
         "category": "idle",
         "description": "An idle spin on Breakout where balls automatically smash bricks while you upgrade them.",
@@ -6040,6 +6154,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-idle-shark",
+        "logo": "assets/logos/huge-idle-shark.webp",
         "title": "Idle Shark",
         "category": "idle",
         "description": "Grow a shark and its underwater empire through passive, incremental upgrades.",
@@ -6055,6 +6170,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-impossible-quiz-huge",
+        "logo": "assets/logos/huge-impossible-quiz-huge.webp",
         "title": "Impossible Quiz (Games Huge)",
         "category": "trivia",
         "description": "A deliberately tricky quiz full of logic traps and absurd, unexpected questions.",
@@ -6070,6 +6186,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-interactivebuddy",
+        "logo": "assets/logos/huge-interactivebuddy.webp",
         "title": "Interactive Buddy",
         "category": "other",
         "description": "Poke, launch, and torment a rubbery ragdoll character using various physics tools.",
@@ -6085,6 +6202,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-iscribble-io",
+        "logo": "assets/logos/huge-iscribble-io.webp",
         "title": "iScribble.io",
         "category": "multiplayer",
         "description": "A multiplayer drawing-and-guessing party game where players sketch prompts.",
@@ -6160,6 +6278,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-justfall",
+        "logo": "assets/logos/huge-justfall.webp",
         "title": "Just Fall",
         "category": "arcade",
         "description": "Fall through a series of trapdoor platforms, timing your drops to avoid hazards.",
@@ -6175,6 +6294,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-kart-fight-io",
+        "logo": "assets/logos/huge-kart-fight-io.webp",
         "title": "Kart Fight.io",
         "category": "multiplayer",
         "description": "A multiplayer kart battle where you race and knock out opponents with weapons.",
@@ -6190,6 +6310,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-kitchen-gun-game",
+        "logo": "assets/logos/huge-kitchen-gun-game.webp",
         "title": "Kitchen Gun Game",
         "category": "shooter",
         "description": "A cartoon party game featuring gun-toting characters running amok in a kitchen setting.",
@@ -6205,6 +6326,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-kittencannon",
+        "logo": "assets/logos/huge-kittencannon.webp",
         "title": "Kitten Cannon",
         "category": "arcade",
         "description": "Launch a kitten from a cannon and use power-ups to maximize the distance traveled.",
@@ -6220,6 +6342,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-klocki",
+        "logo": "assets/logos/huge-klocki.webp",
         "title": "Klocki",
         "category": "puzzle",
         "description": "Rotate tile pieces to connect paths and complete each minimalist geometric puzzle.",
@@ -6250,6 +6373,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-krunker",
+        "logo": "assets/logos/huge-krunker.webp",
         "title": "Krunker.io",
         "category": "shooter",
         "description": "A fast, blocky multiplayer first-person shooter playable directly in the browser.",
@@ -6265,6 +6389,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-learn-to-fly",
+        "logo": "assets/logos/huge-learn-to-fly.webp",
         "title": "Learn to Fly",
         "category": "simulation",
         "description": "Launch a penguin off a ramp, upgrading gear each run to fly farther.",
@@ -6310,6 +6435,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-linquest",
+        "logo": "assets/logos/huge-linquest.webp",
         "title": "Linquest",
         "category": "puzzle",
         "description": "Draw lines to connect and solve geometric routing puzzles across levels.",
@@ -6325,6 +6451,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-madalin-stunt-cars-2",
+        "logo": "assets/logos/huge-madalin-stunt-cars-2.webp",
         "title": "Madalin Stunt Cars 2",
         "category": "racing",
         "description": "Drive high-end cars through an open stunt park full of ramps and loops.",
@@ -6370,6 +6497,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-mario",
+        "logo": "assets/logos/huge-mario.webp",
         "title": "Mario",
         "category": "platformer",
         "description": "A classic side-scrolling Mario-style platformer with running, jumping, and coin collecting.",
@@ -6385,6 +6513,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-marvinspectrum",
+        "logo": "assets/logos/huge-marvinspectrum.webp",
         "title": "Marvin Spectrum",
         "category": "puzzle",
         "description": "Use color-shifting mechanics to solve platforming puzzles across a spectrum world.",
@@ -6400,6 +6529,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-matrixrampage",
+        "logo": "assets/logos/huge-matrixrampage.webp",
         "title": "Matrix Rampage",
         "category": "action",
         "description": "A Matrix-inspired action game with bullet-time combat against waves of agents.",
@@ -6430,6 +6560,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-meme2048",
+        "logo": "assets/logos/huge-meme2048.webp",
         "title": "Meme 2048",
         "category": "puzzle",
         "description": "A meme-image-themed skin on the classic 2048 sliding-merge puzzle.",
@@ -6446,7 +6577,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-minecraft-classic",
         "title": "Minecraft Classic (Alt Build)",
-        "category": "sandbox",
+        "category": "minecraft",
         "description": "Another build of the free browser Minecraft Classic block-building sandbox.",
         "gradient": "linear-gradient(135deg, #65a30d, #1a2e05)",
         "source": "minecraft-classic/index.html",
@@ -6460,6 +6591,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-minesweeper",
+        "logo": "assets/logos/huge-minesweeper.webp",
         "title": "Minesweeper",
         "category": "puzzle",
         "description": "Clear a grid of hidden mines using number clues without detonating any.",
@@ -6475,6 +6607,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-mini-stilts",
+        "logo": "assets/logos/huge-mini-stilts.webp",
         "title": "Mini Stilts",
         "category": "arcade",
         "description": "Balance a character on wobbly stilts, walking as far as possible without falling.",
@@ -6490,6 +6623,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-miniputt",
+        "logo": "assets/logos/huge-miniputt.webp",
         "title": "Mini Putt",
         "category": "sports",
         "description": "A mini-golf game with themed courses full of obstacles and trick shots.",
@@ -6520,6 +6654,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-moto-x3m-2",
+        "logo": "assets/logos/huge-moto-x3m-2.webp",
         "title": "Moto X3M 2",
         "category": "racing",
         "description": "Race a dirt bike through stunt-filled tracks, chaining tricks for a faster time.",
@@ -6535,6 +6670,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-moto-x3m-pool-party",
+        "logo": "assets/logos/huge-moto-x3m-pool-party.webp",
         "title": "Moto X3M: Pool Party",
         "category": "racing",
         "description": "The summer-themed edition of the dirt bike stunt racing series.",
@@ -6550,6 +6686,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-motox3m",
+        "logo": "assets/logos/huge-motox3m.webp",
         "title": "Moto X3M",
         "category": "racing",
         "description": "Race a dirt bike through stunt-filled obstacle courses, chaining tricks for speed bonuses.",
@@ -6565,6 +6702,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-motox3m-spooky",
+        "logo": "assets/logos/huge-motox3m-spooky.webp",
         "title": "Moto X3M: Spooky Land",
         "category": "racing",
         "description": "The Halloween-themed edition of the dirt bike stunt racing series.",
@@ -6625,6 +6763,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ninja",
+        "logo": "assets/logos/huge-ninja.webp",
         "title": "Ninja",
         "category": "platformer",
         "description": "Guide a ninja through stealth-and-combat platforming levels using agile movement.",
@@ -6640,6 +6779,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ninja-vs-evil-corp",
+        "logo": "assets/logos/huge-ninja-vs-evil-corp.webp",
         "title": "Ninja vs Evil Corp",
         "category": "action",
         "description": "Fight through a corporate stronghold as a ninja taking down enemy agents.",
@@ -6655,6 +6795,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ns-shaft",
+        "logo": "assets/logos/huge-ns-shaft.webp",
         "title": "NS-Shaft",
         "category": "arcade",
         "description": "Fall through an endless shaft dodging platforms and spikes for as long as possible.",
@@ -6685,6 +6826,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-one-screen-run",
+        "logo": "assets/logos/huge-one-screen-run.webp",
         "title": "One Screen Run",
         "category": "arcade",
         "description": "A frantic single-screen obstacle dodging runner where everything happens at once.",
@@ -6700,6 +6842,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-one-screen-run-2",
+        "logo": "assets/logos/huge-one-screen-run-2.webp",
         "title": "One Screen Run 2",
         "category": "arcade",
         "description": "The sequel single-screen dodging arcade game with faster, denser obstacle patterns.",
@@ -6715,6 +6858,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-osu",
+        "logo": "assets/logos/huge-osu.webp",
         "title": "osu!",
         "category": "music",
         "description": "A rhythm game where you click, drag, and spin to circles synced with music beats.",
@@ -6730,6 +6874,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ovo",
+        "logo": "assets/logos/huge-ovo.webp",
         "title": "OvO",
         "category": "platformer",
         "description": "A tight, fast-paced parkour platformer focused on precise wall jumps and sliding.",
@@ -6760,6 +6905,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-pacman",
+        "logo": "assets/logos/huge-pacman.webp",
         "title": "Pac-Man",
         "category": "arcade",
         "description": "Guide Pac-Man through a maze eating dots while avoiding four colorful ghosts.",
@@ -6775,6 +6921,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-pacman-fps",
+        "logo": "assets/logos/huge-pacman-fps.webp",
         "title": "Pac-Man FPS",
         "category": "shooter",
         "description": "A first-person reimagining of Pac-Man's maze-chase gameplay.",
@@ -6790,6 +6937,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-pandemic-2",
+        "logo": "assets/logos/huge-pandemic-2.webp",
         "title": "Pandemic 2",
         "category": "strategy",
         "description": "Evolve and spread a virus across the globe before humanity finds a cure.",
@@ -6925,6 +7073,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-paper-io-2",
+        "logo": "assets/logos/huge-paper-io-2.webp",
         "title": "Paper.io 2",
         "category": "multiplayer",
         "description": "Claim territory by drawing loops on the map while avoiding rival trails.",
@@ -6940,6 +7089,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-papery-planes",
+        "logo": "assets/logos/huge-papery-planes.webp",
         "title": "Papery Planes",
         "category": "arcade",
         "description": "Fly a paper airplane through gusty obstacle courses aiming for distance.",
@@ -7060,6 +7210,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-popcat-classic",
+        "logo": "assets/logos/huge-popcat-classic.webp",
         "title": "Popcat Classic",
         "category": "clicker",
         "description": "Click repeatedly to make a cat's mouth pop open and closed as fast as possible.",
@@ -7090,6 +7241,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-precision-client",
+        "logo": "assets/logos/huge-precision-client.webp",
         "title": "Precision Client",
         "category": "shooter",
         "description": "A skill-focused first-person shooting range game emphasizing precise aim.",
@@ -7105,6 +7257,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-protektor",
+        "logo": "assets/logos/huge-protektor.webp",
         "title": "Protektor",
         "category": "strategy",
         "description": "Defend a base against waves of incoming enemies using strategic placement.",
@@ -7120,6 +7273,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-push-the-square",
+        "logo": "assets/logos/huge-push-the-square.webp",
         "title": "Push the Square",
         "category": "puzzle",
         "description": "Push a square block through minimalist maze levels toward the goal.",
@@ -7135,6 +7289,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-plants-vs-zombies-2",
+        "logo": "assets/logos/huge-plants-vs-zombies-2.webp",
         "title": "Plants vs Zombies 2",
         "category": "strategy",
         "description": "Plant a defensive lineup to stop waves of zombies from reaching your house.",
@@ -7150,6 +7305,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-racer",
+        "logo": "assets/logos/huge-racer.webp",
         "title": "Racer",
         "category": "racing",
         "description": "A straightforward arcade racing game across simple looping tracks.",
@@ -7165,6 +7321,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-retro-bowl-huge",
+        "logo": "assets/logos/huge-retro-bowl-huge.webp",
         "title": "Retro Bowl (Games Huge)",
         "category": "sports",
         "description": "Manage and play as an 8-bit-styled American football team through a season.",
@@ -7180,6 +7337,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-rise-of-neon-square",
+        "logo": "assets/logos/huge-rise-of-neon-square.webp",
         "title": "Rise of Neon Square",
         "category": "arcade",
         "description": "Navigate a neon square through glowing obstacle courses at increasing speed.",
@@ -7195,6 +7353,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-rocking-sky-trip",
+        "logo": "assets/logos/huge-rocking-sky-trip.webp",
         "title": "Rocking Sky Trip",
         "category": "arcade",
         "description": "Guide a rocking vehicle through a sky-high obstacle course, balancing momentum.",
@@ -7210,6 +7369,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-rooftop-snipers",
+        "logo": "assets/logos/huge-rooftop-snipers.webp",
         "title": "Rooftop Snipers",
         "category": "action",
         "description": "A ragdoll physics duel where two snipers try to knock each other off a rooftop.",
@@ -7225,6 +7385,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-run-3",
+        "logo": "assets/logos/huge-run-3.webp",
         "title": "Run 3",
         "category": "arcade",
         "description": "Run and jump through gaps in a crumbling tunnel that curves through space.",
@@ -7285,6 +7446,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-shadow-world-adventure",
+        "logo": "assets/logos/huge-shadow-world-adventure.webp",
         "title": "Shadow World Adventure",
         "category": "adventure",
         "description": "Explore a shadowy fantasy world, solving puzzles and battling through levels.",
@@ -7360,6 +7522,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-short-ride",
+        "logo": "assets/logos/huge-short-ride.webp",
         "title": "Short Ride",
         "category": "racing",
         "description": "A brief physics-based bike ride over bumpy, obstacle-strewn terrain.",
@@ -7376,7 +7539,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-slither-snake",
         "title": "Slither Snake",
-        "category": "arcade",
+        "category": "multiplayer",
         "description": "A multiplayer-style snake game where you grow by consuming pellets and avoid crashing.",
         "gradient": "linear-gradient(135deg, #4ade80, #14532d)",
         "source": "slither snake/index.html",
@@ -7390,6 +7553,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-slope",
+        "logo": "assets/logos/huge-slope.webp",
         "title": "Slope",
         "category": "arcade",
         "description": "Steer a ball down a steep, procedurally generated 3D slope, dodging obstacles at speed.",
@@ -7420,6 +7584,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-sm63",
+        "logo": "assets/logos/huge-sm63.webp",
         "title": "Super Mario 63",
         "category": "platformer",
         "description": "A fan-made 2D Mario platformer blending mechanics from multiple Mario games.",
@@ -7435,6 +7600,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-sm64",
+        "logo": "assets/logos/huge-sm64.webp",
         "title": "Super Mario 64 (Port)",
         "category": "platformer",
         "description": "A browser port of the classic 3D platformer starring Mario collecting stars. Hosted here, so your save files stay put.",
@@ -7455,8 +7621,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-smokingbarrels",
+        "logo": "assets/logos/huge-smokingbarrels.webp",
         "title": "Smoking Barrels",
-        "category": "action",
+        "category": "shooter",
         "description": "A slow-motion western duel shooter where timing and aim decide the standoff.",
         "gradient": "linear-gradient(135deg, #a16207, #422006)",
         "source": "smokingbarrels/index.html",
@@ -7471,7 +7638,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-snowbattle",
         "title": "Snow Battle",
-        "category": "action",
+        "category": "multiplayer",
         "description": "A multiplayer snowball-fight arena game with power-ups and forts.",
         "gradient": "linear-gradient(135deg, #bfdbfe, #1e3a8a)",
         "source": "snowbattle/index.html",
@@ -7485,6 +7652,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-soldier-legend",
+        "logo": "assets/logos/huge-soldier-legend.webp",
         "title": "Soldier Legend",
         "category": "shooter",
         "description": "A side-scrolling run-and-gun shooter through enemy-held territory.",
@@ -7560,6 +7728,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-space-company",
+        "logo": "assets/logos/huge-space-company.webp",
         "title": "Space Company",
         "category": "simulation",
         "description": "Manage and grow a space exploration company, launching missions and expanding operations.",
@@ -7605,6 +7774,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-spelunky",
+        "logo": "assets/logos/huge-spelunky.webp",
         "title": "Spelunky",
         "category": "platformer",
         "description": "A procedurally generated cave-exploration platformer full of traps and treasure.",
@@ -7620,6 +7790,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-stack",
+        "logo": "assets/logos/huge-stack.webp",
         "title": "Stack",
         "category": "arcade",
         "description": "Tap to stack moving blocks precisely on top of each other, building as high as possible.",
@@ -7665,6 +7836,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-stealing-the-diamond",
+        "logo": "assets/logos/huge-stealing-the-diamond.webp",
         "title": "Stealing the Diamond",
         "category": "puzzle",
         "description": "Plan a stealthy heist route to steal a diamond without triggering the alarms.",
@@ -7770,6 +7942,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-stickman-golf",
+        "logo": "assets/logos/huge-stickman-golf.webp",
         "title": "Stickman Golf",
         "category": "sports",
         "description": "A physics-based mini-golf game starring a ragdoll stickman golfer.",
@@ -7785,6 +7958,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-stickwar",
+        "logo": "assets/logos/huge-stickwar.webp",
         "title": "Stick War",
         "category": "strategy",
         "description": "Command an army of stick-figure units to conquer enemy territory in real time.",
@@ -7800,8 +7974,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-storm-the-house-2",
+        "logo": "assets/logos/huge-storm-the-house-2.webp",
         "title": "Storm the House 2",
-        "category": "strategy",
+        "category": "tower",
         "description": "A tower-defense shooter where you defend a house against waves of attackers.",
         "gradient": "linear-gradient(135deg, #b91c1c, #1c1917)",
         "source": "stormthehouse2/index.html",
@@ -7875,6 +8050,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-superhero-io",
+        "logo": "assets/logos/huge-superhero-io.webp",
         "title": "Superhero.io",
         "category": "multiplayer",
         "description": "A multiplayer .io brawler where you control a superhero battling other players.",
@@ -7891,7 +8067,7 @@ window.GAME_CATALOG = [
     {
         "id": "huge-superhot",
         "title": "Superhot",
-        "category": "action",
+        "category": "shooter",
         "description": "A stylized shooter where time only moves when you do, turning combat into slow-motion puzzles.",
         "gradient": "linear-gradient(135deg, #dc2626, #f5f5f4)",
         "source": "superhot/index.html",
@@ -7905,6 +8081,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-super-mario-construct",
+        "logo": "assets/logos/huge-super-mario-construct.webp",
         "title": "Super Mario Construct",
         "category": "platformer",
         "description": "A fan-made Mario platformer built with custom levels and classic mechanics.",
@@ -7920,6 +8097,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-swerve",
+        "logo": "assets/logos/huge-swerve.webp",
         "title": "Swerve",
         "category": "arcade",
         "description": "Steer a car left and right to dodge oncoming traffic at increasing speed.",
@@ -7935,6 +8113,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-synesthesia",
+        "logo": "assets/logos/huge-synesthesia.webp",
         "title": "Synesthesia",
         "category": "music",
         "description": "An audio-visual rhythm toy that turns sound into flowing generative visuals.",
@@ -7950,8 +8129,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tactical-weapon-pack-2",
+        "logo": "assets/logos/huge-tactical-weapon-pack-2.webp",
         "title": "Tactical Weapon Pack 2",
-        "category": "action",
+        "category": "shooter",
         "description": "A top-down tactical shooter with a wide arsenal of weapons across combat missions.",
         "gradient": "linear-gradient(135deg, #4b5320, #1a1a1a)",
         "source": "tactical-weapon-pack-2/index.html",
@@ -7980,6 +8160,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tail-of-the-dragon",
+        "logo": "assets/logos/huge-tail-of-the-dragon.webp",
         "title": "Tail of the Dragon",
         "category": "racing",
         "description": "Race a car through winding mountain-road courses inspired by a famous driving route.",
@@ -7995,6 +8176,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tank-trouble-2",
+        "logo": "assets/logos/huge-tank-trouble-2.webp",
         "title": "Tank Trouble 2",
         "category": "action",
         "description": "Battle friends or AI in a maze arena, firing bouncing shells from tiny tanks.",
@@ -8025,6 +8207,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-temple-run-2",
+        "logo": "assets/logos/huge-temple-run-2.webp",
         "title": "Temple Run 2",
         "category": "arcade",
         "description": "Sprint down an endless jungle path, dodging obstacles and collecting coins.",
@@ -8070,6 +8253,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-the-final-earth-2",
+        "logo": "assets/logos/huge-the-final-earth-2.webp",
         "title": "The Final Earth 2",
         "category": "strategy",
         "description": "The sequel city-building survival game managing a colony on a dying Earth.",
@@ -8130,6 +8314,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-thebattle",
+        "logo": "assets/logos/huge-thebattle.webp",
         "title": "The Battle",
         "category": "strategy",
         "description": "A tactical battle simulator where opposing armies clash on a strategic map.",
@@ -8145,6 +8330,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-theheist",
+        "logo": "assets/logos/huge-theheist.webp",
         "title": "The Heist",
         "category": "puzzle",
         "description": "Plan and execute a stealth heist, avoiding guards and cameras to reach the vault.",
@@ -8190,6 +8376,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-this-is-the-only-level",
+        "logo": "assets/logos/huge-this-is-the-only-level.webp",
         "title": "This Is the Only Level",
         "category": "puzzle",
         "description": "A single level that keeps changing its rules, forcing you to solve it in new ways each time.",
@@ -8205,8 +8392,9 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-time-shooter-3",
+        "logo": "assets/logos/huge-time-shooter-3.webp",
         "title": "Time Shooter 3",
-        "category": "action",
+        "category": "shooter",
         "description": "A stylized shooter where time moves only when you move, turning fights into slow-motion puzzles.",
         "gradient": "linear-gradient(135deg, #dc2626, #f5f5f4)",
         "source": "time-shooter-3/index.html",
@@ -8250,6 +8438,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tiny-islands",
+        "logo": "assets/logos/huge-tiny-islands.webp",
         "title": "Tiny Islands",
         "category": "puzzle",
         "description": "Place tiles to build small island communities in a relaxed placement puzzle.",
@@ -8280,6 +8469,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-toss-the-turtle",
+        "logo": "assets/logos/huge-toss-the-turtle.webp",
         "title": "Toss the Turtle",
         "category": "arcade",
         "description": "Launch a turtle as far as possible using upgrades and weapons along its flight.",
@@ -8325,6 +8515,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-townscaper",
+        "logo": "assets/logos/huge-townscaper.webp",
         "title": "Townscaper",
         "category": "sandbox",
         "description": "Click to grow a charming little town along the water, with no goals or rules.",
@@ -8355,6 +8546,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tube-jumpers",
+        "logo": "assets/logos/huge-tube-jumpers.webp",
         "title": "Tube Jumpers",
         "category": "arcade",
         "description": "Jump between rotating tubes, timing leaps to avoid falling off.",
@@ -8370,6 +8562,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-tunnel-rush",
+        "logo": "assets/logos/huge-tunnel-rush.webp",
         "title": "Tunnel Rush",
         "category": "arcade",
         "description": "Steer through a fast-moving tunnel of obstacles, dodging walls at high speed.",
@@ -8415,6 +8608,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-twitch-tetris",
+        "logo": "assets/logos/huge-twitch-tetris.webp",
         "title": "Twitch Tetris",
         "category": "puzzle",
         "description": "A collaborative Tetris variant styled after crowd-controlled Twitch chat play.",
@@ -8445,6 +8639,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-unfold-2",
+        "logo": "assets/logos/huge-unfold-2.webp",
         "title": "Unfold 2",
         "category": "puzzle",
         "description": "Unfold and manipulate shapes to solve minimalist geometric puzzles.",
@@ -8475,6 +8670,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-veloce",
+        "logo": "assets/logos/huge-veloce.webp",
         "title": "Veloce",
         "category": "racing",
         "description": "A stylish arcade racer with drifting mechanics across varied circuit tracks.",
@@ -8490,6 +8686,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-vex-3",
+        "logo": "assets/logos/huge-vex-3.webp",
         "title": "Vex 3",
         "category": "platformer",
         "description": "Navigate deadly obstacle courses as a stick figure using precise parkour moves.",
@@ -8505,6 +8702,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-vex-4",
+        "logo": "assets/logos/huge-vex-4.webp",
         "title": "Vex 4",
         "category": "platformer",
         "description": "The fourth entry in the stick-figure parkour obstacle-course platformer series.",
@@ -8520,6 +8718,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-vex-5",
+        "logo": "assets/logos/huge-vex-5.webp",
         "title": "Vex 5",
         "category": "platformer",
         "description": "The fifth entry in the stick-figure parkour obstacle-course platformer series.",
@@ -8550,6 +8749,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-vex-7",
+        "logo": "assets/logos/huge-vex-7.webp",
         "title": "Vex 7",
         "category": "platformer",
         "description": "The seventh entry in the stick-figure parkour obstacle-course platformer series.",
@@ -8565,6 +8765,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-waterworks",
+        "logo": "assets/logos/huge-waterworks.webp",
         "title": "Waterworks",
         "category": "puzzle",
         "description": "Rotate pipe pieces to connect a flowing water source to its destination.",
@@ -8610,6 +8811,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-wolf3d",
+        "logo": "assets/logos/huge-wolf3d.webp",
         "title": "Wolfenstein 3D",
         "category": "shooter",
         "description": "A browser port of the pioneering first-person shooter through Nazi-occupied levels.",
@@ -8625,6 +8827,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-wordle",
+        "logo": "assets/logos/huge-wordle.webp",
         "title": "Wordle",
         "category": "puzzle",
         "description": "Guess a five-letter word within six tries, using color clues to narrow it down.",
@@ -8640,6 +8843,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-worlds-hardest-game",
+        "logo": "assets/logos/huge-worlds-hardest-game.webp",
         "title": "World's Hardest Game",
         "category": "puzzle",
         "description": "Guide a red square through a maze of moving blue circles without touching them.",
@@ -8685,6 +8889,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-xx142-b2exe",
+        "logo": "assets/logos/huge-xx142-b2exe.webp",
         "title": "xx142-b2 Exe",
         "category": "horror",
         "description": "A short, unsettling first-person horror game exploring a glitching digital space.",
@@ -8700,6 +8905,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-yoshifabrication",
+        "logo": "assets/logos/huge-yoshifabrication.webp",
         "title": "Yoshi Fabrication",
         "category": "platformer",
         "description": "A Yoshi-themed platformer about hatching eggs and building through obstacle levels.",
@@ -14176,7 +14382,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula2-jmocraft",
         "title": "Jmocraft",
-        "category": "arcade",
+        "category": "minecraft",
         "description": "Play Jmocraft — a other game playable directly in your browser.",
         "gradient": "linear-gradient(135deg, #06b6d4, #0e7490)",
         "source": "jmocraft.html",
@@ -16951,7 +17157,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula-1v1lol",
         "title": "1v1 Lol",
-        "category": "arcade",
+        "category": "multiplayer",
         "description": "Play 1v1 Lol — a browser game you can play right here.",
         "gradient": "linear-gradient(135deg, #ea580c, #431407)",
         "source": "1v1lol.html",
@@ -19246,7 +19452,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula-grindcraft",
         "title": "Grind Craft",
-        "category": "arcade",
+        "category": "minecraft",
         "description": "Play Grindcraft — a browser game you can play right here.",
         "gradient": "linear-gradient(135deg, #0891b2, #083344)",
         "source": "grindcraft.html",
@@ -20326,7 +20532,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula-ayuncraft",
         "title": "A Yun Craft",
-        "category": "arcade",
+        "category": "minecraft",
         "description": "Play Ayuncraft — a browser game you can play right here.",
         "gradient": "linear-gradient(135deg, #ca8a04, #422006)",
         "source": "ayuncraft.html",
@@ -20536,7 +20742,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula-slope2player",
         "title": "Slope 2 Player",
-        "category": "arcade",
+        "category": "multiplayer",
         "description": "Play Slope 2 Player — a browser game you can play right here.",
         "gradient": "linear-gradient(135deg, #ea580c, #431407)",
         "source": "slope2player.html",
@@ -20551,7 +20757,7 @@ window.GAME_CATALOG = [
     {
         "id": "nebula-stealbrainrotonline",
         "title": "Steal Brain Rot Online",
-        "category": "arcade",
+        "category": "multiplayer",
         "description": "Play Stealbrainrotonline — a browser game you can play right here.",
         "gradient": "linear-gradient(135deg, #4f46e5, #1e1b4b)",
         "source": "stealbrainrotonline.html",
@@ -21574,7 +21780,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-2048",
         "title": "2048",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2F2048.swf",
@@ -21589,7 +21795,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-bloons-tower-defense-5",
         "title": "Bloons Tower Defense 5",
-        "category": "arcade",
+        "category": "tower",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2FBloons-Tower-Defense-5.swf",
@@ -21604,7 +21810,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-happywheels",
         "title": "HappyWheels",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2FHappyWheels.swf",
@@ -21619,7 +21825,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-run-2",
         "title": "Run 2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2FRun%25202.swf",
@@ -21634,7 +21840,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-super-smash-flash",
         "title": "Super Smash Flash",
-        "category": "fighting",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2FSuper%2520Smash%2520Flash.swf",
@@ -21649,7 +21855,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-swords-and-sandals-2-full",
         "title": "Swords And Sandals 2 (Full)",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2FSwords%2520and%2520Sandals%25202%2520%2528Full%2529.swf",
@@ -21664,7 +21870,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-billiards",
         "title": "Billiards",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fbilliards.swf",
@@ -21679,7 +21885,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-bitdungeon",
         "title": "Bitdungeon",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fbitdungeon.swf",
@@ -21694,7 +21900,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-btd5hacked",
         "title": "Btd5hacked",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fbtd5hacked.swf",
@@ -21709,7 +21915,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-chess",
         "title": "Chess",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fchess.swf",
@@ -21724,7 +21930,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-chibiknight",
         "title": "Chibiknight",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fchibiknight.swf",
@@ -21739,7 +21945,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-clickerheroes",
         "title": "Clickerheroes",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fclickerheroes.swf",
@@ -21754,7 +21960,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-clickerheroeshacked",
         "title": "Clickerheroeshacked",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fclickerheroeshacked.swf",
@@ -21769,7 +21975,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-dagobah-str1ke-force-heroes",
         "title": "Dagobah Strike Force Heroes",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fdagobah_Str1ke_Force_Heroes.swf",
@@ -21784,7 +21990,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-dreamcarracing",
         "title": "Dreamcarracing",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fdreamcarracing.swf",
@@ -21799,7 +22005,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-duck-life4",
         "title": "Duck Life4",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fduck-life4.swf",
@@ -21814,7 +22020,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-ducklife2",
         "title": "Ducklife2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fducklife2.swf",
@@ -21829,7 +22035,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-ducklife3",
         "title": "Ducklife3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fducklife3.swf",
@@ -21844,7 +22050,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-escapingtheprison",
         "title": "Escapingtheprison",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fescapingtheprison.swf",
@@ -21859,7 +22065,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-fancypantsadventure",
         "title": "Fancypantsadventure",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ffancypantsadventure.swf",
@@ -21874,7 +22080,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-finalninja",
         "title": "Finalninja",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ffinalninja.swf",
@@ -21889,7 +22095,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-flappy-bird",
         "title": "Flappy Bird",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fflappy-bird.swf",
@@ -21904,7 +22110,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-fleeingthecomplex",
         "title": "Fleeingthecomplex",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ffleeingthecomplex.swf",
@@ -21919,7 +22125,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-frogger",
         "title": "Frogger",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ffrogger.swf",
@@ -21934,7 +22140,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-geometrydash",
         "title": "Geometrydash",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgeometrydash.swf",
@@ -21949,7 +22155,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-geometrydashtest1",
         "title": "Geometrydashtest1",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgeometrydashtest1.swf",
@@ -21964,7 +22170,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-getontop",
         "title": "Getontop",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgetontop.swf",
@@ -21979,7 +22185,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-give-up-2",
         "title": "Give Up 2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgive-up-2.swf",
@@ -21994,7 +22200,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-give-up-robot-2",
         "title": "Give Up Robot 2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgive_up_robot_2.swf",
@@ -22009,7 +22215,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-gunmayhem2",
         "title": "Gunmayhem2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fgunmayhem2.swf",
@@ -22024,7 +22230,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-idlewebtycoon",
         "title": "Idlewebtycoon",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fidlewebtycoon.swf",
@@ -22039,7 +22245,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-impossiblequiz",
         "title": "Impossiblequiz",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fimpossiblequiz.swf",
@@ -22054,7 +22260,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-impossiblequiz2",
         "title": "Impossiblequiz2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fimpossiblequiz2.swf",
@@ -22069,7 +22275,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-impossiblequizhacked",
         "title": "Impossiblequizhacked",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fimpossiblequizhacked.swf",
@@ -22084,7 +22290,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-indestructotank",
         "title": "Indestructotank",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Findestructotank.swf",
@@ -22099,7 +22305,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-infilteratingtheairship",
         "title": "Infilteratingtheairship",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Finfilteratingtheairship.swf",
@@ -22114,7 +22320,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-jacksmith",
         "title": "Jacksmith",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fjacksmith.swf",
@@ -22129,7 +22335,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-learn-to-fly-3",
         "title": "Learn To Fly 3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearn-to-fly-3.swf",
@@ -22144,7 +22350,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-learn-to-fly-3-unlocked",
         "title": "Learn To Fly 3 (Everything Unlocked)",
-        "category": "arcade",
+        "category": "retro",
         "description": "Learn to Fly 3 with the Black Market open: 999,999 fish, Extra Items, Extended Upgrades, Cheats and Time Warp already bought, and 99 of each power. Works without Kongregate. Open the mod menu to unlock every item and mode, set bonus points, or copy your progress over from the normal Learn To Fly 3.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-3-unlocked.swf",
@@ -22159,7 +22365,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-learntofly",
         "title": "Learntofly",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly.swf",
@@ -22174,7 +22380,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-learntofly2",
         "title": "Learntofly2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Flearntofly2.swf%3Ffrom%3Dchat.kongregate.com",
@@ -22189,7 +22395,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-miraginewar",
         "title": "Miraginewar",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fmiraginewar.swf",
@@ -22204,7 +22410,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-multitask",
         "title": "Multitask",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fmultitask.swf",
@@ -22219,7 +22425,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-n",
         "title": "N",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fn.swf",
@@ -22234,7 +22440,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-obeythegame",
         "title": "Obeythegame",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fobeythegame.swf",
@@ -22249,7 +22455,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papasbakeria",
         "title": "Papasbakeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapasbakeria.swf",
@@ -22264,7 +22470,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papasburgeria",
         "title": "Papasburgeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapasburgeria.swf",
@@ -22279,7 +22485,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papasdonuteria",
         "title": "Papasdonuteria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapasdonuteria.swf",
@@ -22294,7 +22500,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papasfreezeria",
         "title": "Papasfreezeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapasfreezeria.swf",
@@ -22309,7 +22515,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papashotdoggeria",
         "title": "Papashotdoggeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapashotdoggeria.swf",
@@ -22324,7 +22530,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papaspizzeria",
         "title": "Papaspizzeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapaspizzeria.swf",
@@ -22339,7 +22545,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papasscooperia",
         "title": "Papasscooperia",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapasscooperia.swf",
@@ -22354,7 +22560,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papassushiria",
         "title": "Papassushiria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapassushiria.swf",
@@ -22369,7 +22575,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-papaswingeria",
         "title": "Papaswingeria",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fpapaswingeria.swf",
@@ -22384,7 +22590,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-qwop",
         "title": "Qwop",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fqwop.swf",
@@ -22399,7 +22605,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-raze2",
         "title": "Raze2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fraze2.swf",
@@ -22414,7 +22620,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-raze3",
         "title": "Raze3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fraze3.swf",
@@ -22429,7 +22635,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-run-3-unblocked-games-1531491672",
         "title": "Run 3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Frun-3-unblocked-games_1531491672.swf",
@@ -22444,7 +22650,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-run3",
         "title": "Run3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Frun3.swf",
@@ -22459,7 +22665,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-sportsheadsbasketballchampionship",
         "title": "Sportsheadsbasketballchampionship",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsportsheadsbasketballchampionship.swf",
@@ -22474,7 +22680,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-sportsheadssoccer",
         "title": "Sportsheadssoccer",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsportsheadssoccer.swf",
@@ -22489,7 +22695,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-sportsheadstennis",
         "title": "Sportsheadstennis",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsportsheadstennis.swf",
@@ -22504,7 +22710,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-sportsheadsvolleyball",
         "title": "Sportsheadsvolleyball",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsportsheadsvolleyball.swf",
@@ -22519,7 +22725,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-stealingthediamond",
         "title": "Stealingthediamond",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstealingthediamond.swf",
@@ -22534,7 +22740,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-stickrpg",
         "title": "Stickrpg",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstickrpg.swf",
@@ -22549,7 +22755,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-stickwar",
         "title": "Stickwar",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstickwar.swf",
@@ -22564,7 +22770,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-stickwar2",
         "title": "Stickwar2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstickwar2.swf",
@@ -22579,7 +22785,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-str1ke-force-heroes",
         "title": "Strike Force Heroes",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstr1ke-force-heroes.swf",
@@ -22594,7 +22800,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-str1keforceheroes3",
         "title": "Str1keforceheroes3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fstr1keforceheroes3.swf",
@@ -22609,7 +22815,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-superfighters",
         "title": "Superfighters",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsuperfighters.swf",
@@ -22624,7 +22830,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-superfightersultimate",
         "title": "Superfightersultimate",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsuperfightersultimate.swf",
@@ -22639,7 +22845,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-supermario63",
         "title": "Supermario63",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsupermario63.swf",
@@ -22654,7 +22860,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-supermarioflash",
         "title": "Supermarioflash",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsupermarioflash.swf",
@@ -22669,7 +22875,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-supermarioflash2",
         "title": "Supermarioflash2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fsupermarioflash2.swf",
@@ -22684,7 +22890,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-swordsandsandals3",
         "title": "Swordsandsandals3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fswordsandsandals3.swf",
@@ -22699,7 +22905,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-swordsandsouls",
         "title": "Swordsandsouls",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fswordsandsouls.swf",
@@ -22714,7 +22920,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-tank-trouble",
         "title": "Tank Trouble",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ftank-trouble.swf",
@@ -22729,7 +22935,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-territorywar",
         "title": "Territorywar",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fterritorywar.swf",
@@ -22744,7 +22950,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-tetris",
         "title": "Tetris",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Ftetris.swf",
@@ -22759,7 +22965,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-the-binding-of-isaac",
         "title": "The Binding Of Isaac",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fthe_binding_of_isaac.swf",
@@ -22774,7 +22980,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-thefloodrunner2",
         "title": "Thefloodrunner2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fthefloodrunner2.swf",
@@ -22789,7 +22995,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-thelaststandunion",
         "title": "Thelaststandunion",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fthelaststandunion.swf",
@@ -22804,7 +23010,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-themehotel",
         "title": "Themehotel",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fthemehotel.swf",
@@ -22819,7 +23025,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-themehotelhacked",
         "title": "Themehotelhacked",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fthemehotelhacked.swf",
@@ -22834,7 +23040,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-unfairmario",
         "title": "Unfairmario",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ef4444,#7f1d1d)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Funfairmario.swf",
@@ -22849,7 +23055,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-uno",
         "title": "Uno",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Funo.swf",
@@ -22864,7 +23070,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-vex",
         "title": "Vex",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fvex.swf",
@@ -22879,7 +23085,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-zombocalyps3",
         "title": "Zombocalyps3",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fzombocalyps3.swf",
@@ -22894,7 +23100,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-zombocalyps32",
         "title": "Zombocalyps32",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fzombocalyps32.swf",
@@ -22909,7 +23115,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-zombocalypse2",
         "title": "Zombocalypse2",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#f97316,#7c2d12)",
         "source": "games/flash.html?swf=https%3A%2F%2Fsusorodni.github.io%2Fswfgalaxy%2Fgames%2Fzombocalypse2.swf",
@@ -22924,7 +23130,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-dagobah-portal-flash",
         "title": "Dagobah Portal Flash",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fdagobah_portal_flash.swf",
@@ -22939,7 +23145,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-duck-life",
         "title": "Duck Life",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fduck-life.swf",
@@ -22954,7 +23160,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-ducklife3game",
         "title": "Ducklife3game",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#eab308,#713f12)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fducklife3game.swf",
@@ -22969,7 +23175,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-ducklife4",
         "title": "Ducklife4",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#06b6d4,#164e63)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fducklife4.swf",
@@ -22984,7 +23190,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-flash-crash",
         "title": "Flash Crash",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#ec4899,#831843)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fflash-crash.swf",
@@ -22999,7 +23205,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-learn-to-fly-2-11967",
         "title": "Learn To Fly 2 11967",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#8b5cf6,#4c1d95)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Flearn-to-fly-2-11967.swf%3Ffrom%3Dchat.kongregate.com",
@@ -23014,7 +23220,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-pacman",
         "title": "Pacman",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#6366f1,#312e81)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fpacman.swf",
@@ -23029,7 +23235,7 @@ window.GAME_CATALOG = [
     {
         "id": "flash-supersmash",
         "title": "Supersmash",
-        "category": "arcade",
+        "category": "retro",
         "description": "Classic Flash game, playable in-browser via Ruffle.",
         "gradient": "linear-gradient(135deg,#10b981,#064e3b)",
         "source": "games/flash.html?swf=https%3A%2F%2Farcadecampushub.github.io%2Fflashgames%2Fsupersmash.swf",
@@ -26572,7 +26778,7 @@ window.GAME_CATALOG = [
     {
         "id": "original-word-master",
         "title": "Word Master",
-        "category": "trivia",
+        "category": "puzzle",
         "description": "Guess the five-letter word in six tries — colour clues show which letters are right and where. A fresh word every game. Self-hosted here so it always loads and never gets blocked.",
         "gradient": "linear-gradient(135deg,#3fb950,#0d3b1e)",
         "source": "games/originals/word-master.html",
@@ -26717,6 +26923,7 @@ window.GAME_CATALOG = [
         "icon": "",
         "dateAdded": "2026-09-18",
         "id": "huge-kart-fight",
+        "logo": "assets/logos/huge-kart-fight.webp",
         "title": "Kart Fight.io",
         "category": "fighting",
         "description": "Battle other karts in a chaotic online arena — bump, boost and knock rivals off the stage. Fast multiplayer fighting fun.",
@@ -26732,6 +26939,7 @@ window.GAME_CATALOG = [
         "icon": "",
         "dateAdded": "2026-09-18",
         "id": "huge-boxhead",
+        "logo": "assets/logos/huge-boxhead.webp",
         "title": "Boxhead: 2 Play",
         "category": "fighting",
         "description": "Blast through waves of zombies solo or with a friend in this top-down shooter-brawler. Grab weapons, survive, rack up kills.",
@@ -26747,6 +26955,7 @@ window.GAME_CATALOG = [
         "icon": "",
         "dateAdded": "2026-09-18",
         "id": "huge-ninja-vs",
+        "logo": "assets/logos/huge-ninja-vs.webp",
         "title": "Ninja vs EvilCorp",
         "category": "fighting",
         "description": "Slice, dash and combo your way through EvilCorp's goons as a lightning-fast ninja. Skill-based action fighting.",
@@ -26800,6 +27009,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-cookieclicker",
+        "logo": "assets/logos/huge-cookieclicker.webp",
         "title": "Cookie Clicker",
         "category": "idle",
         "description": "The original idle legend — bake cookies, buy grandmas and factories, ascend forever. Saves locally.",
@@ -26830,6 +27040,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-doge2048",
+        "logo": "assets/logos/huge-doge2048.webp",
         "title": "Doge 2048",
         "category": "puzzle",
         "description": "2048 with a Doge twist — slide and merge tiles. Much wow.",
@@ -26845,6 +27056,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-ducklife1",
+        "logo": "assets/logos/huge-ducklife1.webp",
         "title": "Duck Life",
         "category": "adventure",
         "description": "Train your racing duck across running, flying and swimming events.",
@@ -26860,6 +27072,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-emulator-js",
+        "logo": "assets/logos/huge-emulator-js.webp",
         "title": "EmulatorJS",
         "category": "emulator",
         "description": "Play retro console games in-browser via EmulatorJS — bring your own ROMs. Save states persist.",
@@ -26876,6 +27089,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-factoryballs",
+        "logo": "assets/logos/huge-factoryballs.webp",
         "title": "Factory Balls",
         "category": "puzzle",
         "description": "Dress each ball to match the order using paints and tools — clever puzzles.",
@@ -26906,6 +27120,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-geodash-2",
+        "logo": "assets/logos/huge-geodash-2.webp",
         "title": "Geometry Dash 2",
         "category": "arcade",
         "description": "Rhythm-based jump-and-fly platforming through spike-filled levels.",
@@ -26937,6 +27152,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-motox3m-pool",
+        "logo": "assets/logos/huge-motox3m-pool.webp",
         "title": "Moto X3M Pool Party",
         "category": "racing",
         "description": "Summer-themed stunt biking over pools, slides and beach obstacles.",
@@ -26982,6 +27198,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-papasburgeria",
+        "logo": "assets/logos/huge-papasburgeria.webp",
         "title": "Papa's Burgeria",
         "category": "simulation",
         "description": "Run Papa's burger joint — take orders, grill, top and serve. Saves your progress.",
@@ -26997,6 +27214,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-papaspizzaria",
+        "logo": "assets/logos/huge-papaspizzaria.webp",
         "title": "Papa's Pizzeria",
         "category": "simulation",
         "description": "Bake and top pizzas to order in the time-management classic.",
@@ -27027,6 +27245,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-retrobowl",
+        "logo": "assets/logos/huge-retrobowl.webp",
         "title": "Retro Bowl",
         "category": "sports",
         "description": "Manage and play retro-styled American football — the addictive pixel classic. Saves your team.",
@@ -27042,6 +27261,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-run3",
+        "logo": "assets/logos/huge-run3.webp",
         "title": "Run 3",
         "category": "platformer",
         "description": "Sprint and leap through crumbling space tunnels in the endless runner Run 3.",
@@ -27057,6 +27277,7 @@ window.GAME_CATALOG = [
     },
     {
         "id": "huge-spacecompany",
+        "logo": "assets/logos/huge-spacecompany.webp",
         "title": "Space Company",
         "category": "idle",
         "description": "An idle space-industry tycoon — automate resources and expand across the solar system.",

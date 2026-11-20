@@ -506,6 +506,25 @@ code { font-family: var(--mono); font-size: 0.88em; }
 .home-shortcuts a:first-child { color: var(--accent); }
 .home-head .readout { gap: 0.5rem 1.5rem; }
 .home-head .readout #r-date { margin-left: auto; }
+
+/* One-click resume of the last game you had open. */
+.home-continue {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  margin-top: 1rem; padding: 0.5rem 1rem;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.85rem; color: var(--ink-2);
+  transition: border-color 0.12s, color 0.12s;
+}
+.home-continue strong { color: var(--ink); font-weight: 600; }
+.home-continue-go {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.35rem; height: 1.35rem; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink, #fff);
+  font-size: 0.6rem; flex: none;
+}
+.home-continue:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.home-continue:hover strong { color: var(--accent); }
 .rail-extras { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 0.5rem; }
 .rail-extras summary { min-height: 44px; padding: 0.7rem 0.5rem; font-size: 0.8rem; color: var(--ink-2); cursor: pointer; }
 @media (max-width: 560px) {
@@ -777,6 +796,28 @@ html[data-lite="on"] .tile.fx-tilt::before { display: none; }
 }
 .tile-hit { position: absolute; inset: 0; z-index: 2; }
 
+/* Hover play affordance over the card art. Pill sits above the hit link but
+   takes no pointer events; animated with opacity/transform only. Hidden on
+   touch (no hover) and in lite mode, where it would be pure noise. */
+.tile-play {
+  position: absolute; z-index: 3; left: 50%; bottom: 9%;
+  transform: translate(-50%, 7px);
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink, #fff);
+  font-size: 0.74rem; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  pointer-events: none;
+}
+.tile:hover .tile-play, .tile:focus-within .tile-play {
+  opacity: 1; transform: translate(-50%, 0);
+}
+@media (hover: none) { .tile-play { display: none; } }
+html[data-lite="on"] .tile-play { display: none; }
+
 /* --------------------------------------------------------------------------
    07 · LIST VIEW
    -------------------------------------------------------------------------- */
@@ -986,6 +1027,20 @@ body.game-pseudo-fullscreen { overflow: hidden; }
 }
 .stage-loading[hidden] { display: none; }
 .stage-loading p { margin: 0; color: var(--ink-3); max-width: 34ch; }
+/* The loading card shows the game's own logo, so "Loading" reads as loading
+   THIS game rather than a generic spinner box. */
+.stage-loading-art { display: grid; place-items: center; }
+.stage-loading-art img {
+  width: min(96px, 20vw); height: auto; max-height: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.35));
+}
+.stage-loading-art svg { width: 128px; height: 80px; border-radius: 8px; }
+
+/* The frame fades in once it reports loaded, instead of popping in as a
+   blank white/black rectangle. Opacity only — never reflows the stage. */
+.stage > iframe { opacity: 0; transition: opacity 0.28s ease; }
+.stage > iframe.is-live { opacity: 1; }
 
 .spinner {
   width: 1.6rem; height: 1.6rem;

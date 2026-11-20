@@ -10,6 +10,7 @@ window.MOD_GAMES = {
   "chromaincident": "values",
   "dino": "dino",
   "eaglercraft-1-8-8": "minecraft",
+  "eaglercraft-26-1-2": "minecraft",
   "ext-2048-gd4ark": "values",
   "ext-elematter": "values",
   "ext-js-tetris": "values",

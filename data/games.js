@@ -2243,9 +2243,22 @@ window.GAME_CATALOG = [
     "embed": "allowed",
     "schoolRisk": "low",
     "dateAdded": "2026-11-19",
-    "download": "https://github.com/arcadecampushub/Minecraft/raw/main/eaglercraft-1.8.8-main.zip",
-    "downloadLabel": "Offline copy",
     "notice": "Worlds save in this browser, per version, and do not carry between Eaglercraft builds. Sign in and use the Save button to back a world up to your account."
+  },
+  {
+    "id": "eaglercraft-26-1-2",
+    "title": "Eaglercraft 26.1.2",
+    "category": "sandbox",
+    "description": "Minecraft 26.1.2 in the browser \u2014 the newest build, modern blocks, and a PatentSMP entry baked into the server list.",
+    "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
+    "host": "minecraft",
+    "source": "26.1.2/index.html",
+    "direct": "26.1.2/index.html",
+    "platform": "local",
+    "embed": "allowed",
+    "schoolRisk": "low",
+    "dateAdded": "2026-11-19",
+    "notice": "Downloads a 369 MB asset pack the first time it opens; after that it is cached and loads fast. No sound in this build, and it wants a strong machine. Worlds do not carry over from 1.8.8."
   },
   {
     "id": "waterboy-firegirl",

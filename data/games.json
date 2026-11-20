@@ -14378,21 +14378,6 @@
         "dateAdded": "2026-09-10"
     },
     {
-        "id": "nebula2-jmocraft",
-        "title": "Jmocraft",
-        "category": "minecraft",
-        "description": "Play Jmocraft — a other game playable directly in your browser.",
-        "gradient": "linear-gradient(135deg, #06b6d4, #0e7490)",
-        "source": "jmocraft.html",
-        "direct": "jmocraft.html",
-        "platform": "local",
-        "embed": "allowed",
-        "schoolRisk": "low",
-        "icon": "",
-        "host": "nebula-cdn",
-        "dateAdded": "2026-09-10"
-    },
-    {
         "id": "nebula2-cheeseisthereason",
         "title": "Cheese Is the Reason",
         "category": "arcade",
@@ -19448,21 +19433,6 @@
         "dateAdded": "2026-09-11"
     },
     {
-        "id": "nebula-grindcraft",
-        "title": "Grind Craft",
-        "category": "minecraft",
-        "description": "Play Grindcraft — a browser game you can play right here.",
-        "gradient": "linear-gradient(135deg, #0891b2, #083344)",
-        "source": "grindcraft.html",
-        "direct": "grindcraft.html",
-        "platform": "local",
-        "embed": "allowed",
-        "schoolRisk": "medium",
-        "icon": "",
-        "host": "nebula-cdn",
-        "dateAdded": "2026-09-11"
-    },
-    {
         "id": "nebula-tacostand",
         "title": "Taco Stand",
         "category": "arcade",
@@ -20520,21 +20490,6 @@
         "gradient": "linear-gradient(135deg, #dc2626, #450a0a)",
         "source": "arthursnightmare.html",
         "direct": "arthursnightmare.html",
-        "platform": "local",
-        "embed": "allowed",
-        "schoolRisk": "medium",
-        "icon": "",
-        "host": "nebula-cdn",
-        "dateAdded": "2026-09-11"
-    },
-    {
-        "id": "nebula-ayuncraft",
-        "title": "A Yun Craft",
-        "category": "minecraft",
-        "description": "Play Ayuncraft — a browser game you can play right here.",
-        "gradient": "linear-gradient(135deg, #ca8a04, #422006)",
-        "source": "ayuncraft.html",
-        "direct": "ayuncraft.html",
         "platform": "local",
         "embed": "allowed",
         "schoolRisk": "medium",

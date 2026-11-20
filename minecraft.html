@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="noir" data-lite="off">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Minecraft! — Arcade Campus Hub</title>
+  <meta name="description" content="Every Minecraft on the Arcade Campus Hub: 1.8.8 and 26.1.2 in your browser, Minecraft Classic, and the PatentSMP server address.">
+  <meta name="theme-color" content="#0c0d10">
+  <meta name="robots" content="index,follow">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/core/access-gate.js"></script>
+  <script src="js/core/theme-boot.js"></script>
+  <script src="js/core/consent-gate.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div data-shell="chrome"></div>
+
+  <main class="main" id="main">
+
+    <header class="page-head">
+      <span class="label">Minecraft!</span>
+      <h1>Minecraft!</h1>
+      <p>All three Minecraft builds on the hub, plus our server. Browser versions join
+         PatentSMP with one click — the server is already in their multiplayer list.</p>
+    </header>
+
+    <section class="block">
+      <div class="block-head"><h2>The three builds</h2><span class="fill"></span></div>
+      <div class="panel">
+        <div class="btn-row" style="gap:0.6rem;flex-wrap:wrap">
+          <a class="btn btn-cta" href="play.html?id=eaglercraft-1-8-8">&#9635; Minecraft 1.8.8 <span class="dim">— fast, runs on anything</span></a>
+          <a class="btn" href="play.html?id=eaglercraft-26-1-2">&#9635; Minecraft 26.1.2 <span class="dim">— newest, heavy download</span></a>
+          <a class="btn" href="play.html?id=huge-minecraft-classic">&#9635; Minecraft Classic <span class="dim">— the original sandbox</span></a>
+        </div>
+        <p class="dim" style="margin:0.6rem 0 0">Weak laptop or Chromebook? Play 1.8.8. It is 14 MB and boots in seconds.
+           26.1.2 has modern blocks and creatures but pulls a 369 MB pack on first load (cached after that).</p>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>Play on PatentSMP</h2><span class="fill"></span></div>
+      <div class="panel">
+        <p style="margin:0 0 0.6rem">In the browser versions: click Multiplayer — <strong>PatentSMP</strong> is already
+           in the server list. Just join and sign in.</p>
+        <p style="margin:0 0 0.6rem">Java Edition (real launcher, any version 1.8.8 to latest):</p>
+        <p style="margin:0 0 0.6rem"><code id="addr">patentsmp.stealzerslab.fun</code></p>
+        <div class="btn-row">
+          <button class="btn btn-cta" type="button" id="copy-addr">&#9021; Copy address</button>
+        </div>
+        <p class="dim" id="copy-status" role="status" style="margin:0.6rem 0 0"></p>
+        <p class="dim" style="margin:0.6rem 0 0">First time on the server: type <code>/register &lt;password&gt; &lt;password&gt;</code>.
+           After that: <code>/login &lt;password&gt;</code>. Real Java Edition accounts joining straight from a launcher
+           skip the password entirely. Full guide on the <a href="patentsmp.html">server page</a>.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/core/config.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/features/catalog-overlay.js"></script>
+  <script src="js/features/catalog.js"></script>
+  <script src="js/features/art.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/api-supabase.js"></script>
+  <script src="js/core/session.js"></script>
+  <script src="js/core/realtime.js"></script>
+  <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
+  <script src="js/features/chat-core.js"></script>
+  <script src="js/features/chat-dock.js"></script>
+  <script src="js/features/call.js"></script>
+  <script src="js/features/game-saves.js"></script>
+  <script src="js/features/shell.js"></script>
+  <script src="js/features/motion-fx.js"></script>
+  <script src="js/features/context-menu.js"></script>
+  <script src="js/pages/page-minecraft.js"></script>
+</body>
+</html>

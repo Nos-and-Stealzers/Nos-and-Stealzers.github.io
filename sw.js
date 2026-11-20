@@ -3,7 +3,7 @@
    pepersfight's Build files, which are version-stamped in their URLs and cached
    so returning players skip the wasm download. Bump SHELL_VERSION after a deploy. */
 
-var SHELL_VERSION = "ach-shell-v131";
+var SHELL_VERSION = "ach-shell-v132";
 
 /* Pepersfight build files are version-stamped in their URL (?v=x.y.z), so a cached
    copy can never go stale: the first visit fills this cache and repeat visits skip
@@ -23,6 +23,8 @@ var SHELL = [
   "about.html",
   "patentsmp.html",
   "js/pages/page-patentsmp.js",
+  "minecraft.html",
+  "js/pages/page-minecraft.js",
   "ai.html",
   "plus.html",
   "404.html",

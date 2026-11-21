@@ -14,6 +14,21 @@
   <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
+  <style>
+    .mc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+    .mc-card { display: flex; flex-direction: column; gap: 0.6rem; padding: 1.1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--panel, rgba(255,255,255,0.03)); }
+    .mc-card h3 { margin: 0.2rem 0 0; font-size: 1.15rem; }
+    .mc-card p { margin: 0; color: var(--muted, #9aa3b2); line-height: 1.45; flex: 1; }
+    .mc-card .btn { align-self: flex-start; margin-top: 0.3rem; }
+    .mc-ico { filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35)); }
+    .mc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; list-style: none; padding: 0; margin: 0.1rem 0; }
+    .mc-chips li { font-size: 0.78rem; padding: 0.18rem 0.55rem; border: 1px solid var(--line); border-radius: 999px; color: var(--muted, #9aa3b2); }
+    .mc-server { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .mc-way h3 { margin: 0 0 0.6rem; font-size: 1.05rem; }
+    .mc-way ol { margin: 0; padding-left: 1.2rem; line-height: 1.6; }
+    .mc-addr { margin: 0 0 0.6rem; }
+    .mc-addr code { font-size: 1.05rem; padding: 0.35rem 0.6rem; border: 1px solid var(--line); border-radius: 8px; }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -24,37 +39,55 @@
     <header class="page-head">
       <span class="label">Minecraft!</span>
       <h1>Minecraft!</h1>
-      <p>All three Minecraft builds on the hub, plus our server. Browser versions join
-         PatentSMP with one click — the server is already in their multiplayer list.</p>
+      <p>Three ways to play Minecraft in your browser, plus our own server. Pick the one that fits your computer.</p>
     </header>
 
     <section class="block">
-      <div class="block-head"><h2>The three builds</h2><span class="fill"></span></div>
-      <div class="panel">
-        <div class="btn-row" style="gap:0.6rem;flex-wrap:wrap">
-          <a class="btn btn-cta" href="play.html?id=eaglercraft-1-8-8">&#9635; Minecraft 1.8.8 <span class="dim">— fast, runs on anything</span></a>
-          <a class="btn" href="play.html?id=eaglercraft-26-1-2">&#9635; Minecraft 26.1.2 <span class="dim">— newest, heavy download</span></a>
-          <a class="btn" href="play.html?id=huge-minecraft-classic">&#9635; Minecraft Classic <span class="dim">— the original sandbox</span></a>
-        </div>
-        <p class="dim" style="margin:0.6rem 0 0">Weak laptop or Chromebook? Play 1.8.8. It is 14 MB and boots in seconds.
-           26.1.2 has modern blocks and creatures but pulls a 369 MB pack on first load (cached after that).</p>
+      <div class="block-head"><h2>Pick a version</h2><span class="fill"></span></div>
+      <div class="mc-grid">
+        <article class="mc-card">
+          <svg class="mc-ico" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><polygon points="32,6 58,20 32,34 6,20" fill="#6cc04a"/><polygon points="6,20 32,34 32,60 6,46" fill="#7a5230"/><polygon points="58,20 32,34 32,60 58,46" fill="#5d4027"/><path d="M32 6 58 20 32 34 6 20Z M6 20v26l26 14 26-14V20" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/></svg>
+          <h3>Minecraft 1.8.8</h3>
+          <p>The fast one. Runs smoothly on school laptops and Chromebooks, and PatentSMP is already in the server list.</p>
+          <ul class="mc-chips"><li>14 MB</li><li>Boots in seconds</li><li>Best for weak laptops</li></ul>
+          <a class="btn btn-cta" href="play.html?id=eaglercraft-1-8-8">Play 1.8.8</a>
+        </article>
+        <article class="mc-card">
+          <svg class="mc-ico" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><polygon points="32,6 58,20 32,34 6,20" fill="#5fb0d9"/><polygon points="6,20 32,34 32,60 6,46" fill="#3b7ea6"/><polygon points="58,20 32,34 32,60 58,46" fill="#2f6485"/><path d="M32 6 58 20 32 34 6 20Z M6 20v26l26 14 26-14V20" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/></svg>
+          <h3>Minecraft 26.1.2</h3>
+          <p>The newest blocks, mobs and world generation. Needs a decent laptop; the first load downloads the game pack, then it is cached.</p>
+          <ul class="mc-chips"><li>80 MB first load</li><li>Newest content</li><li>Best on a good laptop</li></ul>
+          <a class="btn" href="play.html?id=eaglercraft-26-1-2">Play 26.1.2</a>
+        </article>
+        <article class="mc-card">
+          <svg class="mc-ico" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><polygon points="32,6 58,20 32,34 6,20" fill="#c9c3b3"/><polygon points="6,20 32,34 32,60 6,46" fill="#8d8a7e"/><polygon points="58,20 32,34 32,60 58,46" fill="#706d63"/><path d="M32 6 58 20 32 34 6 20Z M6 20v26l26 14 26-14V20" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/></svg>
+          <h3>Minecraft Classic</h3>
+          <p>The original 2009 block-building sandbox. Tiny, instant, and perfect for a quick build.</p>
+          <ul class="mc-chips"><li>Tiny</li><li>Starts instantly</li><li>Single-player</li></ul>
+          <a class="btn" href="play.html?id=huge-minecraft-classic">Play Classic</a>
+        </article>
       </div>
     </section>
 
     <section class="block">
-      <div class="block-head"><h2>Play on PatentSMP</h2><span class="fill"></span></div>
-      <div class="panel">
-        <p style="margin:0 0 0.6rem">In the browser versions: click Multiplayer — <strong>PatentSMP</strong> is already
-           in the server list. Just join and sign in.</p>
-        <p style="margin:0 0 0.6rem">Java Edition (real launcher, any version 1.8.8 to latest):</p>
-        <p style="margin:0 0 0.6rem"><code id="addr">patentsmp.arcadecampushub.online</code></p>
-        <div class="btn-row">
-          <button class="btn btn-cta" type="button" id="copy-addr">&#9021; Copy address</button>
+      <div class="block-head"><h2>PatentSMP server</h2><span class="fill"></span></div>
+      <div class="mc-server">
+        <div class="panel mc-way">
+          <h3>In your browser</h3>
+          <ol>
+            <li>Open 1.8.8 or 26.1.2 above.</li>
+            <li>Click <strong>Multiplayer</strong>. <strong>PatentSMP</strong> is already in the list.</li>
+            <li>Join, then type <code>/register &lt;password&gt; &lt;password&gt;</code> the first time and <code>/login &lt;password&gt;</code> after that.</li>
+          </ol>
         </div>
-        <p class="dim" id="copy-status" role="status" style="margin:0.6rem 0 0"></p>
-        <p class="dim" style="margin:0.6rem 0 0">First time on the server: type <code>/register &lt;password&gt; &lt;password&gt;</code>.
-           After that: <code>/login &lt;password&gt;</code>. Players joining straight from a Java launcher skip the
-           password, except admins and names that already have a password. Full guide on the <a href="patentsmp.html">server page</a>.</p>
+        <div class="panel mc-way">
+          <h3>Java Edition (launcher)</h3>
+          <p class="dim" style="margin:0 0 0.5rem">Any version from 1.8.8 to the latest. Add this address under Multiplayer:</p>
+          <p class="mc-addr"><code id="addr">patentsmp.arcadecampushub.online</code></p>
+          <div class="btn-row"><button class="btn btn-cta" type="button" id="copy-addr">&#9021; Copy address</button></div>
+          <p class="dim" id="copy-status" role="status" style="margin:0.6rem 0 0"></p>
+          <p class="dim" style="margin:0.6rem 0 0">Launcher players skip the password, except admins and names that already have one. Full guide on the <a href="patentsmp.html">server page</a>.</p>
+        </div>
       </div>
     </section>
 

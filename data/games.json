@@ -6574,9 +6574,9 @@
     },
     {
         "id": "huge-minecraft-classic",
-        "title": "Minecraft Classic (Alt Build)",
+        "title": "Minecraft Classic",
         "category": "minecraft",
-        "description": "Another build of the free browser Minecraft Classic block-building sandbox.",
+        "description": "The original 2009 Minecraft in your browser: build freely with the classic blocks. Worlds save in this browser.",
         "gradient": "linear-gradient(135deg, #65a30d, #1a2e05)",
         "source": "minecraft-classic/index.html",
         "direct": "minecraft-classic/index.html",

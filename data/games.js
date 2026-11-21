@@ -2268,7 +2268,7 @@ window.GAME_CATALOG = [
         "embed": "allowed",
         "schoolRisk": "low",
         "dateAdded": "2026-11-19",
-        "notice": "Downloads a 369 MB asset pack the first time it opens; after that it is cached and loads fast. No sound in this build, and it wants a strong machine. Worlds do not carry over from 1.8.8."
+        "notice": "Downloads an 80 MB game pack the first time it opens, then it is cached. Click Play once so sound can start. Music is not included. Worlds do not carry over from 1.8.8."
     },
     {
         "id": "waterboy-firegirl",

@@ -2266,7 +2266,7 @@
         "embed": "allowed",
         "schoolRisk": "low",
         "dateAdded": "2026-11-19",
-        "notice": "Downloads an 80 MB game pack the first time it opens, then it is cached. Click Play once so sound can start. Music is not included. Worlds do not carry over from 1.8.8."
+        "notice": "Downloads a 64 MB game pack the first time it opens, then it is cached. Click Play once so sound can start. Music is not included. Worlds do not carry over from 1.8.8."
     },
     {
         "id": "waterboy-firegirl",

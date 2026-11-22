@@ -114,6 +114,11 @@
   }
 
   function readError(body, status) {
+    /* A raise in our own SQL (code P0001) is already written for people. A
+       gateway or server fault is not, so say what to do instead. */
+    var own = body && typeof body === "object" && body.code === "P0001";
+    if (!own && status === 429) return "Too many requests. Wait a few seconds and try again.";
+    if (!own && status >= 500) return "Something went wrong on our side. Try again in a moment.";
     if (!body) return "Request failed (" + status + ")";
     /* PostgREST puts RAISE EXCEPTION text in `message`; GoTrue uses several
        shapes depending on the endpoint. */
@@ -163,6 +168,11 @@
       method: opts.method || "GET",
       headers: headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+    }).catch(function (err) {
+      /* fetch only rejects when nothing came back at all. */
+      throw fail(navigator.onLine === false
+        ? "You're offline. Check your connection and try again."
+        : "Can't reach the server right now. Check your connection and try again.", 0);
     }).then(function (res) {
       if (res.status === 204) return null;
       return res.text().then(function (text) {
@@ -1494,6 +1504,7 @@
     },
 
     startCall: function (payload) {
+      iceFetch();   /* warm the cache while the call row is created */
       return rpc("start_call", {
         target: payload.userId || null,
         t: payload.threadId ? Number(payload.threadId) : null,
@@ -1513,6 +1524,7 @@
     },
 
     joinCall: function (id) {
+      iceFetch();
       return rpc("join_call", { c: Number(id) }).then(function () {
         return Promise.all([API.pollSignals(id), iceFetch()]).then(function (arr) {
           return {

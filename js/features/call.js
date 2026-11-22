@@ -540,7 +540,9 @@
   function connect(userId) {
     if (state.peers[userId] && state.peers[userId].pc) return state.peers[userId];
 
-    var pc = new window.RTCPeerConnection({ iceServers: state.ice || [] });
+    /* iceCandidatePoolSize lets the browser start gathering (and TURN
+       allocation) as soon as the connection exists, not when the offer goes out. */
+    var pc = new window.RTCPeerConnection({ iceServers: state.ice || [], iceCandidatePoolSize: 2 });
     var entry = state.peers[userId] || (state.peers[userId] = {});
     entry.pc = pc;
     entry.el = tileFor(userId, nameOf(userId));
@@ -671,6 +673,12 @@
   function pokePeer(to) {
     if (!window.Realtime || !state.call) return;
     window.Realtime.broadcast(callTopic(state.call.id), "sig", { to: to });
+  }
+
+  /* Wake everyone else in the call. */
+  function pokeCall() {
+    if (!window.Realtime || !state.call) return;
+    window.Realtime.broadcast(callTopic(state.call.id), "sig", { to: null });
   }
 
   var callSub = null;
@@ -823,7 +831,19 @@
 
   /* ------------------------------------------------------- start / stop */
 
-  function begin(call, ice, wantVideo) {
+  /* Tell everyone invited that the call exists, right away over their personal
+     channel, so the incoming-call card pops without waiting for their poll. */
+  function ringPeers(call, sayBye) {
+    var byes = [];
+    ((call && call.peers) || []).forEach(function (p) {
+      if (p.id === state.self) return;
+      if (window.Realtime) window.Realtime.broadcast(userTopic(p.id), "ring", { call: call.id });
+      if (sayBye && p.state === "joined") byes.push(send(p.id, "bye", {}));
+    });
+    return Promise.all(byes);
+  }
+
+  function begin(call, ice, wantVideo, media, fresh) {
     state.call = call;
     state.ice = ice;
     state.startedAt = 0;
@@ -840,20 +860,22 @@
     drawWho();
     announce(call);
 
-    return getLocal(wantVideo).then(function () {
+    /* Ring now. The microphone prompt can take as long as the person likes,
+       and nobody should wait on it to hear their phone ring. */
+    var told = ringPeers(call, !fresh);
+    /* Someone answering a ringing call tells the caller at once, so the offer
+       goes out now instead of on the caller's next 1.5 s poll. */
+    if (fresh) pokeCall();
+
+    return (media || getLocal(wantVideo)).then(function () {
       /* Only after the media actually arrives — getLocal falls back to audio
          when there is no camera, and marking the button on beforehand claimed
          a camera that isn't running. */
       mark("cam", !state.camOff);
-      /* Ring every invited peer instantly over their personal channel, so the incoming-call card pops right away… */
-      if (call && call.peers) {
-        call.peers.forEach(function (p) {
-          if (p.id === state.self) return;
-          if (window.Realtime) window.Realtime.broadcast(userTopic(p.id), "ring", { call: call.id });
-          if (p.state === "joined") send(p.id, "bye", {});
-        });
-      }
-      runLoop();
+      /* A rejoin's "bye" must land before the first offer is made. */
+      return told;
+    }).then(function () {
+      if (state.call) runLoop();
     }).catch(function (err) {
       window.UI.toast(err.message || "Could not start the call.");
       hangUp();
@@ -872,12 +894,27 @@
     }
     if (!root) build();
 
+    /* Ask for the microphone while the server sets the call up. The two used
+       to run one after the other. */
+    state.self = whoAmI() || state.self;   /* the "You" tile is keyed by it */
+    var media = getLocal(opts.kind === "video");
+    media.catch(function () { /* reported by begin() */ });
+    /* Open the callee's channel now so the ring broadcast has somewhere to go. */
+    var warm = opts.userId && window.Realtime && window.Realtime.subscribe
+      ? window.Realtime.subscribe(userTopic(opts.userId), { ring: function () {} }) : null;
+    function cool() { if (warm) window.setTimeout(warm, 3000); }
+
     return window.API.startCall({
       userId: opts.userId, threadId: opts.threadId, kind: opts.kind || "audio"
     }).then(function (res) {
       state.self = whoAmI() || res.call.startedBy;
-      return begin(res.call, res.iceServers, opts.kind === "video");
+      var started = begin(res.call, res.iceServers, opts.kind === "video", media, false);
+      cool();
+      return started;
     }).catch(function (err) {
+      cool();
+      /* The call never started, so give the microphone back. */
+      media.then(function () { if (!state.call) teardown(""); }, function () {});
       window.UI.toast(err.message || "Could not start the call.");
       throw err;
     });
@@ -886,12 +923,19 @@
   function answer(callId, wantVideo) {
     if (!root) build();
     stopRinging();
+    /* Answering a ringing call is a fresh join; a rejoin after navigating
+       still has to tell the old connection to go. */
+    var fresh = !!(state.ringing && state.ringing.id === callId);
+    state.self = whoAmI() || state.self;
+    var media = getLocal(!!wantVideo);
+    media.catch(function () { /* reported by begin() */ });
     return window.API.joinCall(callId).then(function (res) {
       /* The Node backend hands `self` back; Supabase does not always, and a
          null id would break the "lower id offers" rule for every pair. */
       state.self = res.self || whoAmI() || state.self;
-      return begin(res.call, res.iceServers, !!wantVideo);
+      return begin(res.call, res.iceServers, !!wantVideo, media, fresh);
     }).catch(function (err) {
+      media.then(function () { if (!state.call) teardown(""); }, function () {});
       window.UI.toast(err.message || "Could not join that call.");
       dismissRing();
     });
@@ -1092,6 +1136,8 @@
 
     state.ringTimer = window.setInterval(watch, RING_POLL);
     watch();
+    /* Fetch the relay credentials now so a call doesn't wait on them. */
+    if (window.API.iceServers) window.API.iceServers().catch(function () {});
 
     /* Instant ring: listen on my personal channel. When someone starts a
        call aimed at me they broadcast here, so watch() runs at once instead

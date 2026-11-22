@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var POLL_LIVE = 5000;          // open conversation, realtime not connected
+  var POLL_LIVE = 3000;          // open conversation, realtime not connected
   var POLL_SOCKET = 15000;       // open conversation, realtime connected (safety net only)
   var GROUP_GAP = 5 * 60 * 1000; // consecutive messages within this join one group
   var TYPING_SEND_EVERY = 2500;
@@ -564,6 +564,9 @@
     var seq = 0;
     var timer = null;
     var ticking = false;
+    var tickAgain = false;       // a push arrived while a fetch was in flight
+    var lastPoll = 0;
+    var activityTimer = null;
     var unsub = null;
     var unseen = 0;
     var typers = {};            // username -> { name, until }
@@ -869,6 +872,14 @@
       if (state && state.id) drafts.set(state.id, input.value);
       window.clearInterval(timer);
       timer = null;
+      /* Don't lose a list refresh that was still waiting. */
+      if (activityTimer) {
+        window.clearTimeout(activityTimer);
+        activityTimer = null;
+        if (opts.onActivity) opts.onActivity();
+      }
+      tickAgain = false;
+      lastPoll = 0;
       if (unsub) { unsub(); unsub = null; }
       state = null;
       lastId = 0;
@@ -888,28 +899,47 @@
 
     function socketUp() { return !!(window.Realtime && window.Realtime.connected); }
 
+    /* Checks often, fetches only when due. The socket can drop or come back
+       at any time, so the gap is worked out on every check instead of being
+       fixed when the conversation opened. */
     function retime() {
       window.clearInterval(timer);
       if (!state) return;
-      timer = window.setInterval(tick, socketUp() ? POLL_SOCKET : POLL_LIVE);
+      timer = window.setInterval(function () {
+        var gap = socketUp() ? POLL_SOCKET : POLL_LIVE;
+        if (Date.now() - lastPoll >= gap - 300) tick();
+      }, 1500);
+    }
+
+    /* The list only needs to hear about activity once per burst of messages. */
+    function activity() {
+      if (!opts.onActivity) return;
+      window.clearTimeout(activityTimer);
+      activityTimer = window.setTimeout(function () { activityTimer = null; opts.onActivity(); }, 900);
     }
 
     var tickCount = 0;
     function tick() {
-      if (!state || !state.id || ticking || document.hidden) return;
+      if (!state || !state.id || document.hidden) return;
+      /* A push that lands mid-fetch used to be dropped until the next poll. */
+      if (ticking) { tickAgain = true; return; }
       if (++tickCount % 4 === 0) refreshCalls();
       var my = seq;
       ticking = true;
+      lastPoll = Date.now();
       window.API.thread(state.id, lastId).then(function (res) {
         if (my !== seq || !state) return;
         if (res.messages && res.messages.length) {
           addServerMessages(res.messages);
-          if (opts.onActivity) opts.onActivity();
+          activity();
           if (window.Session && window.Session.refreshBadges) window.Session.refreshBadges();
         }
       }).catch(function (err) {
         if (my === seq && err && err.status === 404 && opts.onGone) opts.onGone(err);
-      }).then(function () { ticking = false; });
+      }).then(function () {
+        ticking = false;
+        if (tickAgain) { tickAgain = false; tick(); }
+      });
     }
 
     document.addEventListener("visibilitychange", function () {
@@ -920,6 +950,8 @@
 
     function subscribe(id) {
       if (!window.Realtime || !window.Realtime.subscribe) return;
+      /* Anything sent while the channel was still joining gets no push. */
+      window.setTimeout(function () { if (state && state.id === id) tick(); }, 800);
       unsub = window.Realtime.subscribe("realtime:thread:" + id, {
         msg: function () { tick(); },
         typing: function (p) {
@@ -1112,7 +1144,7 @@
           if (id > lastId) lastId = id;
         }
         pokeOthers(threadId);
-        if (opts.onActivity) opts.onActivity();
+        activity();
       }).catch(function (err) {
         if (my !== seq) return;
         o.failed = true;

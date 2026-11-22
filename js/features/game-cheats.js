@@ -34,6 +34,49 @@
     raf(frame);
   }
 
+  /* ---- multiplayer lock ----
+     In a multiplayer game nobody gets to change the game's speed, clock,
+     timers or frame rate. The hub marks the page (lock) and every speed path
+     below checks it, so the rule holds whichever control or saved setting
+     tries to apply it. */
+  var SPEEDY = /speed|\bfast|\bslow|time ?scale|\bfps\b|frame ?rate|\btimers?\b|countdown|\bclock\b|\bticks?\b|haste|turbo|\btime\b|\bpause/i;
+  var SPEED_REFUSAL = "Speed and timer changes are off in multiplayer games.";
+
+  function locked(w) {
+    try {
+      for (var p = w, n = 0; p && n < 4; n++) {
+        if (p.__achMP) return true;
+        if (p.parent === p) break;
+        p = p.parent;
+      }
+    } catch (e) { /* a parent on another origin */ }
+    return false;
+  }
+
+  function speedy(it) {
+    return SPEEDY.test(String(it.id || "") + " " + String(it.label || "") + " " + String(it.group || ""));
+  }
+
+  function setLock(win, on) {
+    var marked = [win];
+    try { marked.push(target(win)); } catch (e) {}
+    marked.forEach(function (w) {
+      try { w.__achMP = !!on; } catch (e) {}
+    });
+    if (!on) return;
+    /* Anything already applied (an earlier session, a saved setting) is undone. */
+    marked.forEach(function (w) {
+      try {
+        if (w.__achClock) { w.__achClock.speed = 1; w.__achClock.paused = false; }
+        var s = w.__achCheats;
+        if (s) {
+          Object.keys(s.on || {}).forEach(function (k) { if (/^q:(fast|slow|speed|timer)$/.test(k) || SPEEDY.test(k)) delete s.on[k]; });
+          Object.keys(s.held || {}).forEach(function (k) { if (s.held[k].why === "timer") delete s.held[k]; });
+        }
+      } catch (e) {}
+    });
+  }
+
   /* Speed and pause, by retiming the game's own clock. */
   function timeControl(w) {
     if (w.__achClock) return w.__achClock;
@@ -45,7 +88,12 @@
     var caf = w.cancelAnimationFrame.bind(w);
     var st = w.setTimeout.bind(w);
     var si = w.setInterval.bind(w);
-    var state = { speed: 1, paused: false };
+    var state = {};
+    var speed = 1, paused = false;
+    Object.defineProperties(state, {
+      speed: { enumerable: true, get: function () { return locked(w) ? 1 : speed; }, set: function (v) { if (!locked(w)) speed = v; } },
+      paused: { enumerable: true, get: function () { return locked(w) ? false : paused; }, set: function (v) { if (!locked(w)) paused = !!v; } }
+    });
     var last = realNow();
     var virt = last;
     var dateOffset = realDate() - last;
@@ -2992,6 +3040,7 @@
 
   function quickRun(win, s, eng, id, on) {
     var k = id.slice(2);
+    if (locked(win) && /^(fast|slow|speed|timer)$/.test(k)) return;
     if (on) s.on[id] = true; else delete s.on[id];
     if (k === "fast" || k === "slow") {
       if (on) delete s.on[k === "fast" ? "q:slow" : "q:fast"];
@@ -3029,7 +3078,8 @@
       });
     }
     if (!q) return;
-    var on = function (k) { return !!s.on["q:" + k]; };
+    var mp = locked(win);
+    var on = function (k) { return !(mp && /^(fast|slow|speed|timer)$/.test(k)) && !!s.on["q:" + k]; };
     if (eng === sm64) {
       var a = findMario(win, s), dv = sm64View(win);
       if (!a || !dv) return;
@@ -3038,7 +3088,7 @@
       var game = phGame(win), hero = phHero(phState(game));
       if (!hero) return;
       ["god", "grav", "noclip"].forEach(function (k) { if (on(k)) q[k](win, s, hero, game); });
-    } else if (eng === construct && (on("speed") || on("jump") || on("grav"))) {
+    } else if (eng === construct && (on("speed") || on("jump") || on("grav") || (mp && s.on["q:speed"]))) {
       cScale(win, s);
     }
   }
@@ -3098,6 +3148,9 @@
     if (s.restart) { base.restart = true; s.restart = false; }
     ensureLoop(win);
     var quick = quickItems(win, s, eng);
+    var mp = locked(win);
+    if (mp) base.locked = true;
+    if (mp) quick = quick.filter(function (it) { return !speedy(it); });
     if (!eng) {
       base.items = quick;
       base.note = "This game's insides aren't readable, so only the speed mods apply.";
@@ -3108,7 +3161,7 @@
     base.items = quick.concat(got.items.map(function (it) {
       if (it.type === "toggle") it.on = !!s.on[it.id];
       return it;
-    }));
+    }).filter(function (it) { return !mp || !speedy(it); }));
     return base;
   }
 
@@ -3137,9 +3190,14 @@
 
   function run(win, id, arg) {
     if (id === "focus") { keepFocus(win); return { engine: "", items: [] }; }
+    if (id === "lock") { setLock(win, !!(arg && arg.mp)); return { engine: "", items: [], locked: !!(arg && arg.mp) }; }
     if (id === "refresh") return refresh(win);
     win = target(win);
     var s = state(win);
+    if (locked(win) && (id === "clock" || /^q:(fast|slow|speed|timer)$/.test(id) || SPEEDY.test(id) ||
+      (id === "mc-custom" && /speed|haste|\bticks?\b|\btime\b|timescale/i.test(String(arg && arg.value || ""))))) {
+      return Promise.reject(new Error(SPEED_REFUSAL));
+    }
     if (id === "clock") {
       var c = timeControl(win);
       if (arg && typeof arg.speed === "number") c.speed = Math.max(0.1, Math.min(4, arg.speed));
@@ -3159,6 +3217,7 @@
     var all = eng.items(win, s).items;
     var item = all.filter(function (i) { return i.id === id; })[0];
     if (!item) return inspect(win);
+    if (locked(win) && speedy(item)) return Promise.reject(new Error(SPEED_REFUSAL));
     if (item.type === "toggle") {
       s.on[id] = !!(arg && arg.on);
       if (!s.on[id]) delete s.on[id];
@@ -3251,7 +3310,7 @@
     return Promise.all(jobs).then(function () { return info; });
   }
 
-  window.GameCheats = { inspect: inspect, run: run, refresh: refresh, timeControl: timeControl, keepFocus: keepFocus, flush: flush,
+  window.GameCheats = { inspect: inspect, run: run, lock: setLock, isLocked: locked, refresh: refresh, timeControl: timeControl, keepFocus: keepFocus, flush: flush,
     /* The /idbfs folder Unity uses for a page at this URL. */
     unityDirOf: function (url) {
       url = String(url).split(/[?#]/)[0];

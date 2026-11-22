@@ -3569,6 +3569,8 @@ html[data-skin="paper"] .utag.is-dev, html[data-skin="linen"] .utag.is-dev { --t
 .mod-slider b { color: var(--accent); font-variant-numeric: tabular-nums; }
 .mod-slider input { width: 100%; min-height: 0; padding: 0; border: 0; background: transparent; accent-color: var(--accent); }
 .mod-note { margin: 0; font-size: 0.78rem; color: var(--ink-3); line-height: 1.45; }
+.mod-slider.is-locked { opacity: 0.55; }
+.mod-foot .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .mod-pause, .mod-reset { border-radius: 999px; }
 .stage.mod-zoomed { overflow: hidden; }
 @keyframes mod-hue { to { filter: hue-rotate(360deg); } }

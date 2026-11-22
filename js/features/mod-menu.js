@@ -29,6 +29,19 @@
 
   function el(t, c, x) { return window.UI.el(t, c, x); }
 
+  /* Games played against other people. Speed, timers and the game clock are
+     locked for these (the lock itself lives in game-cheats.js). Catalog
+     category first, then .io names and wording in the title or blurb. */
+  var MP_TITLE = /(^|[^a-z])io($|[^a-z])|\.io\b|\bonline\b|\b1v1\b|\bpvp\b|\bmmo\b|multiplayer|eaglercraft/i;
+  var MP_BLURB = /multiplayer|\b1v1\b|\bpvp\b|battle royale|\bmmo\b|\bio game|play(?:ing)? (?:online|against (?:other )?players)|online (?:match|server|lobby|play|with)|vs\.? (?:other )?players|with friends online/i;
+  function isMultiplayer(game) {
+    var g = game || {};
+    if (g.category === "multiplayer" || g.category === "minecraft") return true;
+    if (/^eaglercraft/.test(g.id || "")) return true;
+    return MP_TITLE.test(g.title || "") || MP_BLURB.test(g.description || "");
+  }
+  var SPEED_LOCK_NOTE = "Speed and timer changes are turned off in multiplayer games, so nobody gets an unfair edge.";
+
   function load() {
     try { return JSON.parse(window.localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; }
   }
@@ -103,6 +116,10 @@
     settings.looks = settings.looks || {};
     settings.zoom = settings.zoom || 1;
     settings.speed = settings.speed || 1;
+    function multiplayer() { return isMultiplayer(opts.game); }
+    /* A saved speed belongs to single-player games: remember it, never apply it here. */
+    var savedSpeed = settings.speed;
+    if (multiplayer()) { settings.speed = 1; settings.paused = false; }
 
     var btn = el("button", "btn mod-btn");
     btn.type = "button";
@@ -145,6 +162,13 @@
     function applySpeed() {
       var l = link();
       if (!l) return false;
+      if (multiplayer()) {
+        settings.speed = 1;
+        settings.paused = false;
+        /* Make sure the game's own clock is at normal and stays locked. */
+        l.ask("run", "lock", { mp: true }).catch(function () {});
+        return true;
+      }
       /* Leave a game's clock alone until someone actually changes it. */
       if (settings.speed === 1 && !settings.paused && !l.touched) return true;
       l.touched = true;
@@ -170,6 +194,7 @@
             win: w,
             ask: function (action, id, arg) {
               try {
+                if (window.GameCheats.lock) window.GameCheats.lock(w, multiplayer());
                 return Promise.resolve(action === "run"
                   ? window.GameCheats.run(w, id, arg) : window.GameCheats.inspect(w));
               } catch (e) { return Promise.reject(e); }
@@ -216,7 +241,7 @@
             else resolve(data);
           };
           target.contentWindow.postMessage(
-            { channel: "ach-mods", id: n, action: action, cheat: id, arg: arg }, origin);
+            { channel: "ach-mods", id: n, action: action, cheat: id, arg: arg, mp: multiplayer() }, origin);
         });
       });
     }
@@ -233,7 +258,7 @@
     function applyAll() { applyLooks(); applySpeed(); }
 
     function persist() {
-      if (cfg.remember) save({ looks: settings.looks, zoom: settings.zoom, speed: settings.speed });
+      if (cfg.remember) save({ looks: settings.looks, zoom: settings.zoom, speed: multiplayer() ? savedSpeed : settings.speed });
     }
 
     var tab = "looks";
@@ -357,7 +382,23 @@
     function drawGame(body) {
       var reach = !!link();
       body.appendChild(el("span", "mod-label", "Speed & pause"));
-      if (reach) {
+      if (multiplayer()) {
+        var slow = slider("Game speed", 0.25, 3, 0.25, 1, function () {}, function (v) { return v + "×"; });
+        slow.classList.add("is-locked");
+        slow.querySelector("input").disabled = true;
+        slow.title = SPEED_LOCK_NOTE;
+        body.appendChild(slow);
+        var lockRow = el("div", "mod-foot");
+        ["Pause", "Normal speed"].forEach(function (name) {
+          var b = el("button", "btn btn-sm btn-flat", name);
+          b.type = "button";
+          b.disabled = true;
+          b.title = SPEED_LOCK_NOTE;
+          lockRow.appendChild(b);
+        });
+        body.appendChild(lockRow);
+        body.appendChild(el("p", "mod-note", "Locked: " + SPEED_LOCK_NOTE));
+      } else if (reach) {
         body.appendChild(slider("Game speed", 0.25, 3, 0.25, settings.speed, function (v) {
           settings.speed = v;
           applySpeed();
@@ -394,11 +435,6 @@
 
     var cheat = { loading: false, data: null, keys: [], fields: [], error: "", undo: null };
 
-    function multiplayer() {
-      var g = opts.game || {};
-      return g.category === "multiplayer" ||
-        /\.io\b|multiplayer|online|\b1v1\b|\bpvp\b|battle royale|\bmmo/i.test((g.title || "") + " " + (g.description || ""));
-    }
 
     var WANTED = /coin|money|gold|gem|cash|diamond|point|token|credit|star|ruby|crystal|energy|\bxp\b|exp|level|lives|life|health|hp|ammo|score|bucks|dollar|currency|skill|upgrade|power|key|ticket|orb|shard/i;
 
@@ -782,6 +818,7 @@
           var l = link();
           if (l) l.ask("run", "focus").catch(function () {});
           settings.paused = false;
+          if (multiplayer() && l) l.ask("run", "lock", { mp: true }).catch(function () {});
           if (member()) applySpeed();
           /* The game usually has keyboard focus; hear the shortcut in there too. */
           if (sameOrigin(f)) {
@@ -797,6 +834,7 @@
     attach: attach,
     agentFor: agentFor,
     looks: LOOKS,
+    isMultiplayer: isMultiplayer,
     config: config,
     saveConfig: saveConfig,
     member: member,

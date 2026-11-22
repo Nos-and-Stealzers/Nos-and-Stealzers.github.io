@@ -108,6 +108,7 @@
       { href: "feedback.html", icon: "✎", label: "Send feedback" },
       { href: "support.html", icon: "?", label: "Help & support" },
       { href: "patentsmp.html", icon: "⛏", label: "Minecraft server" },
+      { href: "lounge.html", icon: "◆", label: "Arcade Lounge" },
       { href: "about.html", icon: "ⓘ", label: "About the arcade" }
     ].forEach(function (item) {
       if (item.href === here) extras.open = true;
@@ -931,6 +932,47 @@
     var timer = window.setInterval(function () { if (!document.hidden) check(); }, 60000);
   }
 
+  /* Campus+ accent colour and the daily streak (keys shared with js/core/perks.js).
+     The member flag is re-read from the account on every page, so turning
+     Campus+ off removes the colour here too. */
+  function trackPerks() {
+    function read(key) {
+      try { return JSON.parse(window.localStorage.getItem(key) || "null") || {}; } catch (e) { return {}; }
+    }
+    function write(key, value) {
+      try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
+    }
+    function dayKey(offset) {
+      var d = new Date();
+      d.setDate(d.getDate() + offset);
+      return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    }
+
+    var s = read("ach:streak");
+    var today = dayKey(0);
+    if (s.last !== today) {
+      s.count = s.last === dayKey(-1) ? (s.count || 0) + 1 : 1;
+      s.best = Math.max(s.best || 0, s.count);
+      s.last = today;
+      s.days = (Array.isArray(s.days) ? s.days : []).filter(function (d) { return d !== today; }).concat(today).slice(-60);
+      write("ach:streak", s);
+    }
+
+    function syncMember() {
+      var user = window.Session.user;
+      var perks = read("ach:perks");
+      var member = !!(user && window.Session.isPlus && window.Session.isPlus());
+      if ((perks.member === true) === member) return;
+      perks.member = member;
+      write("ach:perks", perks);
+      if (!member) ["--accent", "--accent-2", "--accent-ink"].forEach(function (n) { document.documentElement.style.removeProperty(n); });
+    }
+    if (window.Session && window.Session.ready) {
+      window.Session.ready.then(syncMember);
+      document.addEventListener("session:change", syncMember);
+    }
+  }
+
   /* ------------------------------------------------------------------ boot */
 
   function boot() {
@@ -972,6 +1014,8 @@
     }
 
     bindKeys();
+
+    trackPerks();
 
     /* Render once immediately so "Display & skins" is there even with no
        backend, then again when the session resolves. */

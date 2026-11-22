@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="noir" data-lite="off">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arcade Lounge — Arcade Campus Hub</title>
+  <meta name="description" content="Game of the day, a daily spin with stickers, a game roulette, achievements and a soundboard.">
+  <meta name="theme-color" content="#0c0d10">
+  <meta name="robots" content="index,follow">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/extras.css">
+  <script src="js/core/access-gate.js"></script>
+  <script src="js/core/theme-boot.js"></script>
+  <script src="js/core/consent-gate.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div data-shell="chrome"></div>
+
+  <main class="main lounge" id="main">
+
+    <header class="lg-hero">
+      <span class="label">Arcade Lounge</span>
+      <h1>Mess around</h1>
+      <p>A daily spin, a random-game roulette, achievements from your own play, and a soundboard. Nothing to sign up for; it all stays on this device.</p>
+      <nav class="lg-jump" aria-label="Lounge sections">
+        <a href="#today">Today</a>
+        <a href="#roulette">Roulette</a>
+        <a href="#achievements">Achievements</a>
+        <a href="#soundboard">Soundboard</a>
+      </nav>
+    </header>
+
+    <section class="lg-section" id="today" aria-labelledby="today-h">
+      <div class="lg-head"><h2 id="today-h">Today</h2></div>
+      <div class="lg-today-grid">
+        <div id="lg-today"></div>
+
+        <div class="set-card lg-spin-card">
+          <div class="lg-streak-row">
+            <div class="lg-streak"><b id="lg-streak">0</b><span>day streak</span><em id="lg-streak-best" class="dim"></em></div>
+            <div class="lg-days" id="lg-days" aria-label="Last seven days"></div>
+          </div>
+          <div class="lg-spin-row">
+            <div class="lg-wheel-wrap">
+              <span class="lg-pointer" aria-hidden="true"></span>
+              <div class="lg-wheel" id="lg-wheel"></div>
+            </div>
+            <div class="lg-spin-side">
+              <strong>Daily spin</strong>
+              <p class="set-hint" id="lg-spin-note" role="status"></p>
+              <button class="btn btn-cta" type="button" id="lg-spin"><span>Spin the wheel</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg-subhead"><h3>Sticker collection</h3><span class="dim" id="lg-sticker-count"></span></div>
+      <div class="lg-stickers" id="lg-stickers"></div>
+    </section>
+
+    <section class="lg-section" id="roulette" aria-labelledby="roulette-h">
+      <div class="lg-head"><h2 id="roulette-h">Game roulette</h2><p class="dim">Can't pick? Let the arcade pick for you.</p></div>
+      <div class="set-card lg-roulette">
+        <div class="lg-roulette-bar">
+          <label class="lg-field"><span>Category</span><select id="lg-cat" aria-label="Roulette category"></select></label>
+          <button class="btn btn-cta" type="button" id="lg-roll"><span>Spin the roulette</span></button>
+        </div>
+        <div class="lg-reel" id="lg-reel" aria-live="polite"></div>
+        <div class="btn-row" id="lg-reel-acts"></div>
+      </div>
+    </section>
+
+    <section class="lg-section" id="achievements" aria-labelledby="ach-h">
+      <div class="lg-head"><h2 id="ach-h">Achievements</h2><span class="dim" id="lg-ach-count"></span></div>
+      <div class="lg-ach-grid" id="lg-ach"></div>
+    </section>
+
+    <section class="lg-section" id="soundboard" aria-labelledby="sb-h">
+      <div class="lg-head"><h2 id="sb-h">Soundboard</h2><p class="dim">Tap a pad, or press 1 to 8. Sounds are made live in your browser.</p></div>
+      <div class="set-card lg-board">
+        <div class="lg-pads" id="lg-pads"></div>
+        <label class="lg-vol"><span>Volume</span><input type="range" id="lg-vol" min="0" max="100" value="60" aria-label="Soundboard volume"></label>
+      </div>
+      <div class="set-card lg-beat">
+        <div class="lg-beat-head">
+          <strong>Beat maker</strong>
+          <span class="fill"></span>
+          <label class="lg-vol"><span id="lg-bpm-out">100 BPM</span><input type="range" id="lg-bpm" min="60" max="180" value="100" aria-label="Tempo"></label>
+          <button class="btn btn-cta btn-sm" type="button" id="lg-play" aria-pressed="false"><span class="lg-play-label">Play beat</span></button>
+        </div>
+        <div class="lg-seq" id="lg-seq"></div>
+      </div>
+    </section>
+
+    <div data-shell="foot"></div>
+  </main>
+
+  <script src="js/core/config.js"></script>
+  <script src="data/games.js"></script>
+  <script src="js/core/store.js"></script>
+  <script src="js/features/catalog-overlay.js"></script>
+  <script src="js/features/catalog.js"></script>
+  <script src="js/features/art.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/api-supabase.js"></script>
+  <script src="js/core/session.js"></script>
+  <script src="js/core/realtime.js"></script>
+  <script src="js/features/capture.js"></script>
+  <script src="js/features/social-ui.js"></script>
+  <script src="js/features/chat-core.js"></script>
+  <script src="js/features/chat-dock.js"></script>
+  <script src="js/features/call.js"></script>
+  <script src="js/features/game-saves.js"></script>
+  <script src="js/features/shell.js"></script>
+  <script src="js/features/motion-fx.js"></script>
+  <script src="js/features/context-menu.js"></script>
+  <script src="js/core/perks.js"></script>
+  <script src="js/pages/page-lounge.js"></script>
+</body>
+</html>

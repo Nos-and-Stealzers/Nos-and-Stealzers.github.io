@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/admin-command.css">
   <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
@@ -56,6 +57,11 @@
         <button class="admin-nav-link" type="button" data-tab="help" data-icon="info"><span class="lbl">Help</span></button>
         <div class="admin-nav-foot">
           <button class="btn btn-sm btn-flat" type="button" id="refresh">Refresh data</button>
+          <div class="admin-design" id="admin-design" role="group" aria-label="Console design">
+            <span class="admin-design-label">Design</span>
+            <button class="admin-design-opt" type="button" data-design="classic" aria-pressed="true">Classic</button>
+            <button class="admin-design-opt" type="button" data-design="command" aria-pressed="false">Command</button>
+          </div>
         </div>
       </nav>
 
@@ -609,5 +615,6 @@
   <script src="js/features/context-menu.js"></script>
   <script src="js/pages/page-gamedata.js"></script>
   <script src="js/pages/page-admin.js"></script>
+  <script src="js/pages/page-admin-design.js"></script>
 </body>
 </html>

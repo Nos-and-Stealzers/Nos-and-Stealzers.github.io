@@ -1,0 +1,135 @@
+/* Staff console, "Command" design. Everything is scoped to
+   body[data-admin-design="command"], so Classic is untouched. Colours come
+   from the active skin's variables; only layout and density change. */
+
+/* ---- design picker (shown in both designs, bottom of the section nav) ---- */
+.admin-design { display: flex; align-items: center; gap: .15rem; margin-top: .55rem; padding: .2rem; border: 1px solid var(--line); border-radius: 7px; }
+.admin-design-label { padding: 0 .4rem; font: 600 .62rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.admin-design-opt { flex: 1 1 auto; min-height: 1.8rem; padding: .2rem .55rem; border: 0; border-radius: 5px; background: transparent; color: var(--ink-2); font: 600 .72rem var(--font); cursor: pointer; }
+.admin-design-opt:hover { color: var(--ink); }
+.admin-design-opt[aria-pressed="true"] { background: var(--sel); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.cmd-open, .cmd-kpis { display: none; }
+
+/* ---- KPI strip + palette launcher are only shown in Command ---- */
+body[data-admin-design="command"] .cmd-kpis {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin: 0 0 .9rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden;
+}
+body[data-admin-design="command"] .cmd-kpi {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .1rem; min-width: 0;
+  padding: .55rem .8rem; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit;
+}
+body[data-admin-design="command"] .cmd-kpi:first-child { border-left: 0; }
+body[data-admin-design="command"] .cmd-kpi:hover { background: var(--sel); }
+body[data-admin-design="command"] .cmd-kpi b { font: 650 1.25rem/1.1 var(--mono); letter-spacing: -.03em; }
+body[data-admin-design="command"] .cmd-kpi span { font-size: .68rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+body[data-admin-design="command"] .cmd-kpi.is-warn b { color: var(--bad); }
+body[data-admin-design="command"] .cmd-kpi.is-good b { color: var(--accent); }
+body[data-admin-design="command"] .cmd-open {
+  display: flex; align-items: center; gap: .45rem; width: 100%; min-height: 2rem; padding: .25rem .6rem; border: 1px solid var(--line); border-radius: 6px;
+  background: transparent; color: var(--ink-2); font: 500 .75rem var(--font); cursor: pointer;
+}
+body[data-admin-design="command"] .cmd-open:hover { border-color: var(--accent); color: var(--ink); }
+.cmd-open kbd, .cmd-palette kbd {
+  margin-left: auto; padding: .05rem .35rem; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink-3); font: 600 .62rem var(--mono);
+}
+.cmd-palette kbd { margin: 0 .2rem 0 0; }
+
+.cmd-palette { position: fixed; inset: 0; z-index: 400; display: flex; align-items: flex-start; justify-content: center; padding: 14vh 1rem 1rem; background: rgba(0, 0, 0, .5); }
+.cmd-palette[hidden] { display: none; }
+.cmd-palette-box { width: min(36rem, 100%); max-height: min(30rem, 76vh); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: 0 18px 50px rgba(0, 0, 0, .45); overflow: hidden; }
+.cmd-palette-field { display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem; border-bottom: 1px solid var(--line); color: var(--ink-3); font-size: 1.05rem; }
+.cmd-palette-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 500 .95rem var(--font); }
+.cmd-palette-list { margin: 0; padding: .3rem; list-style: none; overflow-y: auto; }
+.cmd-group { padding: .55rem .6rem .2rem; font: 650 .62rem var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.cmd-item { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border-radius: 6px; font-size: .85rem; cursor: pointer; color: var(--ink-2); }
+.cmd-item.is-on { background: var(--sel); color: var(--ink); box-shadow: inset 2px 0 var(--accent); }
+.cmd-item-label { font-weight: 600; }
+.cmd-item-hint { margin-left: auto; font-size: .7rem; color: var(--ink-3); }
+.cmd-none { padding: 1rem; text-align: center; color: var(--ink-3); font-size: .85rem; }
+.cmd-palette-foot { display: flex; gap: 1rem; padding: .45rem .9rem; border-top: 1px solid var(--line); font-size: .68rem; color: var(--ink-3); }
+
+/* ---- layout: top workspace bar instead of the sidebar (desktop) ---- */
+@media (min-width: 861px) {
+  body[data-admin-design="command"] .rail { display: none; }
+  body[data-admin-design="command"] .main { margin-left: 0; padding: 0 clamp(.75rem, 2vw, 1.5rem) 4rem; }
+  body[data-admin-design="command"] .admin-shell { display: block; padding-top: 0; }
+  body[data-admin-design="command"] .admin-nav {
+    position: sticky; top: 0; z-index: 30; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: .15rem;
+    margin: 0 calc(-1 * clamp(.75rem, 2vw, 1.5rem)) .9rem; padding: .4rem clamp(.75rem, 2vw, 1.5rem);
+    border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: var(--surface); max-height: none; overflow: visible; top: 0;
+  }
+  body[data-admin-design="command"] .admin-nav-brand { padding: 0 .9rem 0 0; margin: 0 .4rem 0 0; border-bottom: 0; border-right: 1px solid var(--line); }
+  body[data-admin-design="command"] .admin-brand-mark { width: 1.7rem; height: 1.7rem; font-size: .7rem; }
+  body[data-admin-design="command"] .admin-nav-brand div > span { display: none; }
+  body[data-admin-design="command"] .admin-nav-brand strong { font-size: .78rem; white-space: nowrap; }
+  body[data-admin-design="command"] .admin-nav-label { width: 1px; height: 1.1rem; margin: 0 .3rem; padding: 0; overflow: hidden; font-size: 0; background: var(--line); }
+  body[data-admin-design="command"] .admin-nav-link { width: auto; min-height: 1.9rem; padding: .25rem .5rem; gap: .35rem; font-size: .76rem; border-radius: 5px; }
+  body[data-admin-design="command"] .admin-nav-link.on { background: var(--sel); box-shadow: inset 0 -2px var(--accent); }
+  body[data-admin-design="command"] .admin-nav-foot { margin: 0 0 0 auto; padding: 0; border: 0; display: flex; align-items: center; gap: .4rem; flex: 0 1 auto; }
+  body[data-admin-design="command"] .admin-nav-foot .cmd-open { width: 9.5rem; }
+  body[data-admin-design="command"] .admin-nav-foot .btn { width: auto; min-height: 2rem; padding: .2rem .65rem; font-size: .74rem; border-radius: 6px; }
+  body[data-admin-design="command"] .admin-nav-link .lbl { flex: none; white-space: nowrap; }
+  body[data-admin-design="command"] .admin-design { margin: 0; }
+  body[data-admin-design="command"] .admin-design-label { display: none; }
+}
+
+/* ---- header: one tight line, the KPI strip carries the numbers ---- */
+body[data-admin-design="command"] .admin-topbar { padding: 0 0 .7rem; margin-bottom: 0; gap: .5rem; }
+body[data-admin-design="command"] .admin-eyebrow, body[data-admin-design="command"] .admin-stats { display: none; }
+body[data-admin-design="command"] .admin-heading { flex: 1 1 100%; display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .9rem; }
+body[data-admin-design="command"] .admin-title h1 { font-size: 1.15rem; letter-spacing: -.02em; }
+body[data-admin-design="command"] .admin-description { margin: 0; font-size: .75rem; color: var(--ink-3); flex: 1 1 18rem; }
+body[data-admin-design="command"] .admin-load-line { flex-basis: 100%; }
+body[data-admin-design="command"] .admin-panel-intro { display: none; }
+
+/* ---- density: tables, cards, controls ---- */
+body[data-admin-design="command"] #console .metrics { grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .4rem; }
+body[data-admin-design="command"] #console .metric { padding: .55rem .7rem; border-radius: 6px; }
+body[data-admin-design="command"] #console .metric b { font-size: 1.15rem; }
+body[data-admin-design="command"] #console .queue-metrics .metric small { padding-top: .35rem; margin-top: .2rem; font-size: .65rem; }
+body[data-admin-design="command"] #console .block-head { margin-bottom: .4rem; }
+body[data-admin-design="command"] #console .block-head h2 { font: 650 .68rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+body[data-admin-design="command"] #console .panel, body[data-admin-design="command"] #console .report,
+body[data-admin-design="command"] #console .ticket, body[data-admin-design="command"] #console .fb { border-radius: 6px; padding: .7rem .8rem; }
+body[data-admin-design="command"] #console .rows { border-radius: 6px; }
+body[data-admin-design="command"] #console .rows .row { padding: .35rem .7rem; font-size: .76rem; gap: .5rem; }
+body[data-admin-design="command"] #console .rows .row:nth-child(even) { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+body[data-admin-design="command"] #console .rows .row:hover { background: var(--sel); }
+body[data-admin-design="command"] #console .rows-head { padding: .3rem .7rem; font: 650 .62rem var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+body[data-admin-design="command"] #console .admin-urow { padding: .35rem .5rem; gap: .4rem; }
+body[data-admin-design="command"] #console .admin-urow-name { font-size: .78rem; }
+body[data-admin-design="command"] #console .admin-urow-stats, body[data-admin-design="command"] #console .admin-urow-meta { font: .68rem var(--mono); color: var(--ink-3); }
+body[data-admin-design="command"] #console .admin-users-layout { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: .75rem; }
+body[data-admin-design="command"] #console .admin-users-layout .rows-scroll { max-height: calc(100dvh - 12rem); }
+body[data-admin-design="command"] #console #user-detail { top: 3.4rem; }
+body[data-admin-design="command"] #console .toolbar { gap: .35rem; margin-bottom: .6rem; }
+body[data-admin-design="command"] #console input, body[data-admin-design="command"] #console select, body[data-admin-design="command"] #console textarea { font-size: .78rem; padding-block: .3rem; border-radius: 5px; }
+body[data-admin-design="command"] #console .btn { min-height: 1.9rem; padding: .2rem .65rem; font-size: .74rem; border-radius: 5px; }
+body[data-admin-design="command"] #console .pill { min-height: 1.9rem; font-size: .74rem; }
+body[data-admin-design="command"] #console .keys-table th, body[data-admin-design="command"] #console .keys-table td { padding: .3rem .5rem; font-size: .74rem; }
+body[data-admin-design="command"] #console .two-col, body[data-admin-design="command"] #console .help-grid { gap: .75rem; }
+
+@media (max-width: 1180px) {
+  body[data-admin-design="command"] .cmd-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  body[data-admin-design="command"] .cmd-kpi:nth-child(5) { border-left: 0; }
+  body[data-admin-design="command"] .cmd-kpi:nth-child(n+5) { border-top: 1px solid var(--line); }
+  body[data-admin-design="command"] #console .admin-users-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 860px) {
+  body[data-admin-design="command"] .cmd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-admin-design="command"] .cmd-kpi { border-left: 0; border-top: 1px solid var(--line); }
+  body[data-admin-design="command"] .cmd-kpi:nth-child(-n+2) { border-top: 0; }
+  body[data-admin-design="command"] .cmd-kpi:nth-child(even) { border-left: 1px solid var(--line); }
+  body[data-admin-design="command"] .cmd-open { display: none; }
+  body[data-admin-design="command"] .admin-design { margin-top: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) { .cmd-palette * { transition: none !important; animation: none !important; } }
+
+/* the queue cards repeat the KPI strip's first four cells, so Command drops them */
+body[data-admin-design="command"] #console .queue-metrics, body[data-admin-design="command"] #console .block-head:has(+ .queue-metrics) { display: none; }
+body[data-admin-design="command"] #console label, body[data-admin-design="command"] #console .field > span { font-size: .76rem; }
+.cmd-palette .cmd-palette-field input#cmd-input { border: 0; box-shadow: none; outline: 0; background: transparent; padding: .1rem 0; border-radius: 0; }
+@media (max-width: 860px) {
+  body[data-admin-design="command"] .cmd-kpi:last-child:nth-child(odd) { grid-column: 1 / -1; border-left: 0; }
+}

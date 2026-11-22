@@ -5,12 +5,14 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https: blob: data:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Campus+ — Arcade Campus Hub</title>
-  <meta name="description" content="Campus+: videos and playlists, Campus AI, and the game mod menu.">
+  <meta name="description" content="Campus+: videos and playlists, Campus AI, the game mod menu, accent colours, game collections, backups and more.">
   <meta name="theme-color" content="#0c0d10">
   <meta name="robots" content="noindex,follow">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://qopjzxrjkkljpumyirtb.supabase.co" crossorigin>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/extras.css">
   <script src="js/core/access-gate.js"></script>
   <script src="js/core/theme-boot.js"></script>
   <script src="js/core/consent-gate.js"></script>
@@ -25,7 +27,7 @@
       <span class="plus-badge" aria-hidden="true">+</span>
       <div>
         <h1>Campus+</h1>
-        <p id="plus-status" class="dim">Extras for members: videos, an AI helper, and a mod menu for games.</p>
+        <p id="plus-status" class="dim">Extras for members: videos, an AI helper, a mod menu, and perks you switch on and off.</p>
       </div>
     </header>
 
@@ -34,6 +36,7 @@
       <li><b>500</b> videos each</li>
       <li><b>Mod menu</b> with cheats</li>
       <li><b>Campus AI</b></li>
+      <li><b>6</b> switchable perks</li>
       <li><b>✦</b> member badge</li>
     </ul>
 
@@ -57,6 +60,15 @@
         <span class="plus-card-go">Customize mods</span>
       </a>
     </div>
+
+    <section class="pk" id="perks" aria-labelledby="perks-h">
+      <div class="plus-mods-head">
+        <h2 id="perks-h">Your perks</h2>
+        <p class="dim">Videos, Campus AI and the mod menu are always on for members (above). These six you can switch on or off, and settings stay on this device.</p>
+      </div>
+      <div class="pk-list" id="pk-list"></div>
+      <div class="pk-panels" id="pk-panels"></div>
+    </section>
 
     <section class="plus-mods plus-modlist" id="mod-games" aria-labelledby="modlist-h">
       <div class="plus-mods-head">
@@ -147,6 +159,8 @@
   <script src="js/features/motion-fx.js"></script>
   <script src="js/features/context-menu.js"></script>
   <script src="js/features/mod-menu.js"></script>
+  <script src="js/core/perks.js"></script>
   <script src="js/pages/page-plus.js"></script>
+  <script src="js/pages/page-plus-perks.js"></script>
 </body>
 </html>

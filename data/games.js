@@ -2241,6 +2241,21 @@ window.GAME_CATALOG = [
         "host": "games-huge"
     },
     {
+        "id": "eaglercraft-1-12-2",
+        "title": "Eaglercraft 1.12.2",
+        "category": "minecraft",
+        "description": "Minecraft 1.12.2 in the browser, the recommended version. Off-hand, the F key for PatentSMP abilities, and PatentSMP already in the server list.",
+        "gradient": "linear-gradient(135deg, #5b8a3c, #7a5a3a)",
+        "host": "minecraft",
+        "source": "1.12.2/index.html",
+        "direct": "1.12.2/index.html",
+        "platform": "local",
+        "embed": "allowed",
+        "schoolRisk": "low",
+        "dateAdded": "2026-11-22",
+        "notice": "Downloads a 17 MB game file the first time, then it is cached. Click Play once so sound can start. Needs a recent Chrome, Edge or Firefox. Worlds do not carry over from 1.8.8."
+    },
+    {
         "id": "eaglercraft-1-8-8",
         "title": "Eaglercraft 1.8.8",
         "category": "minecraft",
